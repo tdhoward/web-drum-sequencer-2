@@ -23,7 +23,7 @@ https://wds-1.com
 
 ## Circle CI status
 
-[![CircleCI](https://circleci.com/gh/stufreen/web-drum-sequencer.svg?style=svg)](https://circleci.com/gh/stufreen/web-drum-sequencer)
+[![CircleCI](https://circleci.com/gh/tdhoward/web-drum-sequencer.svg?style=svg)](https://circleci.com/gh/tdhoward/web-drum-sequencer)
 
 ## Installation
 
