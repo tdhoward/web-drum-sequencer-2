@@ -75,9 +75,9 @@ jobs:
       - run:
           name: Install awscli
           command: sudo pip install awscli
-      - run:
-          name: Deploy to S3
-          command: aws s3 sync --acl public-read ~/repo/dist s3://wds-1.com/ --delete
+      #- run:
+          #name: Deploy to S3
+          #command: aws s3 sync --acl public-read ~/repo/dist s3://wds-1.com/ --delete
 
 workflows:
   version: 2
