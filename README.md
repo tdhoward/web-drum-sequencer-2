@@ -1,10 +1,9 @@
 # Web Drum Sequencer
 
-A browser-based drum machine and sequencer built with the Web Audio API, React, and Redux.
+A browser-based drum machine and sequencer built with the Web Audio API, React, and Redux.  This was originally created by Stu Freen, whose excellent work can be seen [here](https://github.com/stufreen/web-drum-sequencer). This current repo is under development to add more features than perhaps were originally intended, as well as to spend more time exploring React, Redux, and the like.
 
 ## Demo
-
-https://wds-1.com
+The original web app can be found here:  https://wds-1.com
 
 ## Features
  * Swap drum samples
@@ -42,6 +41,7 @@ npm run test
 ```
 
 ## Thank You
+ * [web-drum-sequencer](https://github.com/stufreen/web-drum-sequencer)
  * [React-Select](https://github.com/JedWatson/react-select)
  * [Webaudio-Controls](https://github.com/g200kg/webaudio-controls)
  * Chris Wilson's article [here](https://www.html5rocks.com/en/tutorials/audio/scheduling/)
