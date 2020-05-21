@@ -1,5 +1,6 @@
 import React from 'react';
 import { ThemeProvider } from 'styled-components';
+import { Button, ButtonGroup } from '@material-ui/core';
 import theme from '../styles/theme';
 import globalStyles from '../styles/globalStyles';
 import {
@@ -27,6 +28,12 @@ const App = () => (
       <header>
         <Box display="flex" justifyContent="space-between" alignItems="flex-start">
           <Branding />
+          <ButtonGroup variant="contained" color="primary" aria-label="contained primary button group">
+            <Button>Kit</Button>
+            <Button>Pattern</Button>
+            <Button>Song</Button>
+            <Button>Share</Button>
+          </ButtonGroup>
           <InstallButton />
         </Box>
       </header>
