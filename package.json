@@ -1,6 +1,6 @@
 {
-  "name": "web-drum-sequencer",
-  "version": "0.2.3",
+  "name": "web-drum-sequencer-2",
+  "version": "0.2.4",
   "description": "A drum machine and sequencer built with the Web Audio API and React.",
   "main": "dist/index.html",
   "scripts": {
@@ -10,11 +10,11 @@
     "test": "jest",
     "gh-pages": "git subtree push --prefix dist origin gh-pages"
   },
-  "author": "Stu Freen (http://www.stufreen.com)",
+  "author": "Stu Freen (http://www.stufreen.com), Tim Howard",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/stufreen/web-drum-sequencer.git"
+    "url": "https://github.com/tdhoward/web-drum-sequencer-2.git"
   },
   "keywords": [
     "Web Audio",
@@ -53,6 +53,7 @@
     "webpack-pwa-manifest": "^3.6.3"
   },
   "dependencies": {
+    "@material-ui/core": "^4.0.0",
     "@shopify/draggable": "^1.0.0-beta.8",
     "animol": "1.0.9",
     "prop-types": "^15.6.2",
