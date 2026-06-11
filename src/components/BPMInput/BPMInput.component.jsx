@@ -1,4 +1,5 @@
 import React from 'react';
+import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import theme from '../../styles/theme';
 import {
@@ -8,7 +9,7 @@ import {
   Button,
 } from '../design-system';
 
-const ShinyBox = Box.extend`
+const ShinyBox = styled(Box)`
   background: linear-gradient(190deg, #19191D 0%, #303036 50%,#0a0e0a 51%, #29292D 100%);
   transition: border-color 0.2s;
 
@@ -17,7 +18,7 @@ const ShinyBox = Box.extend`
   }
 `;
 
-const BPMButton = Button.extend`
+const BPMButton = styled(Button)`
   &:active {
     background-color: rgba(255, 255, 255, 0.2);
   }

@@ -1,10 +1,11 @@
 import React from 'react';
+import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import { Box } from '../design-system';
 import { getCurrentBeat } from '../../services/audioContext';
 import theme from '../../styles/theme';
 
-const Container = Box.extend`
+const Container = styled(Box)`
   overflow: hidden;
 `;
 

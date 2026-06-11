@@ -72,11 +72,11 @@ export class FlashMessageComponent extends React.Component {
           m={3}
           boxShadow="0 0.5rem 3rem rgba(0,0,0,0.9)"
           maxWidth="30rem"
-          innerRef={(comp) => { this.flashBox = comp; }}
+          ref={(comp) => { this.flashBox = comp; }}
           opacity="0"
         >
           <Box
-            innerRef={(comp) => { this.flashMessage = comp; }}
+            ref={(comp) => { this.flashMessage = comp; }}
             p={4}
           >
             <DisappearingMessage onDismiss={onDismiss} />

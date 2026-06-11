@@ -1,9 +1,10 @@
 import React from 'react';
+import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import { FancyButton } from '../FancyButton.component';
 import { Text } from '../design-system';
 
-const StyledPlayButton = FancyButton.extend`
+const StyledPlayButton = styled(FancyButton)`
   margin-bottom: 1px;
   width: 8rem;
   display: flex;

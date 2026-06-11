@@ -49,7 +49,7 @@ export class SavePresetModalComponent extends React.Component {
               width="15em"
               id="preset-name"
               placeholder="Enter name..."
-              innerRef={(input) => { this.nameInput = input; }}
+              ref={(input) => { this.nameInput = input; }}
               boxShadow={error ? `inset 0 0 0 3px ${theme.colors.lightRed}` : ''}
             />
           </label>

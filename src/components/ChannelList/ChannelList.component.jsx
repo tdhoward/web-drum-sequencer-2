@@ -1,11 +1,12 @@
 import React from 'react';
+import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import { Sortable } from '@shopify/draggable';
 import { Box } from '../design-system';
 import { Channel } from '../Channel';
 import { AddChannelButton } from '../AddChannelButton';
 
-const ChannelListBox = Box.extend`
+const ChannelListBox = styled(Box)`
   outline: none;
 `;
 
@@ -29,7 +30,7 @@ export class ChannelListComponent extends React.Component {
   render() {
     const { channels } = this.props;
     return (
-      <ChannelListBox mt={2} innerRef={(el) => { this.channelContainer = el; }}>
+      <ChannelListBox mt={2} ref={(el) => { this.channelContainer = el; }}>
         {channels.map(channel => <Channel key={channel.id} channel={channel} />)}
         <AddChannelButton />
       </ChannelListBox>

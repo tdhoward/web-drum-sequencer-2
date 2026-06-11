@@ -45,7 +45,7 @@ export const VolumeMeter = () => {
       height={6}
       borderRadius="50%"
       bg="black"
-      innerRef={ref}
+      ref={ref}
       mx={1}
     />
   );

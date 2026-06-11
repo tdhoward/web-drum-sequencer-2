@@ -1,4 +1,5 @@
 import React from 'react';
+import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import {
   detuneSupported,
@@ -8,7 +9,7 @@ import { SampleSelect } from '../SampleSelect';
 import { InfoKnob } from '../InfoKnob.component';
 import { LabelBox } from '../LabelBox';
 
-const ControlCluster = Box.extend`
+const ControlCluster = styled(Box)`
   background-color: ${({ theme }) => theme.colors.darkGray};
   border-radius: 0.3rem;
   display: flex;

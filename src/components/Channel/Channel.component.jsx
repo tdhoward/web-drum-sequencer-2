@@ -1,4 +1,5 @@
 import React from 'react';
+import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import * as R from 'ramda';
 import { Toggles } from '../Toggles';
@@ -18,7 +19,7 @@ const getSampleName = (sampleURL) => {
   return maybeName ? maybeName.name : sampleURL;
 };
 
-const ChannelBox = Box.extend`
+const ChannelBox = styled(Box)`
   outline: none;
   
   &.draggable-source--is-dragging {
@@ -31,7 +32,7 @@ const ChannelBox = Box.extend`
   }
 `;
 
-const MoveImage = Image.extend`
+const MoveImage = styled(Image)`
   cursor: move;
   opacity: 0.2;
   transition: opacity 0.1s;

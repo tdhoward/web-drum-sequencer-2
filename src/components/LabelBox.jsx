@@ -1,9 +1,10 @@
 import React from 'react';
+import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import theme from '../styles/theme';
 import { Box, Text } from './design-system';
 
-const HoverBox = Box.extend`
+const HoverBox = styled(Box)`
   transition: border-color 0.2s;
 
   &:hover {

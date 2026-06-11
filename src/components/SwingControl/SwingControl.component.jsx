@@ -1,9 +1,10 @@
 import React from 'react';
+import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import { Knob } from '../Knob.component';
 import { Box, Text } from '../design-system';
 
-const LabelText = Text.extend`
+const LabelText = styled(Text)`
   transform: translateY(-0.3em);
 `;
 

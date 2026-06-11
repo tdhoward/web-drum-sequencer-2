@@ -1,8 +1,9 @@
 import React from 'react';
+import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import { Box, Button, Text } from '../design-system';
 
-const MSButton = Button.extend`
+const MSButton = styled(Button)`
   width: 0.9rem;
   height: 0.9rem;
   padding: 0;
@@ -10,7 +11,7 @@ const MSButton = Button.extend`
   transition: all 0.1s;
 `;
 
-const MSText = Text.extend`
+const MSText = styled(Text)`
   font-weight: 500;
   font-size: 0.6rem;
   margin: 1px 1px 0 0;
