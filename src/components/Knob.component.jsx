@@ -1,8 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import '../assets/js/webcomponents-lite';
 import knobImage from '../assets/images/maschine-50.png';
-import '../assets/js/webaudio-controls';
 
 export class Knob extends React.Component {
   componentDidMount() {

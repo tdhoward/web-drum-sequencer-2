@@ -6,54 +6,35 @@ version: 2
 jobs:
   build:
     docker:
-      # specify the version you desire here
-      - image: circleci/node:9.4.0
-      
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/mongo:3.4.4
-
+      - image: cimg/node:16.13.2
     working_directory: ~/repo
-
     steps:
       - checkout
-
-      # Download and cache dependencies
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "package.json" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
+            - v1-dependencies-{{ checksum "package.json" }}
+            - v1-dependencies-
       - run: npm install
-
       - run: npm run build
-
       - persist_to_workspace:
           root: ~/repo
           paths:
             - dist
-
       - save_cache:
           paths:
             - node_modules
           key: v1-dependencies-{{ checksum "package.json" }}
-  
+
   test:
     docker:
-      - image: circleci/node:9.4.0
+      - image: cimg/node:16.13.2
     working_directory: ~/repo
     steps:
       - checkout
-
-      # Download and cache dependencies
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "package.json" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
+            - v1-dependencies-{{ checksum "package.json" }}
+            - v1-dependencies-
       - run: npm install
       - run:
           name: Test
@@ -61,16 +42,13 @@ jobs:
       - run:
           name: Lint
           command: npm run lint
-        
-      # run tests!
-      #- run: yarn test
+
   deploy:
     docker:
       - image: circleci/python:2.7-jessie
     working_directory: ~/repo
     steps:
       - attach_workspace:
-          # Must be absolute path or relative path from working_directory
           at: ~/repo
       - run:
           name: Install awscli

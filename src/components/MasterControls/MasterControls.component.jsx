@@ -5,12 +5,14 @@ import { BPMInput } from '../BPMInput';
 import { PresetSelector } from '../PresetSelector';
 import { PatternSelector } from '../PatternSelector';
 import { SwingControl } from '../SwingControl';
+import { VolumeMeter } from '../VolumeMeter.component';
 
 export const MasterControls = () => (
   <Box mb={3} display="flex" alignItems="stretch" height="3rem" justifyContent="space-between">
     <Box display="flex" mr={2}>
-      <Box mr={2}>
+      <Box mr={2} display="flex" alignItems="center">
         <PlayButton />
+        <VolumeMeter />
       </Box>
       <BPMInput />
       <SwingControl />
