@@ -4,13 +4,19 @@ const fallbackUuid = () => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/
   return value.toString(16);
 });
 
+const getCrypto = () => {
+  if (typeof window !== 'undefined' && window.crypto) {
+    return window.crypto;
+  }
+
+  return undefined;
+};
+
 export const uuid = () => {
-  if (
-    typeof globalThis !== 'undefined'
-    && globalThis.crypto
-    && typeof globalThis.crypto.randomUUID === 'function'
-  ) {
-    return globalThis.crypto.randomUUID();
+  const crypto = getCrypto();
+
+  if (crypto && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
   }
 
   return fallbackUuid();
