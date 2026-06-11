@@ -1,5 +1,8 @@
 {
-  "extends": ["eslint:recommended", "plugin:react/recommended"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:react/recommended"
+  ],
   "env": {
     "browser": true,
     "jest": true,
@@ -8,10 +11,19 @@
   "rules": {
     "import/prefer-default-export": 0,
     "global-require": 0,
-    "jsx-a11y/label-has-for": [0],
-    "jsx-a11y/label-has-associated-control": [0],
+    "jsx-a11y/label-has-for": [
+      0
+    ],
+    "jsx-a11y/label-has-associated-control": [
+      0
+    ],
     "default-param-last": 0,
     "implicit-arrow-linebreak": 0
   },
-  "parser": "@babel/eslint-parser"
+  "parser": "@babel/eslint-parser",
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  }
 }
