@@ -15,7 +15,7 @@ import construction from '../../assets/images/construction-light.svg';
 import samples from '../../samples.config';
 
 const getSampleName = (sampleURL) => {
-  const maybeName = R.find(R.propEq('url', sampleURL))(samples);
+  const maybeName = R.find(R.propEq(sampleURL, 'url'))(samples);
   return maybeName ? maybeName.name : sampleURL;
 };
 
