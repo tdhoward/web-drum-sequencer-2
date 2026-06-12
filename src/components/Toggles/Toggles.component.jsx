@@ -40,7 +40,7 @@ export class TogglesComponent extends React.PureComponent {
     return (
       <Box display="flex" flex="1 1 auto" alignItems="center">
         {toggleGroups.map((toggleGroup, i) => (
-          <ToggleGroup key={i /* eslint-disable-line*/}>
+          <ToggleGroup key={i}>
             {toggleGroup}
           </ToggleGroup>
         ))}

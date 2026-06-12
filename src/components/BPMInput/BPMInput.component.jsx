@@ -83,7 +83,7 @@ export const BPMInputComponent = ({ bpm, setBPM }) => (
         }}
         aria-label="Increase beat per minute"
       >
-        <svg width="10px" height="6px" viewBox="0 0 12 7" version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink">
+        <svg width="10px" height="6px" viewBox="0 0 12 7" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink">
           <polygon points="0 7 12 7 6 0" fill="white" />
         </svg>
       </BPMButton>
@@ -99,7 +99,7 @@ export const BPMInputComponent = ({ bpm, setBPM }) => (
         }}
         aria-label="Decrease beat per minute"
       >
-        <svg width="10px" height="6px" viewBox="0 0 12 7" version="1.1" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink">
+        <svg width="10px" height="6px" viewBox="0 0 12 7" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink">
           <polygon points="0 0 12 0 6 7" fill="white" />
         </svg>
       </BPMButton>

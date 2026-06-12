@@ -1,16 +1,24 @@
 import React from 'react';
 
-export const timedCallback = (callback, delay) => WrappedEl => class extends React.Component {
-  constructor() {
-    super();
-    this.timer = setTimeout(callback, delay);
+export const timedCallback = (callback, delay) => (WrappedEl) => {
+  class TimedCallback extends React.Component {
+    constructor() {
+      super();
+      this.timer = setTimeout(callback, delay);
+    }
+
+    componentWillUnmount() {
+      clearTimeout(this.timer);
+    }
+
+    render() {
+      return <WrappedEl {...this.props} />;
+    }
   }
 
-  componentWillUnmount() {
-    clearTimeout(this.timer);
-  }
+  TimedCallback.displayName = WrappedEl
+    ? `TimedCallback(${WrappedEl.displayName || WrappedEl.name || 'Component'})`
+    : 'TimedCallback';
 
-  render() {
-    return <WrappedEl {...this.props} />;
-  }
+  return TimedCallback;
 };

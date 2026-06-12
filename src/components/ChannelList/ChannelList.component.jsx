@@ -12,7 +12,6 @@ const ChannelListBox = styled(Box)`
 
 export class ChannelListComponent extends React.Component {
   componentDidMount() {
-    // eslint-disable-next-line
     const sortable = new Sortable([this.channelContainer], {
       draggable: '.wds-draggable',
       handle: '.wds-channel-handle',
