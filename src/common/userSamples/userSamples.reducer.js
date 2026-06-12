@@ -1,19 +1,21 @@
-import { USER_SAMPLES_CONSTANTS } from './userSamples.constants';
+import { createSlice } from '@reduxjs/toolkit';
 
 export const userSamplesInitialState = [];
 
-export const userSamplesReducer = (state = userSamplesInitialState, action) => {
-  switch (action.type) {
-    case USER_SAMPLES_CONSTANTS.ADD_USER_SAMPLE:
-      return [
-        ...state,
-        action.payload,
-      ];
-    case USER_SAMPLES_CONSTANTS.REMOVE_USER_SAMPLE:
+export const userSamplesSlice = createSlice({
+  name: 'userSamples',
+  initialState: userSamplesInitialState,
+  reducers: {
+    addUserSample(state, action) {
+      state.push(action.payload);
+    },
+    removeUserSample(state, action) {
       return state.filter(userSample => userSample.id !== action.payload);
-    case USER_SAMPLES_CONSTANTS.CLEAR_USER_SAMPLES:
+    },
+    clearUserSamples() {
       return userSamplesInitialState;
-    default:
-      return state;
-  }
-};
+    },
+  },
+});
+
+export const userSamplesReducer = userSamplesSlice.reducer;

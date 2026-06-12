@@ -1,10 +1,11 @@
-import { windowInitialState, windowReducer } from './window.reducer';
 import {
+  windowInitialState,
+  windowReducer,
   setPresetPrompt,
   showFlashMessage,
   clearFlashMessage,
   setCanInstall,
-} from './window.actions';
+} from './window.reducer';
 
 describe('setPresetPrompt', () => {
   test('should set presetPromptOpen to true', () => {

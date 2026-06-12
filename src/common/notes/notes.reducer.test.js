@@ -1,10 +1,10 @@
-import { notesReducer } from './notes.reducer';
 import {
+  notesReducer,
   toggleNote,
   initializeChannelNotes,
   removeChannelNotes,
   setNotes,
-} from './notes.actions';
+} from './notes.reducer';
 
 jest.mock('../../presets');
 jest.mock('../../samples.config');

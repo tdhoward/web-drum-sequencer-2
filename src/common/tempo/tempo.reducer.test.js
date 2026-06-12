@@ -1,8 +1,9 @@
 import {
   tempoInitialState,
   tempoReducer,
+  setBPM,
+  setSwing,
 } from './tempo.reducer';
-import { setBPM, setSwing } from './tempo.actions';
 
 jest.mock('../../presets');
 

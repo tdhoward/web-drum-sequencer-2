@@ -1,95 +1,134 @@
+import { createSlice } from '@reduxjs/toolkit';
 import * as R from 'ramda';
-import { CHANNELS_CONSTANTS } from './channels.constants';
 import presets from '../../presets';
 
 export const channelsInitialState = R.clone(presets[1].channels);
 
-export const channelsReducer = (state = channelsInitialState, action) => {
-  switch (action.type) {
-    case CHANNELS_CONSTANTS.SET_CHANNEL_SAMPLE:
-      return state.map((channel) => {
-        if (channel.id === action.payload.channel) {
-          return { ...channel, sample: action.payload.sampleURL };
-        }
-        return channel;
-      });
-    case CHANNELS_CONSTANTS.SET_CHANNEL_GAIN:
-      return state.map((channel) => {
-        if (channel.id === action.payload.channel) {
-          return { ...channel, gain: action.payload.gain };
-        }
-        return channel;
-      });
-    case CHANNELS_CONSTANTS.SET_CHANNEL_PAN:
-      return state.map((channel) => {
-        if (channel.id === action.payload.channel) {
-          return { ...channel, pan: action.payload.pan };
-        }
-        return channel;
-      });
-    case CHANNELS_CONSTANTS.SET_CHANNEL_PITCH_COARSE:
-      return state.map((channel) => {
-        if (channel.id === action.payload.channel) {
-          return { ...channel, pitchCoarse: action.payload.pitchCoarse };
-        }
-        return channel;
-      });
-    case CHANNELS_CONSTANTS.SET_CHANNEL_PITCH_FINE:
-      return state.map((channel) => {
-        if (channel.id === action.payload.channel) {
-          return { ...channel, pitchFine: action.payload.pitchFine };
-        }
-        return channel;
-      });
-    case CHANNELS_CONSTANTS.SET_CHANNEL_REVERB:
-      return state.map((channel) => {
-        if (channel.id === action.payload.channel) {
-          return { ...channel, reverb: action.payload.reverb };
-        }
-        return channel;
-      });
-    case CHANNELS_CONSTANTS.ADD_CHANNEL:
-      return [...state, action.payload];
-    case CHANNELS_CONSTANTS.REMOVE_CHANNEL:
-      return state.filter(channel => channel.id !== action.payload);
-    case CHANNELS_CONSTANTS.SAMPLE_LOADED:
-      return state.map((channel) => {
-        if (channel.id === action.payload.channelID) {
-          return { ...channel, sampleLoaded: action.payload.isLoaded };
-        }
-        return channel;
-      });
-    case CHANNELS_CONSTANTS.SET_CHANNEL_MUTED:
-      return state.map((channel) => {
-        if (channel.id === action.payload.channel) {
-          return {
-            ...channel,
-            muted: action.payload.muted,
-            solo: false,
-          };
-        }
-        return channel;
-      });
-    case CHANNELS_CONSTANTS.SET_CHANNEL_SOLO:
-      return state.map((channel) => {
-        if (channel.id === action.payload.channel) {
-          return {
-            ...channel,
-            solo: action.payload.solo,
-            muted: false,
-          };
-        }
-        return channel;
-      });
-    case CHANNELS_CONSTANTS.UPDATE_CHANNEL_ORDER:
-      return R.insert(
-        action.payload.newIndex,
-        state[action.payload.oldIndex],
-        R.remove(action.payload.oldIndex, 1, state),
-      );
-    case CHANNELS_CONSTANTS.SET_CHANNELS:
-      return [...action.payload];
-    default:
-      return state;
+const updateChannel = (state, channelId, update) => {
+  const channel = state.find(item => item.id === channelId);
+  if (channel) {
+    update(channel);
   }
 };
+
+export const channelsSlice = createSlice({
+  name: 'channels',
+  initialState: channelsInitialState,
+  reducers: {
+    setChannelSample: {
+      reducer(state, action) {
+        updateChannel(state, action.payload.channel, (channel) => {
+          channel.sample = action.payload.sampleURL;
+        });
+      },
+      prepare(channel, sampleURL) {
+        return { payload: { channel, sampleURL } };
+      },
+    },
+    setChannelGain: {
+      reducer(state, action) {
+        updateChannel(state, action.payload.channel, (channel) => {
+          channel.gain = action.payload.gain;
+        });
+      },
+      prepare(channel, gain) {
+        return { payload: { channel, gain } };
+      },
+    },
+    setChannelPan: {
+      reducer(state, action) {
+        updateChannel(state, action.payload.channel, (channel) => {
+          channel.pan = action.payload.pan;
+        });
+      },
+      prepare(channel, pan) {
+        return { payload: { channel, pan } };
+      },
+    },
+    setChannelPitchCoarse: {
+      reducer(state, action) {
+        updateChannel(state, action.payload.channel, (channel) => {
+          channel.pitchCoarse = action.payload.pitchCoarse;
+        });
+      },
+      prepare(channel, pitchCoarse) {
+        return { payload: { channel, pitchCoarse } };
+      },
+    },
+    setChannelPitchFine: {
+      reducer(state, action) {
+        updateChannel(state, action.payload.channel, (channel) => {
+          channel.pitchFine = action.payload.pitchFine;
+        });
+      },
+      prepare(channel, pitchFine) {
+        return { payload: { channel, pitchFine } };
+      },
+    },
+    setChannelReverb: {
+      reducer(state, action) {
+        updateChannel(state, action.payload.channel, (channel) => {
+          channel.reverb = action.payload.reverb;
+        });
+      },
+      prepare(channel, reverb) {
+        return { payload: { channel, reverb } };
+      },
+    },
+    addChannel(state, action) {
+      state.push(action.payload);
+    },
+    removeChannel(state, action) {
+      return state.filter(channel => channel.id !== action.payload);
+    },
+    sampleLoaded: {
+      reducer(state, action) {
+        updateChannel(state, action.payload.channelID, (channel) => {
+          channel.sampleLoaded = action.payload.isLoaded;
+        });
+      },
+      prepare(channelID, isLoaded) {
+        return { payload: { channelID, isLoaded } };
+      },
+    },
+    setChannelMuted: {
+      reducer(state, action) {
+        updateChannel(state, action.payload.channel, (channel) => {
+          channel.muted = action.payload.muted;
+          channel.solo = false;
+        });
+      },
+      prepare(channel, muted) {
+        return { payload: { channel, muted } };
+      },
+    },
+    setChannelSolo: {
+      reducer(state, action) {
+        updateChannel(state, action.payload.channel, (channel) => {
+          channel.solo = action.payload.solo;
+          channel.muted = false;
+        });
+      },
+      prepare(channel, solo) {
+        return { payload: { channel, solo } };
+      },
+    },
+    updateChannelOrder: {
+      reducer(state, action) {
+        return R.insert(
+          action.payload.newIndex,
+          state[action.payload.oldIndex],
+          R.remove(action.payload.oldIndex, 1, state),
+        );
+      },
+      prepare(oldIndex, newIndex) {
+        return { payload: { oldIndex, newIndex } };
+      },
+    },
+    replaceChannels(state, action) {
+      return [...action.payload];
+    },
+  },
+});
+
+export const channelsReducer = channelsSlice.reducer;

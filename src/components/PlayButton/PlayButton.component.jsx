@@ -16,7 +16,7 @@ const StyledPlayButton = styled(FancyButton)`
 export const PlayButtonComponent = ({ startPlaybackAndResume, stopPlayback, playing }) => (playing
   ? (
     <StyledPlayButton
-      onClick={stopPlayback}
+      onClick={() => stopPlayback()}
       variant="red"
     >
       <Text mr={2} fontSize={1}>
@@ -31,7 +31,7 @@ export const PlayButtonComponent = ({ startPlaybackAndResume, stopPlayback, play
   )
   : (
     <StyledPlayButton
-      onClick={startPlaybackAndResume}
+      onClick={() => startPlaybackAndResume()}
       variant="green"
     >
       <Text mr={2} fontSize={1}>

@@ -1,4 +1,4 @@
-import { TEMPO_CONSTANTS } from './tempo.constants';
+import { createSlice } from '@reduxjs/toolkit';
 import presets from '../../presets';
 
 export const tempoInitialState = {
@@ -6,19 +6,22 @@ export const tempoInitialState = {
   swing: presets[1].swing,
 };
 
-export const tempoReducer = (state = tempoInitialState, action) => {
-  switch (action.type) {
-    case TEMPO_CONSTANTS.SET_BPM:
-      return {
-        ...state,
-        bpm: action.payload,
-      };
-    case TEMPO_CONSTANTS.SET_SWING:
-      return {
-        ...state,
-        swing: action.payload,
-      };
-    default:
-      return state;
-  }
-};
+export const tempoSlice = createSlice({
+  name: 'tempo',
+  initialState: tempoInitialState,
+  reducers: {
+    setBPM(state, action) {
+      state.bpm = action.payload;
+    },
+    setSwing(state, action) {
+      state.swing = action.payload;
+    },
+  },
+});
+
+export const {
+  setBPM,
+  setSwing,
+} = tempoSlice.actions;
+
+export const tempoReducer = tempoSlice.reducer;

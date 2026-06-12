@@ -23,7 +23,7 @@ describe('startPlayback', () => {
   });
 });
 
-describe('startPlayback', () => {
+describe('stopPlayback', () => {
   test('should set playing to false', () => {
     const state = playbackSessionReducer(playbackSessionInitialState, stopPlayback());
     expect(state.playing).toBe(false);
@@ -32,6 +32,11 @@ describe('startPlayback', () => {
   test('should set startTime to null', () => {
     const state = playbackSessionReducer(playbackSessionInitialState, stopPlayback());
     expect(state.startTime).toBeNull();
+  });
+
+  test('should ignore accidental event arguments', () => {
+    const action = stopPlayback({ type: 'click' });
+    expect(action.payload).toBeUndefined();
   });
 });
 

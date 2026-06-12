@@ -1,6 +1,15 @@
-import { legacy_createStore as createStore, applyMiddleware, compose } from 'redux';
-import { thunk } from 'redux-thunk';
-import { persistStore, persistReducer, createMigrate } from 'redux-persist';
+import { configureStore } from '@reduxjs/toolkit';
+import {
+  persistStore,
+  persistReducer,
+  createMigrate,
+  FLUSH,
+  REHYDRATE,
+  PAUSE,
+  PERSIST,
+  PURGE,
+  REGISTER,
+} from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import rootReducer from './reducer';
 
@@ -18,8 +27,16 @@ const persistConfig = {
   migrate: createMigrate(migrations, { debug: import.meta.env.DEV }),
 };
 
-const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
-export const store = createStore(persistedReducer, composeEnhancers(applyMiddleware(thunk)));
+export const store = configureStore({
+  reducer: persistedReducer,
+  devTools: import.meta.env.DEV,
+  middleware: getDefaultMiddleware => getDefaultMiddleware({
+    serializableCheck: {
+      ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+    },
+  }),
+});
+
 export const persistor = persistStore(store);

@@ -1,55 +1,53 @@
+import { createSlice } from '@reduxjs/toolkit';
 import { uuid } from '../../services/uuid';
 import presets from '../../presets';
 import { EMPTY_NOTE_ROW } from '../../presets/empty';
-import { NOTES_CONSTANTS } from './notes.constants';
 
 export const notesInitialState = presets[1].notes;
 
-// Returns a new noteAr clone with a note at beat either added or removed
-const toggleNote = (noteAr, beat) => {
-  if (noteAr.find(note => note.beat === beat)) {
-    return noteAr.filter(note => note.beat !== beat);
+const toggleNoteInRow = (noteAr, beat, id) => {
+  const noteIndex = noteAr.findIndex(note => note.beat === beat);
+  if (noteIndex >= 0) {
+    noteAr.splice(noteIndex, 1);
+    return;
   }
-  return [
-    ...noteAr,
-    {
-      beat,
-      id: uuid(),
-    },
-  ];
+
+  noteAr.push({
+    beat,
+    id,
+  });
 };
 
-// Returns new state object with note at beat on pattern toggled
-const toggleNoteState = (state, { channelID, pattern, beat }) => ({
-  ...state,
-  [channelID]: state[channelID].map((noteAr, patternIndex) => {
-    if (patternIndex === pattern) {
-      // This is the active pattern
-      return toggleNote(noteAr, beat);
-    }
-    return noteAr; // Do nothing to other patterns
-  }),
+export const notesSlice = createSlice({
+  name: 'notes',
+  initialState: notesInitialState,
+  reducers: {
+    toggleNote: {
+      reducer(state, action) {
+        const { channelID, pattern, beat, id } = action.payload;
+        toggleNoteInRow(state[channelID][pattern], beat, id);
+      },
+      prepare(channelID, pattern, beat) {
+        return { payload: { channelID, pattern, beat, id: uuid() } };
+      },
+    },
+    initializeChannelNotes(state, action) {
+      state[action.payload] = EMPTY_NOTE_ROW;
+    },
+    removeChannelNotes(state, action) {
+      state[action.payload] = undefined;
+    },
+    setNotes(state, action) {
+      return { ...action.payload };
+    },
+  },
 });
 
-export const notesReducer = (state = notesInitialState, action) => {
-  switch (action.type) {
-    case NOTES_CONSTANTS.TOGGLE_NOTE:
-      return toggleNoteState(state, action.payload);
-    case NOTES_CONSTANTS.INITIALIZE_CHANNEL:
-      return {
-        ...state,
-        [action.payload]: EMPTY_NOTE_ROW, // TO DO: add empty array for each pattern
-      };
-    case NOTES_CONSTANTS.REMOVE_CHANNEL:
-      return {
-        ...state,
-        [action.payload]: undefined,
-      };
-    case NOTES_CONSTANTS.SET_NOTES:
-      return {
-        ...action.payload,
-      };
-    default:
-      return state;
-  }
-};
+export const {
+  initializeChannelNotes,
+  removeChannelNotes,
+  setNotes,
+  toggleNote,
+} = notesSlice.actions;
+
+export const notesReducer = notesSlice.reducer;

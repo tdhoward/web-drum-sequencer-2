@@ -4,7 +4,7 @@ import { HoverButton } from '../design-system';
 
 export const AddChannelButtonComponent = ({ newChannel }) => (
   <HoverButton
-    onClick={newChannel}
+    onClick={() => newChannel()}
     width="16rem"
     bg="darkGray"
     color="gray"

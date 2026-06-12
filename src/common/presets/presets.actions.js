@@ -1,30 +1,17 @@
 import { setBPM, setSwing } from '../tempo';
 import { loadChannels } from '../channels';
 import { setPattern, setSelectedChannel } from '../master';
-import { PRESETS_CONSTANTS } from './presets.constants';
 import presets from '../../presets';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import { currentStateSelector } from './presets.selectors';
+import { presetsSlice } from './presets.reducer';
 
-export const setPreset = presetName => ({
-  type: PRESETS_CONSTANTS.SET_PRESET,
-  payload: presetName,
-});
-
-export const savePreset = preset => ({
-  type: PRESETS_CONSTANTS.SAVE_PRESET,
-  payload: preset,
-});
-
-export const savePresetAs = preset => ({
-  type: PRESETS_CONSTANTS.SAVE_PRESET_AS,
-  payload: preset,
-});
-
-export const deletePreset = presetName => ({
-  type: PRESETS_CONSTANTS.DELETE_PRESET,
-  payload: presetName,
-});
+export const {
+  setPreset,
+  savePreset,
+  savePresetAs,
+  deletePreset,
+} = presetsSlice.actions;
 
 export const loadPreset = preset => (dispatch) => {
   dispatch(setBPM(preset.bpm));

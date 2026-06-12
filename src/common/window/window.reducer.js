@@ -1,4 +1,11 @@
-import { WINDOW_CONSTANTS } from './window.constants';
+import { createSlice } from '@reduxjs/toolkit';
+
+export const FLASH_MESSAGES = {
+  INSTALL_PWA: 'FLASH_MESSAGE_INSTALL_PWA',
+  SAMPLE_LOAD_ERROR: 'SAMPLE_LOAD_ERROR',
+  PRESET_SAVED: 'PRESET_SAVED',
+  PRESET_DELETED: 'PRESET_DELETED',
+};
 
 export const windowInitialState = {
   presetPromptOpen: false,
@@ -7,30 +14,45 @@ export const windowInitialState = {
   canInstall: false,
 };
 
-export const windowReducer = (state = windowInitialState, action) => {
-  switch (action.type) {
-    case WINDOW_CONSTANTS.PRESET_PROMPT_OPEN:
-      return {
-        ...state,
-        presetPromptOpen: action.payload,
-      };
-    case WINDOW_CONSTANTS.SET_FLASH_MESSAGE:
-      return {
-        ...state,
-        flashMessageKey: action.payload,
-        flashMessageVisible: true,
-      };
-    case WINDOW_CONSTANTS.CLEAR_FLASH_MESSAGE:
-      return {
-        ...state,
-        flashMessageVisible: false,
-      };
-    case WINDOW_CONSTANTS.SET_CAN_INSTALL:
-      return {
-        ...state,
-        canInstall: action.payload,
-      };
-    default:
-      return state;
-  }
-};
+export const windowSlice = createSlice({
+  name: 'window',
+  initialState: windowInitialState,
+  reducers: {
+    setPresetPrompt(state, action) {
+      state.presetPromptOpen = action.payload;
+    },
+    setPresetNameField: {
+      reducer() {
+        // Preserved as a no-op because the legacy action existed without reducer state.
+      },
+      prepare() {
+        return { payload: undefined };
+      },
+    },
+    showFlashMessage(state, action) {
+      state.flashMessageKey = action.payload;
+      state.flashMessageVisible = true;
+    },
+    clearFlashMessage: {
+      reducer(state) {
+        state.flashMessageVisible = false;
+      },
+      prepare() {
+        return { payload: undefined };
+      },
+    },
+    setCanInstall(state, action) {
+      state.canInstall = action.payload;
+    },
+  },
+});
+
+export const {
+  setPresetPrompt,
+  setPresetNameField,
+  showFlashMessage,
+  clearFlashMessage,
+  setCanInstall,
+} = windowSlice.actions;
+
+export const windowReducer = windowSlice.reducer;

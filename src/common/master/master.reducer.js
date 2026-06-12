@@ -1,4 +1,4 @@
-import { MASTER_CONSTANTS } from './master.constants';
+import { createSlice } from '@reduxjs/toolkit';
 import presets from '../../presets';
 
 export const masterInitialState = {
@@ -6,19 +6,22 @@ export const masterInitialState = {
   selectedChannel: presets[1].channels[0].id,
 };
 
-export const masterReducer = (state = masterInitialState, action) => {
-  switch (action.type) {
-    case MASTER_CONSTANTS.SET_PATTERN:
-      return {
-        ...state,
-        pattern: action.payload,
-      };
-    case MASTER_CONSTANTS.SET_SELECTED_CHANNEL:
-      return {
-        ...state,
-        selectedChannel: action.payload,
-      };
-    default:
-      return state;
-  }
-};
+export const masterSlice = createSlice({
+  name: 'master',
+  initialState: masterInitialState,
+  reducers: {
+    setPattern(state, action) {
+      state.pattern = action.payload;
+    },
+    setSelectedChannel(state, action) {
+      state.selectedChannel = action.payload;
+    },
+  },
+});
+
+export const {
+  setPattern,
+  setSelectedChannel,
+} = masterSlice.actions;
+
+export const masterReducer = masterSlice.reducer;

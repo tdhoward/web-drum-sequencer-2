@@ -1,7 +1,8 @@
-import { masterInitialState, masterReducer } from './master.reducer';
 import {
+  masterInitialState,
+  masterReducer,
   setPattern,
-} from './master.actions';
+} from './master.reducer';
 
 describe('setPattern', () => {
   test('should change the pattern', () => {
