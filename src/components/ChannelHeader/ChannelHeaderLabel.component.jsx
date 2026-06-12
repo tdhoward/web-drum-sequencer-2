@@ -7,7 +7,7 @@ const HeaderText = styled(Text)`
   text-transform: uppercase;
 `;
 
-export const ChannelHeaderLabel = ({ children, centerText, ...restProps }) => (
+export const ChannelHeaderLabel = ({ children, centerText = false, ...restProps }) => (
   <Box p={1} {...restProps}>
     <HeaderText
       color="white"
@@ -25,6 +25,3 @@ ChannelHeaderLabel.propTypes = {
   centerText: PropTypes.bool,
 };
 
-ChannelHeaderLabel.defaultProps = {
-  centerText: false,
-};

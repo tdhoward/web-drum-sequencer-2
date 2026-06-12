@@ -1,7 +1,12 @@
 import styled from 'styled-components';
 import * as ss from 'styled-system';
 
-const Text = styled.span`
+const Text = styled.span.attrs(({
+  m = 0,
+  p = 0,
+  lineHeight = '1em',
+  display = 'block',
+}) => ({ m, p, lineHeight, display }))`
   ${ss.color}
   ${ss.fontWeight}
   ${ss.fontSize}
@@ -21,11 +26,5 @@ const Text = styled.span`
   user-select: ${({ userSelect }) => userSelect};
 `;
 
-Text.defaultProps = {
-  m: 0,
-  p: 0,
-  lineHeight: '1em',
-  display: 'block',
-};
 
 export { Text };

@@ -1,7 +1,10 @@
 import styled from 'styled-components';
 import * as ss from 'styled-system';
 
-const Label = styled.label`
+const Label = styled.label.attrs(({
+  m = 0,
+  p = 0,
+}) => ({ m, p }))`
   ${ss.color}
   ${ss.fontWeight}
   ${ss.fontSize}
@@ -15,9 +18,5 @@ const Label = styled.label`
   line-height: 1em;
 `;
 
-Label.defaultProps = {
-  m: 0,
-  p: 0,
-};
 
 export { Label };

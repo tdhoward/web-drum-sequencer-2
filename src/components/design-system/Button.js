@@ -1,7 +1,13 @@
 import styled from 'styled-components';
 import * as ss from 'styled-system';
 
-const Button = styled.button`
+const Button = styled.button.attrs(({
+  border = 'none',
+  fontWeight = 'bold',
+  borderRadius = '0.25rem',
+  variant = 'primary',
+  width = 5,
+}) => ({ border, fontWeight, borderRadius, variant, width }))`
   ${ss.color}
   ${ss.width}
   ${ss.height}
@@ -28,12 +34,5 @@ const Button = styled.button`
   touch-action: manipulation;
 `;
 
-Button.defaultProps = {
-  border: 'none',
-  fontWeight: 'bold',
-  borderRadius: '0.25rem',
-  variant: 'primary',
-  width: 5,
-};
 
 export { Button };

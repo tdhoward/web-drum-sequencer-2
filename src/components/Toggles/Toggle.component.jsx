@@ -5,9 +5,12 @@ import * as ss from 'styled-system';
 import { Box } from '../design-system';
 import theme from '../../styles/theme';
 
-const gradient = `linear-gradient(180deg, ${theme.colors.primary} 0%, ${theme.colors.secondary} 100%);`;
+const gradient = `linear-gradient(180deg, ${theme.colors.primary} 0%, ${theme.colors.secondary} 100%)`;
 
-const BeatButton = styled.button`
+const BeatButton = styled.button.attrs(({
+  border = 'none',
+  borderRadius = '100%',
+}) => ({ border, borderRadius }))`
   ${ss.color}
   ${ss.space}
   ${ss.width}
@@ -20,17 +23,13 @@ const BeatButton = styled.button`
   position: relative;
   background: ${({ isActive }) => (isActive
     ? gradient
-    : theme.colors.darkGray)}
+    : theme.colors.darkGray)};
 
   &:focus {
     box-shadow: 0 0 5px 5px rgba(100, 180, 255, 0.5);
   }
 `;
 
-BeatButton.defaultProps = {
-  border: 'none',
-  borderRadius: '100%',
-};
 
 export const Toggle = ({ isActive, onClick, beat }) => (
   <BeatButton
@@ -52,8 +51,8 @@ export const Toggle = ({ isActive, onClick, beat }) => (
       height="100%"
       left={0}
       top={0}
-      opacity={0}
       borderRadius="100%"
+      style={{ opacity: 0, transform: 'scale(1)' }}
     />
   </BeatButton>
 );

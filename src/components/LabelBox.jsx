@@ -15,7 +15,7 @@ const HoverBox = styled(Box)`
   }
 `;
 
-export const LabelBox = ({ label, children, hoverEffect }) => (
+export const LabelBox = ({ label, children, hoverEffect = false }) => (
   <HoverBox
     display="flex"
     border="2px solid"
@@ -51,6 +51,3 @@ LabelBox.propTypes = {
   hoverEffect: PropTypes.bool,
 };
 
-LabelBox.defaultProps = {
-  hoverEffect: false,
-};
