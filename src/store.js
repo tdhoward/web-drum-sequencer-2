@@ -1,34 +1,25 @@
-import { createStore, applyMiddleware, compose } from 'redux';
-import thunk from 'redux-thunk';
+import { legacy_createStore as createStore, applyMiddleware, compose } from 'redux';
+import { thunk } from 'redux-thunk';
 import { persistStore, persistReducer, createMigrate } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
-import reducer from './reducer';
+import rootReducer from './reducer';
 
 const migrations = {
-  1: () => ({ }),
-  2: () => ({ }),
+  1: () => ({}),
+  2: () => ({}),
+  3: () => ({}),
 };
 
-export const configureStore = (callback) => {
-  const persistConfig = {
-    key: 'root-v1.0.0',
-    storage,
-    version: 2,
-    blacklist: ['playbackSession', 'window'],
-    migrate: createMigrate(migrations, { debug: process.env.__DEV__ }), // eslint-disable-line
-  };
-
-  const persistedReducer = persistReducer(persistConfig, reducer);
-
-  const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose; // eslint-disable-line
-  const store = createStore(persistedReducer, composeEnhancers(
-    applyMiddleware(thunk),
-  ));
-
-  const persistor = persistStore(store, null, callback);
-
-  return {
-    store,
-    persistor,
-  };
+const persistConfig = {
+  key: 'root',
+  version: 3,
+  storage,
+  blacklist: ['playbackSession', 'window'],
+  migrate: createMigrate(migrations, { debug: import.meta.env.DEV }),
 };
+
+const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
+const persistedReducer = persistReducer(persistConfig, rootReducer);
+
+export const store = createStore(persistedReducer, composeEnhancers(applyMiddleware(thunk)));
+export const persistor = persistStore(store);

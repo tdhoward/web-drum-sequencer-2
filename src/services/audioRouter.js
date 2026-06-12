@@ -5,8 +5,15 @@ import impulseResponse from '../assets/impulse-responses/ruby-room.mp3';
 
 const audioCtx = getAudioContext();
 
+const masterOut = audioCtx.createGain();
+masterOut.connect(audioCtx.destination);
+
+export const analyserNode = audioCtx.createAnalyser();
+analyserNode.smoothingTimeConstant = 0;
+masterOut.connect(analyserNode);
+
 const reverbNode = audioCtx.createConvolver();
-reverbNode.connect(audioCtx.destination);
+reverbNode.connect(masterOut);
 loadImpulseResponse(impulseResponse).then((impulseResponseArrayBuffer) => {
   reverbNode.buffer = impulseResponseArrayBuffer;
 });
@@ -18,8 +25,12 @@ loadImpulseResponse(impulseResponse).then((impulseResponseArrayBuffer) => {
  *  -> Gain node
  *    -> Reverb node
  *      -> Master out
+ *        -> Destination
+ *        -> Analyser
  *    -> Pan node
  *      -> Master out
+ *        -> Destination
+ *        -> Analyser
  */
 
 const channelGainNodes = {};
@@ -41,11 +52,8 @@ const calculateGain = (channel, soloEnabled) => {
 
 const updateGainNode = (channel, soloEnabled) => {
   if (typeof channelGainNodes[channel.id] === 'undefined') {
-    // Set up a GainNode to control note volume
     channelGainNodes[channel.id] = audioCtx.createGain();
     channelGainNodes[channel.id].connect(channelPanNodes[channel.id]);
-
-    // Also route to reverb
     channelGainNodes[channel.id].connect(channelReverbNodes[channel.id]);
   }
   channelGainNodes[channel.id].gain.setValueAtTime(
@@ -58,7 +66,7 @@ const updatePanNode = (channel) => {
   if (stereoPannerSupported) {
     if (typeof channelPanNodes[channel.id] === 'undefined') {
       channelPanNodes[channel.id] = audioCtx.createStereoPanner();
-      channelPanNodes[channel.id].connect(audioCtx.destination);
+      channelPanNodes[channel.id].connect(masterOut);
     }
     channelPanNodes[channel.id].pan.setValueAtTime(
       typeof channel.pan === 'undefined' ? 0 : channel.pan,
@@ -68,7 +76,7 @@ const updatePanNode = (channel) => {
     if (typeof channelPanNodes[channel.id] === 'undefined') {
       channelPanNodes[channel.id] = audioCtx.createPanner();
       channelPanNodes[channel.id].panningModel = 'equalpower';
-      channelPanNodes[channel.id].connect(audioCtx.destination);
+      channelPanNodes[channel.id].connect(masterOut);
     }
     const pan = typeof channel.pan === 'undefined' ? 0 : channel.pan;
     channelPanNodes[channel.id].setPosition(pan, 0, 1 - Math.abs(pan));
@@ -77,7 +85,6 @@ const updatePanNode = (channel) => {
 
 const updateReverbNode = (channel) => {
   if (typeof channelReverbNodes[channel.id] === 'undefined') {
-    // Set up a GainNode to control the send volume to reverb
     channelReverbNodes[channel.id] = audioCtx.createGain();
     channelReverbNodes[channel.id].connect(reverbNode);
   }
@@ -104,20 +111,44 @@ export const updateChannelNodes = (channels) => {
   });
 };
 
+const ensureChannelNodes = (channelID) => {
+  if (typeof channelPanNodes[channelID] === 'undefined') {
+    if (stereoPannerSupported) {
+      channelPanNodes[channelID] = audioCtx.createStereoPanner();
+      channelPanNodes[channelID].connect(masterOut);
+    } else {
+      channelPanNodes[channelID] = audioCtx.createPanner();
+      channelPanNodes[channelID].panningModel = 'equalpower';
+      channelPanNodes[channelID].connect(masterOut);
+    }
+  }
+
+  if (typeof channelReverbNodes[channelID] === 'undefined') {
+    channelReverbNodes[channelID] = audioCtx.createGain();
+    channelReverbNodes[channelID].gain.setValueAtTime(0, audioCtx.currentTime);
+    channelReverbNodes[channelID].connect(reverbNode);
+  }
+
+  if (typeof channelGainNodes[channelID] === 'undefined') {
+    channelGainNodes[channelID] = audioCtx.createGain();
+    channelGainNodes[channelID].gain.setValueAtTime(1, audioCtx.currentTime);
+    channelGainNodes[channelID].connect(channelPanNodes[channelID]);
+    channelGainNodes[channelID].connect(channelReverbNodes[channelID]);
+  }
+};
+
 export const playNote = (noteTime, buffer, channelID, notePitch = 0) => {
-  // Set up the AudioBufferSourceNode
+  ensureChannelNodes(channelID);
+
   const source = audioCtx.createBufferSource();
   source.buffer = buffer;
 
-  // Detune if available
   if (detuneSupported) {
     source.detune.value = notePitch;
   }
 
-  // Route to channel gain node
   source.connect(channelGainNodes[channelID]);
 
-  // Connect and start
   source.start(noteTime);
   return source;
 };

@@ -18,3 +18,4 @@ export * from './FlashMessage';
 export * from './SwingControl';
 export * from './Branding';
 export * from './InstallButton';
+export * from './VolumeMeter.component';

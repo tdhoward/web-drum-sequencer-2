@@ -1,0 +1,21 @@
+{
+  "name": "WDS-1: Web Drum Sequencer",
+  "short_name": "WDS-1",
+  "description": "Browser-based drum machine and sequencer for crafting beats on the go.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#202429",
+  "theme_color": "#202429",
+  "icons": [
+    {
+      "src": "/assets/icons/android-icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

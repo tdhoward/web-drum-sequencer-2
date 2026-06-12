@@ -1,8 +1,9 @@
+import styled from 'styled-components';
 import { Button } from './Button';
 
 const getColor = (theme, color) => theme.colors[color] || color;
 
-export const HoverButton = Button.extend`
+export const HoverButton = styled(Button)`
   transition: all ${({ transitionSpeed }) => transitionSpeed}
 
   &:hover {

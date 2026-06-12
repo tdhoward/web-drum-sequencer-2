@@ -1,7 +1,12 @@
 import styled from 'styled-components';
 import * as ss from 'styled-system';
 
-const Line = styled.div`
+const Line = styled.div.attrs(({
+  bg = 'nearWhite',
+  width = '100%',
+  display = 'block',
+  height = 1,
+}) => ({ bg, width, display, height }))`
   ${ss.color}
   ${ss.space}
   ${ss.borderRadius}
@@ -14,11 +19,5 @@ const Line = styled.div`
   ${ss.alignItems}
 `;
 
-Line.defaultProps = {
-  bg: 'nearWhite',
-  width: '100%',
-  display: 'block',
-  height: 1,
-};
 
 export { Line };

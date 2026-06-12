@@ -1,7 +1,10 @@
 import styled from 'styled-components';
 import * as ss from 'styled-system';
 
-const TextInput = styled.input`
+const TextInput = styled.input.attrs(({
+  m = 0,
+  p = 0,
+}) => ({ m, p }))`
   ${ss.color}
   ${ss.fontWeight}
   ${ss.fontSize}
@@ -15,9 +18,5 @@ const TextInput = styled.input`
   border: none;
 `;
 
-TextInput.defaultProps = {
-  m: 0,
-  p: 0,
-};
 
 export { TextInput };
