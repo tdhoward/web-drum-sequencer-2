@@ -9,7 +9,6 @@ import {
 import { SampleLoadError } from '../SampleLoadError.component';
 import { PresetSaved } from '../PresetSaved.component';
 import { PresetDeleted } from '../PresetDeleted.component';
-import { timedCallback } from '../timedCallback.hoc';
 
 const getMessageComponent = (messageKey) => {
   switch (messageKey) {
@@ -27,10 +26,40 @@ const getMessageComponent = (messageKey) => {
 export class FlashMessageComponent extends React.Component {
   componentDidMount() {
     this.animateBox();
+    this.updateDismissTimer();
   }
 
-  componentDidUpdate() {
+  componentDidUpdate(prevProps) {
     this.animateBox();
+    this.updateDismissTimer(prevProps);
+  }
+
+  componentWillUnmount() {
+    this.clearDismissTimer();
+  }
+
+  clearDismissTimer() {
+    if (this.dismissTimer) {
+      clearTimeout(this.dismissTimer);
+      this.dismissTimer = null;
+    }
+  }
+
+  updateDismissTimer(prevProps = {}) {
+    const { flashMessageVisible, messageKey, onDismiss } = this.props;
+    const flashMessageChanged = prevProps.flashMessageVisible !== flashMessageVisible
+      || prevProps.messageKey !== messageKey
+      || prevProps.onDismiss !== onDismiss;
+
+    if (!flashMessageChanged) {
+      return;
+    }
+
+    this.clearDismissTimer();
+
+    if (messageKey && flashMessageVisible) {
+      this.dismissTimer = setTimeout(onDismiss, 6000);
+    }
   }
 
   animateBox() {
@@ -61,7 +90,7 @@ export class FlashMessageComponent extends React.Component {
   render() {
     const { messageKey, onDismiss } = this.props;
     const Message = getMessageComponent(messageKey);
-    const DisappearingMessage = timedCallback(onDismiss, 6000)(Message);
+
     return Message
       ? (
         <Box
@@ -79,7 +108,7 @@ export class FlashMessageComponent extends React.Component {
             ref={(comp) => { this.flashMessage = comp; }}
             p={4}
           >
-            <DisappearingMessage onDismiss={onDismiss} />
+            <Message onDismiss={onDismiss} />
             <HoverButton
               bg="transparent"
               m={1}
