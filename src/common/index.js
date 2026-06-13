@@ -6,3 +6,5 @@ export * from './notes';
 export * from './presets';
 export * from './window';
 export * from './userSamples';
+export * from './song';
+export * from './patterns';

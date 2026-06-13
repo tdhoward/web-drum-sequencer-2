@@ -1,5 +1,5 @@
 import { loadSample } from '../../services/sampleStore';
-import { setNotes, initializeChannelNotes } from '../notes';
+import { setNotes, initializeChannelNotes, removeChannelNotes } from '../notes';
 import { uuid } from '../../services/uuid';
 import factorySamples from '../../samples.config';
 import { setSelectedChannel } from '../master';
@@ -35,7 +35,7 @@ export const loadChannels = (channels, notes) => (dispatch) => {
   channels.forEach((channel) => {
     loadSampleStatefully(dispatch, channel);
   });
-  dispatch(replaceChannels(channels));
+  dispatch(replaceChannels(channels, notes));
   dispatch(setNotes(notes));
 };
 
@@ -69,9 +69,15 @@ export const loadAndSetChannelSample = (channelID, sampleURL) => (dispatch) => {
 export const deleteChannel = (channelID, channels, selectedChannelId) => (dispatch) => {
   if (channels.length === 1) {
     dispatch(newChannel());
+    dispatch(removeChannelNotes(channelID));
+    dispatch(removeChannel(channelID));
+    return;
   }
+
   if (selectedChannelId === channelID) {
-    dispatch(setSelectedChannel(channels[0].id));
+    const nextChannel = channels.find(channel => channel.id !== channelID);
+    dispatch(setSelectedChannel(nextChannel.id));
   }
+  dispatch(removeChannelNotes(channelID));
   dispatch(removeChannel(channelID));
 };

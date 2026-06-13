@@ -5,13 +5,13 @@ import { PersistGate } from 'redux-persist/integration/react';
 import App from './components/App';
 import { initializeAudio } from './services/audioLoop';
 import { store, persistor } from './store';
-import { loadSampleStatefully } from './common';
+import { channelsSelector, loadSampleStatefully } from './common';
 import { startAnimations } from './services/animations';
 import { initializePwaInstall } from './services/pwaInstall';
 import { initializeDB } from './services/database';
 
 window.addEventListener('online', () => {
-  const { channels } = store.getState();
+  const channels = channelsSelector(store.getState());
 
   channels.forEach((channel) => {
     if (!channel.sampleLoaded) {
@@ -38,7 +38,7 @@ initializePwaInstall(store);
 
 initializeDB()
   .then(() => {
-    const { channels } = store.getState();
+    const channels = channelsSelector(store.getState());
 
     channels.forEach((channel) => {
       loadSampleStatefully(store.dispatch, channel);

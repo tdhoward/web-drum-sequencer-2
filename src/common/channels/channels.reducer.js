@@ -1,14 +1,31 @@
 import { createSlice } from '@reduxjs/toolkit';
-import * as R from 'ramda';
 import presets from '../../presets';
+import { normalizeChannelsState } from '../sequencerModel';
+import { notesSlice } from '../notes/notes.reducer';
 
-export const channelsInitialState = R.clone(presets[1].channels);
+export const channelsInitialState = normalizeChannelsState(
+  presets[1].channels,
+  presets[1].notes,
+);
+
+const getChannel = (state, channelId) => state.entities[channelId];
 
 const updateChannel = (state, channelId, update) => {
-  const channel = state.find(item => item.id === channelId);
+  const channel = getChannel(state, channelId);
   if (channel) {
     update(channel);
   }
+};
+
+const moveId = (ids, oldIndex, newIndex) => {
+  const nextIds = [...ids];
+  const [movedId] = nextIds.splice(oldIndex, 1);
+  nextIds.splice(newIndex, 0, movedId);
+  return nextIds;
+};
+
+const removeNoteId = (channel, noteId) => {
+  channel.noteIds = channel.noteIds.filter(id => id !== noteId);
 };
 
 export const channelsSlice = createSlice({
@@ -76,10 +93,16 @@ export const channelsSlice = createSlice({
       },
     },
     addChannel(state, action) {
-      state.push(action.payload);
+      const channel = {
+        ...action.payload,
+        noteIds: action.payload.noteIds || [],
+      };
+      state.ids.push(channel.id);
+      state.entities[channel.id] = channel;
     },
     removeChannel(state, action) {
-      return state.filter(channel => channel.id !== action.payload);
+      state.ids = state.ids.filter(id => id !== action.payload);
+      delete state.entities[action.payload];
     },
     sampleLoaded: {
       reducer(state, action) {
@@ -115,19 +138,39 @@ export const channelsSlice = createSlice({
     },
     updateChannelOrder: {
       reducer(state, action) {
-        return R.insert(
+        state.ids = moveId(
+          state.ids,
+          action.payload.oldIndex,
           action.payload.newIndex,
-          state[action.payload.oldIndex],
-          R.remove(action.payload.oldIndex, 1, state),
         );
       },
       prepare(oldIndex, newIndex) {
         return { payload: { oldIndex, newIndex } };
       },
     },
-    replaceChannels(state, action) {
-      return [...action.payload];
+    replaceChannels: {
+      reducer(state, action) {
+        return normalizeChannelsState(action.payload.channels, action.payload.notes);
+      },
+      prepare(channels, notes = {}) {
+        return { payload: { channels, notes } };
+      },
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(notesSlice.actions.addNote, (state, action) => {
+        const channel = getChannel(state, action.payload.channelId);
+        if (channel && !channel.noteIds.includes(action.payload.id)) {
+          channel.noteIds.push(action.payload.id);
+        }
+      })
+      .addCase(notesSlice.actions.removeNote, (state, action) => {
+        const channel = getChannel(state, action.payload.channelId);
+        if (channel) {
+          removeNoteId(channel, action.payload.id);
+        }
+      });
   },
 });
 

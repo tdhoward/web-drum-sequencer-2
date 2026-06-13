@@ -1,12 +1,12 @@
 import {
   masterInitialState,
   masterReducer,
-  setPattern,
+  setSelectedChannel,
 } from './master.reducer';
 
-describe('setPattern', () => {
-  test('should change the pattern', () => {
-    const state = masterReducer(masterInitialState, setPattern(1));
-    expect(state.pattern).toEqual(1);
+describe('setSelectedChannel', () => {
+  test('should change the selected channel', () => {
+    const state = masterReducer(masterInitialState, setSelectedChannel('channel-2'));
+    expect(state.selectedChannel).toEqual('channel-2');
   });
 });

@@ -1,3 +1,8 @@
-import * as R from 'ramda';
+import { createSelector } from 'reselect';
 
-export const channelsSelector = R.path(['channels']);
+export const channelsStateSelector = state => state.channels;
+
+export const channelsSelector = createSelector(
+  channelsStateSelector,
+  channels => channels.ids.map(id => channels.entities[id]),
+);

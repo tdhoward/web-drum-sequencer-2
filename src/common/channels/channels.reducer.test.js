@@ -18,110 +18,85 @@ jest.mock('../../samples.config');
 jest.mock('../../services/featureChecks');
 
 const testSample = '/fake/sample/b/url.wav';
+const firstChannelId = channelsInitialState.ids[0];
+const getFirstChannel = state => state.entities[firstChannelId];
+
+const expectFirstChannelField = (action, fieldName, expectedValue) => {
+  const state = channelsReducer(channelsInitialState, action);
+  expect(getFirstChannel(state)[fieldName]).toEqual(expectedValue);
+};
 
 describe('setChannelSample', () => {
   test('should change a sample', () => {
-    const state = channelsReducer(
-      channelsInitialState,
-      setChannelSample(channelsInitialState[0].id, testSample),
-    );
-    expect(state[0].sample).toEqual(testSample);
+    expectFirstChannelField(setChannelSample(firstChannelId, testSample), 'sample', testSample);
   });
 });
 
 describe('setChannelGain', () => {
   test('should change gain for a channel', () => {
-    const state = channelsReducer(
-      channelsInitialState,
-      setChannelGain(channelsInitialState[0].id, 0.5),
-    );
-    expect(state[0].gain).toEqual(0.5);
+    expectFirstChannelField(setChannelGain(firstChannelId, 0.5), 'gain', 0.5);
   });
 });
 
 describe('setChannelPan', () => {
   test('should change pan for a channel', () => {
-    const state = channelsReducer(
-      channelsInitialState,
-      setChannelPan(channelsInitialState[0].id, 0.5),
-    );
-    expect(state[0].pan).toEqual(0.5);
+    expectFirstChannelField(setChannelPan(firstChannelId, 0.5), 'pan', 0.5);
   });
 });
 
 describe('setChannelPitchCoarse', () => {
   test('should change pitch (coarse) for a channel', () => {
-    const state = channelsReducer(
-      channelsInitialState,
-      setChannelPitchCoarse(channelsInitialState[0].id, 5),
-    );
-    expect(state[0].pitchCoarse).toEqual(5);
+    expectFirstChannelField(setChannelPitchCoarse(firstChannelId, 5), 'pitchCoarse', 5);
   });
 });
 
 describe('setChannelPitchFine', () => {
   test('should change pitch (fine) for a channel', () => {
-    const state = channelsReducer(
-      channelsInitialState,
-      setChannelPitchFine(channelsInitialState[0].id, -50),
-    );
-    expect(state[0].pitchFine).toEqual(-50);
+    expectFirstChannelField(setChannelPitchFine(firstChannelId, -50), 'pitchFine', -50);
   });
 });
 
 describe('setChannelReverb', () => {
   test('should change reverb for a channel', () => {
-    const state = channelsReducer(
-      channelsInitialState,
-      setChannelReverb(channelsInitialState[0].id, 0.5),
-    );
-    expect(state[0].reverb).toEqual(0.5);
+    expectFirstChannelField(setChannelReverb(firstChannelId, 0.5), 'reverb', 0.5);
   });
 });
 
 describe('setChannelMuted', () => {
   test('should mute a channel', () => {
-    const state = channelsReducer(
-      channelsInitialState,
-      setChannelMuted(channelsInitialState[0].id, true),
-    );
-    expect(state[0].muted).toEqual(true);
+    expectFirstChannelField(setChannelMuted(firstChannelId, true), 'muted', true);
   });
 
   test('should set solo to false if it was true', () => {
     const soloState = channelsReducer(
       channelsInitialState,
-      setChannelSolo(channelsInitialState[0].id, true),
+      setChannelSolo(firstChannelId, true),
     );
-    expect(soloState[0].solo).toEqual(true);
+    expect(getFirstChannel(soloState).solo).toEqual(true);
     const state = channelsReducer(
       soloState,
-      setChannelMuted(channelsInitialState[0].id, true),
+      setChannelMuted(firstChannelId, true),
     );
-    expect(state[0].solo).toEqual(false);
+    expect(getFirstChannel(state).solo).toEqual(false);
   });
 });
 
 describe('setChannelSolo', () => {
   test('should solo a channel', () => {
-    const state = channelsReducer(
-      channelsInitialState,
-      setChannelSolo(channelsInitialState[0].id, true),
-    );
-    expect(state[0].solo).toEqual(true);
+    expectFirstChannelField(setChannelSolo(firstChannelId, true), 'solo', true);
   });
 
   test('should set muted to false if it was true', () => {
     const mutedState = channelsReducer(
       channelsInitialState,
-      setChannelMuted(channelsInitialState[0].id, true),
+      setChannelMuted(firstChannelId, true),
     );
-    expect(mutedState[0].muted).toEqual(true);
+    expect(getFirstChannel(mutedState).muted).toEqual(true);
     const state = channelsReducer(
       mutedState,
-      setChannelSolo(channelsInitialState[0].id, true),
+      setChannelSolo(firstChannelId, true),
     );
-    expect(state[0].muted).toEqual(false);
+    expect(getFirstChannel(state).muted).toEqual(false);
   });
 });
 
@@ -135,7 +110,8 @@ describe('addChannel', () => {
         sample: {},
       }),
     );
-    expect(state.length).toEqual(channelsInitialState.length + 1);
+    expect(state.ids.length).toEqual(channelsInitialState.ids.length + 1);
+    expect(state.entities['12345']).not.toBeUndefined();
   });
 });
 
@@ -143,9 +119,10 @@ describe('removeChannel', () => {
   test('should remove a channel that exists', () => {
     const state = channelsReducer(
       channelsInitialState,
-      removeChannel(channelsInitialState[0].id),
+      removeChannel(firstChannelId),
     );
-    expect(state.length).toEqual(channelsInitialState.length - 1);
+    expect(state.ids.length).toEqual(channelsInitialState.ids.length - 1);
+    expect(state.entities[firstChannelId]).toBeUndefined();
   });
 
   test('should do nothing if no channel matches the ID', () => {
@@ -153,7 +130,7 @@ describe('removeChannel', () => {
       channelsInitialState,
       removeChannel('foo'),
     );
-    expect(state.length).toEqual(channelsInitialState.length);
+    expect(state.ids.length).toEqual(channelsInitialState.ids.length);
   });
 });
 
@@ -169,6 +146,6 @@ describe('replaceChannels', () => {
         },
       ]),
     );
-    expect(state.length).toEqual(1);
+    expect(state.ids.length).toEqual(1);
   });
 });

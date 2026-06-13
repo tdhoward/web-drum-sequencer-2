@@ -1,12 +1,14 @@
 import { getCurrentBeat } from './audioContext';
 import { swing } from './swing';
+import { selectedPatternLengthSelector } from '../common';
 
 const draw = (store) => {
   // Get some data from redux store
   const state = store.getState();
   const { bpm, swing: swingAmount } = state.tempo;
   const { playing, startTime } = state.playbackSession;
-  const currentBeat = getCurrentBeat(bpm, startTime);
+  const patternLengthInBeats = selectedPatternLengthSelector(state);
+  const currentBeat = getCurrentBeat(bpm, startTime, undefined, patternLengthInBeats);
 
   // Grab all the toggles and animate them
   const toggles = document.getElementsByClassName('wds-beat-marker');

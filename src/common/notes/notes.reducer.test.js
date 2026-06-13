@@ -1,15 +1,16 @@
 import {
+  addNote,
   notesReducer,
-  toggleNote,
-  initializeChannelNotes,
   removeChannelNotes,
+  removeNote,
   setNotes,
 } from './notes.reducer';
+import { normalizeNotesState } from '../sequencerModel';
 
 jest.mock('../../presets');
 jest.mock('../../samples.config');
 
-const testNotes = {
+const legacyTestNotes = {
   bongo: [
     [
       {
@@ -34,30 +35,31 @@ const testNotes = {
   ],
 };
 
-describe('toggleNote', () => {
-  test('should toggle a note off', () => {
-    const state = notesReducer(testNotes, toggleNote('bongo', 0, 1));
-    expect(state.bongo[0].length).toBe(1);
-  });
+const testNotes = normalizeNotesState(legacyTestNotes);
 
-  test('should toggle a note on', () => {
-    const state = notesReducer(testNotes, toggleNote('bongo', 0, 2));
-    expect(state.bongo[0].length).toBe(3);
-  });
-
-  test('should toggle a note on the second preset on', () => {
-    const state = notesReducer(testNotes, toggleNote('bongo', 1, 1));
-    expect(state.bongo[1].length).toBe(3);
+describe('addNote', () => {
+  test('should add a note', () => {
+    const state = notesReducer(testNotes, addNote({
+      id: 'new-note',
+      channelId: 'bongo',
+      patternId: 'pattern-0',
+      step: 4,
+      pitch: 0,
+      velocity: 1,
+    }));
+    expect(state.ids).toContain('new-note');
+    expect(state.entities['new-note']).not.toBeUndefined();
   });
 });
 
-describe('initializeChannel', () => {
-  test('should add a channel', () => {
-    const state = notesReducer(
-      testNotes,
-      initializeChannelNotes('cowbell'),
-    );
-    expect(state.cowbell).not.toBeUndefined();
+describe('removeNote', () => {
+  test('should remove a note', () => {
+    const state = notesReducer(testNotes, removeNote({
+      id: 'bing',
+      channelId: 'bongo',
+    }));
+    expect(state.ids).not.toContain('bing');
+    expect(state.entities.bing).toBeUndefined();
   });
 });
 
@@ -67,7 +69,7 @@ describe('removeChannel', () => {
       testNotes,
       removeChannelNotes('bongo'),
     );
-    expect(state.bongo).toBeUndefined();
+    expect(state.ids.length).toBe(0);
   });
 
   test('should do nothing if no channel matches the ID', () => {
@@ -75,8 +77,7 @@ describe('removeChannel', () => {
       testNotes,
       removeChannelNotes('foobar'),
     );
-    expect(state.bongo).not.toBeUndefined();
-    expect(state.foobar).toBeUndefined();
+    expect(state.ids.length).toBe(testNotes.ids.length);
   });
 });
 
@@ -91,7 +92,7 @@ describe('setNotes', () => {
         ],
       }),
     );
-    expect(state.bongo).toBeUndefined();
-    expect(state.maracas).not.toBeUndefined();
+    expect(state.ids.length).toBe(0);
+    expect(state.entities.bing).toBeUndefined();
   });
 });

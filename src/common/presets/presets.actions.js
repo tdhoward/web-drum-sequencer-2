@@ -1,6 +1,7 @@
 import { setBPM, setSwing } from '../tempo';
 import { loadChannels } from '../channels';
-import { setPattern, setSelectedChannel } from '../master';
+import { setSelectedChannel } from '../master';
+import { setPattern } from '../song';
 import presets from '../../presets';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import { currentStateSelector } from './presets.selectors';

@@ -30,6 +30,7 @@ export const getScheduledNotes = ({
   startTime,
   tempo,
   currentBeat,
+  patternLengthInBeats = 4,
 }) => channelNotes.map(
   (note) => {
     const lookaheadBeats = LOOKAHEAD * (tempo.bpm / 60);
@@ -46,10 +47,14 @@ export const getScheduledNotes = ({
       };
     }
     // If nearing the end of the bar, schedule notes at the start of the bar too
-    if (isBetween(note.beat, currentBeat - 4, currentBeat + lookaheadBeats - 4)) {
+    if (isBetween(
+      note.beat,
+      currentBeat - patternLengthInBeats,
+      currentBeat + lookaheadBeats - patternLengthInBeats,
+    )) {
       return {
         id: note.id,
-        time: startTime + ((note.beat + 3) * 60 / tempo.bpm),
+        time: startTime + ((note.beat + patternLengthInBeats - 1) * 60 / tempo.bpm),
         channel,
       };
     }
@@ -69,6 +74,7 @@ export const scheduleNotes = ({
   pattern,
   tempo,
   currentBeat,
+  patternLengthInBeats = 4,
 }) => {
   // Determine which notes need to be scheduled
   const notesToSchedule = channels.reduce(
@@ -80,6 +86,7 @@ export const scheduleNotes = ({
         startTime,
         tempo,
         currentBeat,
+        patternLengthInBeats,
       }),
     ], [],
   );
