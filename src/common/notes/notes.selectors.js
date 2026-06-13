@@ -1,3 +1,4 @@
+// Legacy UI/audio compatibility: returns notes in the old notes[channelId][patternIndex] shape.
 import { createSelector } from 'reselect';
 import { channelsSelector } from '../channels';
 import { patternsSelector } from '../patterns';

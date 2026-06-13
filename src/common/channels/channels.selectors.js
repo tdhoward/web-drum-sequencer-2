@@ -1,3 +1,4 @@
+// Legacy UI/audio compatibility: returns the selected kit as the old channel array shape.
 import { createSelector } from 'reselect';
 import { selectedKitSelector } from '../kits';
 import { samplesSelector } from '../samples';

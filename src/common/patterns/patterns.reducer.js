@@ -1,11 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit';
-import presets from '../../presets';
-import { createPatternsState } from '../sequencerModel';
+import { createDefaultPatternsState } from '../defaultSequencerState';
 import { channelsSlice } from '../channels/channels.reducer';
 
-export const patternsInitialState = createPatternsState({
-  laneIds: presets[1].channels.map(channel => channel.id),
-});
+export const patternsInitialState = createDefaultPatternsState();
 
 const addLaneId = (state, laneId) => {
   state.ids.forEach((patternId) => {

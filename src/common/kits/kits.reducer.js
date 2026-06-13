@@ -1,9 +1,9 @@
 import { createSlice } from '@reduxjs/toolkit';
-import presets from '../../presets';
-import { DEFAULT_KIT_ID, createKitsState } from '../sequencerModel';
+import { DEFAULT_KIT_ID } from '../sequencerModel';
+import { createDefaultKitsState } from '../defaultSequencerState';
 import { channelsSlice } from '../channels/channels.reducer';
 
-export const kitsInitialState = createKitsState(presets[1].channels, DEFAULT_KIT_ID);
+export const kitsInitialState = createDefaultKitsState();
 
 const getKit = (state, kitId = DEFAULT_KIT_ID) => state.entities[kitId];
 

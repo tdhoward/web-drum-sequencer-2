@@ -1,9 +1,9 @@
 import { createSlice } from '@reduxjs/toolkit';
-import presets from '../../presets';
 import { createSamplesState, sampleIdFromUrl } from '../sequencerModel';
+import { createDefaultSamplesState } from '../defaultSequencerState';
 import { channelsSlice } from '../channels/channels.reducer';
 
-export const samplesInitialState = createSamplesState(presets[1].channels);
+export const samplesInitialState = createDefaultSamplesState();
 
 const upsertSampleFromUrl = (state, sampleURL, sourceType = 'factory') => {
   const sampleId = sampleIdFromUrl(sampleURL);

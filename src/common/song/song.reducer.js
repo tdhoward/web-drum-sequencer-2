@@ -1,7 +1,8 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { createSongState, patternIndexToId } from '../sequencerModel';
+import { patternIndexToId } from '../sequencerModel';
+import { createDefaultSongState } from '../defaultSequencerState';
 
-export const songInitialState = createSongState();
+export const songInitialState = createDefaultSongState();
 
 export const songSlice = createSlice({
   name: 'song',

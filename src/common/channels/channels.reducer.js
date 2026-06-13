@@ -1,15 +1,12 @@
 import { createSlice } from '@reduxjs/toolkit';
-import presets from '../../presets';
 import {
   DEFAULT_KIT_ID,
   normalizeKitChannelsState,
   sampleIdFromUrl,
 } from '../sequencerModel';
+import { createDefaultKitChannelsState } from '../defaultSequencerState';
 
-export const channelsInitialState = normalizeKitChannelsState(
-  presets[1].channels,
-  DEFAULT_KIT_ID,
-);
+export const channelsInitialState = createDefaultKitChannelsState();
 
 const getChannel = (state, channelId) => state.entities[channelId];
 

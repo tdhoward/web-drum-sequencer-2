@@ -1,13 +1,13 @@
 import { createSlice } from '@reduxjs/toolkit';
-import presets from '../../presets';
 import {
   normalizeNotesState,
   createPatternIds,
   patternIndexToId,
   beatToStep,
 } from '../sequencerModel';
+import { createDefaultNotesState } from '../defaultSequencerState';
 
-export const notesInitialState = normalizeNotesState(presets[1].notes);
+export const notesInitialState = createDefaultNotesState();
 
 const removeNoteById = (state, noteId) => {
   state.ids = state.ids.filter(id => id !== noteId);
