@@ -14,7 +14,6 @@ import {
   GithubLink,
   FlashMessage,
   InstallButton,
-  WorkspaceNav,
   WorkspacePanel,
 } from '.';
 import { selectedWorkspaceSelector, WORKSPACES } from '../common/workspace';
@@ -32,11 +31,8 @@ const AppComponent = ({ selectedWorkspace }) => (
         <header>
           <Box display="flex" justifyContent="space-between" alignItems="flex-start">
             <Branding />
-            <Box display="flex" alignItems="flex-start">
-              <WorkspaceNav />
-              <Box ml={2}>
-                <InstallButton />
-              </Box>
+            <Box ml={2}>
+              <InstallButton />
             </Box>
           </Box>
         </header>
