@@ -40,6 +40,7 @@ describe('sequencer model invariants', () => {
     const state = clone(createDefaultSequencerState());
     const noteId = 'bad-note';
     const patternId = state.song.patternIds[0];
+
     state.notes.ids.push(noteId);
     state.notes.entities[noteId] = {
       id: noteId,
@@ -55,9 +56,29 @@ describe('sequencer model invariants', () => {
     );
   });
 
+  test('detects notes that reference missing patterns', () => {
+    const state = clone(createDefaultSequencerState());
+    const noteId = 'bad-note';
+
+    state.notes.ids.push(noteId);
+    state.notes.entities[noteId] = {
+      id: noteId,
+      patternId: 'missing-pattern',
+      laneId: state.patterns.entities[state.song.selectedPatternId].laneIds[0],
+      step: 0,
+      pitch: 0,
+      velocity: 1,
+    };
+
+    expect(validateSequencerModelState(state)).toContain(
+      `note ${noteId} references missing patternId: missing-pattern`,
+    );
+  });
+
   test('detects kit channels that reference missing samples', () => {
     const state = clone(createDefaultSequencerState());
     const kitChannelId = state.kitChannels.ids[0];
+
     state.kitChannels.entities[kitChannelId].sampleId = 'missing-sample';
 
     expect(validateSequencerModelState(state)).toContain(
