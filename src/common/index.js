@@ -11,3 +11,4 @@ export * from './patterns';
 export * from './kits';
 export * from './samples';
 export * from './compatibility.selectors';
+export * from './workspace';

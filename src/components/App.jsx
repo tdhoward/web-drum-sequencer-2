@@ -1,4 +1,6 @@
 import React from 'react';
+import { connect } from 'react-redux';
+import PropTypes from 'prop-types';
 import { ThemeProvider } from 'styled-components';
 import theme from '../styles/theme';
 import GlobalStyles from '../styles/globalStyles';
@@ -12,9 +14,12 @@ import {
   GithubLink,
   FlashMessage,
   InstallButton,
+  WorkspaceNav,
+  WorkspacePanel,
 } from '.';
+import { selectedWorkspaceSelector, WORKSPACES } from '../common/workspace';
 
-const App = () => (
+const AppComponent = ({ selectedWorkspace }) => (
   <ThemeProvider theme={theme}>
     <>
       <GlobalStyles />
@@ -27,16 +32,25 @@ const App = () => (
         <header>
           <Box display="flex" justifyContent="space-between" alignItems="flex-start">
             <Branding />
-            <InstallButton />
+            <Box display="flex" alignItems="flex-start">
+              <WorkspaceNav />
+              <Box ml={2}>
+                <InstallButton />
+              </Box>
+            </Box>
           </Box>
         </header>
         <main>
           <Box position="sticky" bg="nearBlack" top="0" zIndex="10" pt={2}>
             <MasterControls />
-            <ChannelControls />
-            <ChannelHeader />
+            {selectedWorkspace === WORKSPACES.PATTERN && (
+              <>
+                <ChannelControls />
+                <ChannelHeader />
+              </>
+            )}
           </Box>
-          <ChannelList />
+          {selectedWorkspace === WORKSPACES.PATTERN ? <ChannelList /> : <WorkspacePanel />}
         </main>
         <footer>
           <Box position="absolute" bottom={0} right={0} mr={[0, 0, 0, 1, 2, 2, 2, 3, 5]}>
@@ -49,4 +63,13 @@ const App = () => (
   </ThemeProvider>
 );
 
-export default App;
+
+AppComponent.propTypes = {
+  selectedWorkspace: PropTypes.oneOf(Object.values(WORKSPACES)).isRequired,
+};
+
+const mapStateToProps = state => ({
+  selectedWorkspace: selectedWorkspaceSelector(state),
+});
+
+export default connect(mapStateToProps)(AppComponent);

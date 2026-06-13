@@ -30,7 +30,7 @@ const persistConfig = {
   key: 'root',
   version: 5,
   storage,
-  blacklist: ['playbackSession', 'window'],
+  blacklist: ['playbackSession', 'window', 'workspace'],
   migrate: createMigrate(migrations, { debug: import.meta.env.DEV }),
 };
 

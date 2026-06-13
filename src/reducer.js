@@ -12,6 +12,7 @@ import {
   kitsReducer,
   channelsReducer,
   samplesReducer,
+  workspaceReducer,
 } from './common';
 
 export default combineReducers({
@@ -27,4 +28,5 @@ export default combineReducers({
   presets: presetsReducer,
   window: windowReducer,
   userSamples: userSamplesReducer,
+  workspace: workspaceReducer,
 });

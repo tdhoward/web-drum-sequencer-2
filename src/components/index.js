@@ -19,3 +19,5 @@ export * from './SwingControl';
 export * from './Branding';
 export * from './InstallButton';
 export * from './VolumeMeter.component';
+export * from './WorkspaceNav';
+export * from './WorkspacePanel';
