@@ -8,6 +8,11 @@ export const selectedPatternIdSelector = createSelector(
   song => song.selectedPatternId,
 );
 
+export const selectedKitIdSelector = createSelector(
+  songSelector,
+  song => song.selectedKitId,
+);
+
 export const patternSelector = createSelector(
   selectedPatternIdSelector,
   selectedPatternId => patternIdToIndex(selectedPatternId),

@@ -12,7 +12,10 @@ import {
 } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import rootReducer from './reducer';
-import { migrateToNormalizedSequencerState } from './common/sequencerModel';
+import {
+  migrateToKitSequencerState,
+  migrateToNormalizedSequencerState,
+} from './common/sequencerModel';
 import presets from './presets';
 
 export const migrations = {
@@ -20,11 +23,12 @@ export const migrations = {
   2: () => ({}),
   3: () => ({}),
   4: state => migrateToNormalizedSequencerState(state, presets[1]),
+  5: state => migrateToKitSequencerState(state, presets[1]),
 };
 
 const persistConfig = {
   key: 'root',
-  version: 4,
+  version: 5,
   storage,
   blacklist: ['playbackSession', 'window'],
   migrate: createMigrate(migrations, { debug: import.meta.env.DEV }),

@@ -18,7 +18,7 @@ export const currentStateSelector = createSelector(
     bpm,
     swing,
     channels: channels.map(
-      channel => R.omit(['sampleLoaded', 'noteIds'], channel),
+      channel => R.omit(['sampleLoaded', 'noteIds', 'sampleId', 'kitId', 'kitChannelId', 'laneId'], channel),
     ),
   }),
 );

@@ -1,6 +1,8 @@
 import {
   beatToStep,
   createPatternsState,
+  DEFAULT_KIT_ID,
+  migrateToKitSequencerState,
   migrateToNormalizedSequencerState,
   normalizeChannelsState,
   normalizeNotesState,
@@ -62,7 +64,7 @@ describe('compatibility selectors', () => {
   test('return legacy channel and note shapes from normalized state', () => {
     const patterns = createPatternsState({
       patternCount: 2,
-      channelIds: ['kick'],
+      laneIds: ['kick'],
     });
     const state = {
       song: {
@@ -100,7 +102,7 @@ describe('redux-persist migration', () => {
     expect(migrated.channels.ids).toEqual(['kick']);
     expect(migrated.notes.entities['kick-1']).toEqual({
       id: 'kick-1',
-      channelId: 'kick',
+      laneId: 'kick',
       patternId: 'pattern-0',
       step: 0,
       pitch: 0,
@@ -109,5 +111,30 @@ describe('redux-persist migration', () => {
     expect(migrated.master).toEqual({
       selectedChannel: 'kick',
     });
+  });
+});
+
+
+describe('kit-aware migration', () => {
+  test('moves channel settings into a globally reusable kit library', () => {
+    const migrated = migrateToKitSequencerState({
+      channels: legacyChannels,
+      notes: legacyNotes,
+      master: {
+        pattern: 1,
+        selectedChannel: 'kick',
+      },
+    }, {
+      channels: legacyChannels,
+      notes: legacyNotes,
+    });
+
+    expect(migrated.song.selectedKitId).toBe(DEFAULT_KIT_ID);
+    expect(migrated.kits.entities[DEFAULT_KIT_ID].channelIds).toEqual(['kick']);
+    expect(migrated.kitChannels.entities.kick.laneId).toBe('kick');
+    expect(migrated.kitChannels.entities.kick.sampleId).toBe('sample:kick.mp3');
+    expect(migrated.samples.entities['sample:kick.mp3'].url).toBe('kick.mp3');
+    expect(migrated.patterns.entities['pattern-0'].laneIds).toEqual(['kick']);
+    expect(migrated.notes.entities['kick-1'].laneId).toBe('kick');
   });
 });

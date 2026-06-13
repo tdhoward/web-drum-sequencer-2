@@ -10,18 +10,19 @@ import {
 } from '../sequencerModel';
 import { patternsSelector } from '../patterns';
 
-const findExistingNote = (state, channelID, patternId, step) => state.notes.ids
+const findExistingNote = (state, laneId, patternId, step) => state.notes.ids
   .map(noteId => state.notes.entities[noteId])
-  .find(note => note.channelId === channelID
+  .find(note => note.laneId === laneId
     && note.patternId === patternId
     && note.step === step);
 
 export const toggleNote = (channelID, patternIndex, beat) => (dispatch, getState) => {
   const state = getState();
+  const laneId = channelID;
   const patternId = patternIndexToId(patternIndex);
   const pattern = patternsSelector(state).entities[patternId];
   const step = beatToStep(beat, pattern);
-  const existingNote = findExistingNote(state, channelID, patternId, step);
+  const existingNote = findExistingNote(state, laneId, patternId, step);
 
   if (existingNote) {
     dispatch(removeNote(existingNote));
@@ -30,7 +31,7 @@ export const toggleNote = (channelID, patternIndex, beat) => (dispatch, getState
 
   dispatch(addNote({
     id: uuid(),
-    channelId: channelID,
+    laneId,
     patternId,
     step,
     pitch: 0,

@@ -1,11 +1,14 @@
 import { createSlice } from '@reduxjs/toolkit';
 import presets from '../../presets';
-import { normalizeChannelsState } from '../sequencerModel';
-import { notesSlice } from '../notes/notes.reducer';
+import {
+  DEFAULT_KIT_ID,
+  normalizeKitChannelsState,
+  sampleIdFromUrl,
+} from '../sequencerModel';
 
-export const channelsInitialState = normalizeChannelsState(
+export const channelsInitialState = normalizeKitChannelsState(
   presets[1].channels,
-  presets[1].notes,
+  DEFAULT_KIT_ID,
 );
 
 const getChannel = (state, channelId) => state.entities[channelId];
@@ -24,18 +27,14 @@ const moveId = (ids, oldIndex, newIndex) => {
   return nextIds;
 };
 
-const removeNoteId = (channel, noteId) => {
-  channel.noteIds = channel.noteIds.filter(id => id !== noteId);
-};
-
 export const channelsSlice = createSlice({
-  name: 'channels',
+  name: 'kitChannels',
   initialState: channelsInitialState,
   reducers: {
     setChannelSample: {
       reducer(state, action) {
         updateChannel(state, action.payload.channel, (channel) => {
-          channel.sample = action.payload.sampleURL;
+          channel.sampleId = sampleIdFromUrl(action.payload.sampleURL);
         });
       },
       prepare(channel, sampleURL) {
@@ -95,7 +94,9 @@ export const channelsSlice = createSlice({
     addChannel(state, action) {
       const channel = {
         ...action.payload,
-        noteIds: action.payload.noteIds || [],
+        kitId: action.payload.kitId || DEFAULT_KIT_ID,
+        laneId: action.payload.laneId || action.payload.id,
+        sampleId: action.payload.sampleId || sampleIdFromUrl(action.payload.sample),
       };
       state.ids.push(channel.id);
       state.entities[channel.id] = channel;
@@ -150,27 +151,12 @@ export const channelsSlice = createSlice({
     },
     replaceChannels: {
       reducer(state, action) {
-        return normalizeChannelsState(action.payload.channels, action.payload.notes);
+        return normalizeKitChannelsState(action.payload.channels, action.payload.kitId);
       },
-      prepare(channels, notes = {}) {
-        return { payload: { channels, notes } };
+      prepare(channels, notes = {}, kitId = DEFAULT_KIT_ID) {
+        return { payload: { channels, notes, kitId } };
       },
     },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addCase(notesSlice.actions.addNote, (state, action) => {
-        const channel = getChannel(state, action.payload.channelId);
-        if (channel && !channel.noteIds.includes(action.payload.id)) {
-          channel.noteIds.push(action.payload.id);
-        }
-      })
-      .addCase(notesSlice.actions.removeNote, (state, action) => {
-        const channel = getChannel(state, action.payload.channelId);
-        if (channel) {
-          removeNoteId(channel, action.payload.id);
-        }
-      });
   },
 });
 

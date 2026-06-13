@@ -1,6 +1,5 @@
 import { combineReducers } from '@reduxjs/toolkit';
 import {
-  channelsReducer,
   playbackSessionReducer,
   tempoReducer,
   masterReducer,
@@ -10,12 +9,17 @@ import {
   userSamplesReducer,
   songReducer,
   patternsReducer,
+  kitsReducer,
+  channelsReducer,
+  samplesReducer,
 } from './common';
 
 export default combineReducers({
   song: songReducer,
+  kits: kitsReducer,
+  kitChannels: channelsReducer,
+  samples: samplesReducer,
   patterns: patternsReducer,
-  channels: channelsReducer,
   playbackSession: playbackSessionReducer,
   tempo: tempoReducer,
   master: masterReducer,

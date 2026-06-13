@@ -28,7 +28,11 @@ const expectFirstChannelField = (action, fieldName, expectedValue) => {
 
 describe('setChannelSample', () => {
   test('should change a sample', () => {
-    expectFirstChannelField(setChannelSample(firstChannelId, testSample), 'sample', testSample);
+    expectFirstChannelField(
+      setChannelSample(firstChannelId, testSample),
+      'sampleId',
+      `sample:${testSample}`,
+    );
   });
 });
 

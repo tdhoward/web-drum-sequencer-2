@@ -3,6 +3,8 @@ import { setNotes, initializeChannelNotes, removeChannelNotes } from '../notes';
 import { uuid } from '../../services/uuid';
 import factorySamples from '../../samples.config';
 import { setSelectedChannel } from '../master';
+import { selectedKitIdSelector } from '../song';
+import { addSampleFromUrl } from '../samples';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import { channelsSlice } from './channels.reducer';
 
@@ -31,23 +33,30 @@ export const loadSampleStatefully = (dispatch, channel) => {
   });
 };
 
-export const loadChannels = (channels, notes) => (dispatch) => {
+export const loadChannels = (channels, notes) => (dispatch, getState) => {
+  const kitId = selectedKitIdSelector(getState());
   channels.forEach((channel) => {
+    dispatch(addSampleFromUrl(channel.sample, 'factory'));
     loadSampleStatefully(dispatch, channel);
   });
-  dispatch(replaceChannels(channels, notes));
+  dispatch(replaceChannels(channels, notes, kitId));
   dispatch(setNotes(notes));
 };
 
-export const newChannel = () => (dispatch) => {
+export const newChannel = () => (dispatch, getState) => {
+  const channelId = uuid();
+  const kitId = selectedKitIdSelector(getState());
   const channelToAdd = {
-    id: uuid(),
+    id: channelId,
+    kitId,
+    laneId: channelId,
     sample: factorySamples[0].url,
     gain: 1,
     pitchCoarse: 0,
     pitchFine: 0,
     pan: 0,
   };
+  dispatch(addSampleFromUrl(channelToAdd.sample, 'factory'));
   dispatch(addChannel(channelToAdd));
   dispatch(initializeChannelNotes(channelToAdd.id));
   dispatch(setSelectedChannel(channelToAdd.id));
@@ -63,6 +72,7 @@ export const loadAndSetChannelSample = (channelID, sampleURL) => (dispatch) => {
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
     }
   });
+  dispatch(addSampleFromUrl(sampleURL, 'user'));
   dispatch(setChannelSample(channelID, sampleURL));
 };
 

@@ -19,7 +19,11 @@ export const notesSlice = createSlice({
   initialState: notesInitialState,
   reducers: {
     addNote(state, action) {
-      const note = action.payload;
+      const note = {
+        ...action.payload,
+        laneId: action.payload.laneId || action.payload.channelId,
+      };
+      delete note.channelId;
       if (!state.entities[note.id]) {
         state.ids.push(note.id);
       }
@@ -34,7 +38,7 @@ export const notesSlice = createSlice({
     removeChannelNotes(state, action) {
       state.ids
         .map(id => state.entities[id])
-        .filter(note => note.channelId === action.payload)
+        .filter(note => note.laneId === action.payload)
         .forEach(note => removeNoteById(state, note.id));
     },
     setNotes(state, action) {
@@ -43,11 +47,12 @@ export const notesSlice = createSlice({
     toggleNote: {
       reducer(state, action) {
         const { channelID, pattern, beat, id } = action.payload;
+        const laneId = channelID;
         const patternId = patternIndexToId(pattern);
         const step = beatToStep(beat);
         const existingNote = state.ids
           .map(noteId => state.entities[noteId])
-          .find(note => note.channelId === channelID
+          .find(note => note.laneId === laneId
             && note.patternId === patternId
             && note.step === step);
 
@@ -59,7 +64,7 @@ export const notesSlice = createSlice({
         state.ids.push(id);
         state.entities[id] = {
           id,
-          channelId: channelID,
+          laneId,
           patternId,
           step,
           pitch: 0,
@@ -86,7 +91,7 @@ export const legacyToggleNote = notesSlice.actions.toggleNote;
 export const createEmptyNotesForChannels = (channels, patternCount) => normalizeNotesState(
   channels.reduce((notes, channel) => ({
     ...notes,
-    [channel.id]: createPatternIds(patternCount).map(() => []),
+    [channel.laneId || channel.id]: createPatternIds(patternCount).map(() => []),
   }), {}),
 );
 

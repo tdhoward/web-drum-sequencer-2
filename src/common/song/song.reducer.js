@@ -16,6 +16,9 @@ export const songSlice = createSlice({
     setSongName(state, action) {
       state.name = action.payload;
     },
+    setSelectedKitId(state, action) {
+      state.selectedKitId = action.payload;
+    },
   },
 });
 
@@ -23,6 +26,7 @@ export const {
   setPattern,
   setSelectedPatternId,
   setSongName,
+  setSelectedKitId,
 } = songSlice.actions;
 
 export const songReducer = songSlice.reducer;
