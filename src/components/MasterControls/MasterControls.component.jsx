@@ -3,8 +3,6 @@ import styled from 'styled-components';
 import { Box } from '../design-system';
 import { PlayButton } from '../PlayButton';
 import { BPMInput } from '../BPMInput';
-import { PresetSelector } from '../PresetSelector';
-import { PatternSelector } from '../PatternSelector';
 import { SwingControl } from '../SwingControl';
 import { VolumeMeter } from '../VolumeMeter.component';
 import { WorkspaceNav } from '../WorkspaceNav';
@@ -15,16 +13,9 @@ const MasterControlsLayout = styled.div`
   height: 3rem;
   justify-content: space-between;
   margin-bottom: 1rem;
-  position: relative;
-
-  .workspace-nav-slot {
-    left: 50%;
-    position: absolute;
-    top: 50%;
-    transform: translate(-50%, -50%);
-  }
 
   .right-controls {
+    align-items: center;
     display: flex;
     margin-left: auto;
   }
@@ -35,17 +26,16 @@ const MasterControlsLayout = styled.div`
     height: auto;
     row-gap: 0.75rem;
 
-    .workspace-nav-slot {
-      display: flex;
-      justify-content: center;
-      order: 3;
-      position: static;
-      transform: none;
-      width: 100%;
-    }
-
     .right-controls {
-      margin-left: 0;
+      justify-content: flex-end;
+      margin-left: auto;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .right-controls {
+      justify-content: center;
+      width: 100%;
     }
   }
 `;
@@ -60,14 +50,8 @@ export const MasterControls = () => (
       <BPMInput />
       <SwingControl />
     </Box>
-    <div className="workspace-nav-slot">
-      <WorkspaceNav />
-    </div>
     <div className="right-controls">
-      <PatternSelector />
-      <Box ml={2} width="15rem">
-        <PresetSelector />
-      </Box>
+      <WorkspaceNav />
     </div>
   </MasterControlsLayout>
 );

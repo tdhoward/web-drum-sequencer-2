@@ -10,7 +10,7 @@ import {
 } from './sequencerModel';
 
 export const DEFAULT_PRESET = presets[1];
-export const DEFAULT_KIT_NAME = 'Default Kit';
+export const DEFAULT_KIT_NAME = DEFAULT_PRESET.name;
 
 export const defaultLaneIds = DEFAULT_PRESET.channels.map(channel => channel.laneId || channel.id);
 

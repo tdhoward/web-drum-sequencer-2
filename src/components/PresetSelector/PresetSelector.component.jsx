@@ -12,6 +12,7 @@ export const PresetSelectorComponent = ({
   currentPreset,
   isEdited,
   userPresets,
+  label,
 }) => {
   const defaultPresetOptions = presets.map(preset => ({
     label: preset.name,
@@ -81,7 +82,7 @@ export const PresetSelectorComponent = ({
         zIndex={1}
         borderRadius="3px"
       >
-        PRESETS
+        {label}
       </Text>
       <Select
         isEdited={isEdited}
@@ -134,4 +135,9 @@ PresetSelectorComponent.propTypes = {
   onSelectPreset: PropTypes.func.isRequired,
   presets: PropTypes.arrayOf(PropTypes.object).isRequired,
   userPresets: PropTypes.arrayOf(PropTypes.object).isRequired,
+  label: PropTypes.string,
+};
+
+PresetSelectorComponent.defaultProps = {
+  label: 'PRESETS',
 };
