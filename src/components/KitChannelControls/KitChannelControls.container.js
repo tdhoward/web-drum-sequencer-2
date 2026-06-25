@@ -6,6 +6,7 @@ import {
   setChannelPan,
   setChannelPitchCoarse,
   setChannelReverb,
+  updateChannelOrder,
 } from '../../common';
 import { playNoteNow } from '../../services/audioScheduler';
 import { KitChannelControlsComponent } from './KitChannelControls.component';
@@ -21,11 +22,15 @@ const mapDispatchToProps = {
   setChannelPan,
   setChannelPitchCoarse,
   setChannelReverb,
+  updateChannelOrder,
 };
 
 const handlers = withHandlers({
   onPressHitButton: () => (channel) => {
     playNoteNow(channel);
+  },
+  onUpdateChannelOrder: props => (oldIndex, newIndex) => {
+    props.updateChannelOrder(oldIndex, newIndex);
   },
   onSetGain: props => (channel, e) => {
     props.setChannelGain(getKitChannelId(channel), e.target.value / 100);
