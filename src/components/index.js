@@ -22,3 +22,5 @@ export * from './VolumeMeter.component';
 export * from './WorkspaceNav';
 export * from './CurrentKitDisplay';
 export * from './WorkspacePanel';
+export * from './KitChannelControls';
+export * from './KitWorkspaceControls';

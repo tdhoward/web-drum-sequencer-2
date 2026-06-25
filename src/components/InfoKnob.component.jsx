@@ -7,12 +7,15 @@ export const InfoKnob = ({
   label,
   minLabel,
   maxLabel,
+  showLabel = true,
   ...rest
 }) => (
   <Box>
-    <ControlLabel fontWeight="bold" mb={1} textAlign="center">
-      {label}
-    </ControlLabel>
+    {showLabel && (
+      <ControlLabel fontWeight="bold" mb={1} textAlign="center">
+        {label}
+      </ControlLabel>
+    )}
     <Box display="flex" alignItems="baseline">
       <ControlLabel opacity="0.5" fontSize={1}>
         {minLabel}
@@ -29,4 +32,5 @@ InfoKnob.propTypes = {
   label: PropTypes.string.isRequired,
   minLabel: PropTypes.string.isRequired,
   maxLabel: PropTypes.string.isRequired,
+  showLabel: PropTypes.bool,
 };

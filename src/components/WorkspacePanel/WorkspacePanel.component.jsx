@@ -3,8 +3,8 @@ import PropTypes from 'prop-types';
 import styled from 'styled-components';
 import { Box, Text } from '../design-system';
 import { LabelBox } from '../LabelBox';
-import { PresetSelector } from '../PresetSelector';
 import { CurrentKitDisplay } from '../CurrentKitDisplay';
+import { KitChannelControls } from '../KitChannelControls';
 import { WORKSPACES } from '../../common/workspace';
 
 const WorkspaceControlLayout = styled.div`
@@ -34,7 +34,7 @@ const WorkspaceControlLayout = styled.div`
 
 const WorkspacePlaceholder = ({ title, body, children }) => (
   <Box
-    bg="darkGray"
+    bg="nearBlack"
     border="1px solid"
     borderColor="steel"
     borderRadius="0.5rem"
@@ -62,24 +62,9 @@ WorkspacePlaceholder.defaultProps = {
 };
 
 const KitWorkspacePanel = () => (
-  <WorkspacePlaceholder
-    title="Kit workspace"
-    body="Kit selection and kit channel editing will go here."
-  >
-    <LabelBox label="KIT CONTROLS">
-      <WorkspaceControlLayout>
-        <div className="workspace-control-copy">
-          <Text color="lightGray" fontSize={2} lineHeight="1.5em">
-            Select the active kit preset here for now. Dedicated kit naming, channel sample
-            editing, and kit duplication controls will be added later.
-          </Text>
-        </div>
-        <div className="workspace-local-control">
-          <PresetSelector label="KIT PRESET" />
-        </div>
-      </WorkspaceControlLayout>
-    </LabelBox>
-  </WorkspacePlaceholder>
+  <Box mt={2}>
+    <KitChannelControls />
+  </Box>
 );
 
 const SongWorkspacePanel = () => (

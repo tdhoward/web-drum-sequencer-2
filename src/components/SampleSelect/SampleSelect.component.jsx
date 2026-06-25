@@ -53,6 +53,7 @@ export const SampleSelectComponent = ({
   onSampleFileChosen,
   channel,
   userSamples,
+  showLabel = true,
 }) => {
   const userOptions = userSamples.map(filename => ({
     value: filename,
@@ -62,9 +63,11 @@ export const SampleSelectComponent = ({
   const currentOption = allOptions.find(option => channel.sample === option.value);
   return (
     <Box>
-      <ControlLabel fontWeight="bold" mb={1} ml={1} textAlign="left">
-        SAMPLE
-      </ControlLabel>
+      {showLabel && (
+        <ControlLabel fontWeight="bold" mb={1} ml={1} textAlign="left">
+          SAMPLE
+        </ControlLabel>
+      )}
       <Select
         aria-label="Select Channel"
         options={getSampleSelectOptions(userOptions)}
@@ -126,4 +129,5 @@ SampleSelectComponent.propTypes = {
     id: PropTypes.string.isRequired,
   }).isRequired,
   userSamples: PropTypes.arrayOf(PropTypes.string).isRequired,
+  showLabel: PropTypes.bool,
 };

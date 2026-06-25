@@ -9,6 +9,8 @@ import {
   ChannelList,
   ChannelHeader,
   ChannelControls,
+  KitChannelHeader,
+  KitWorkspaceControls,
   MasterControls,
   Branding,
   GithubLink,
@@ -43,6 +45,14 @@ const AppComponent = ({ selectedWorkspace }) => (
               <>
                 <ChannelControls />
                 <ChannelHeader />
+              </>
+            )}
+            {selectedWorkspace === WORKSPACES.KIT && (
+              <>
+                <KitWorkspaceControls />
+                <Box mt={3}>
+                  <KitChannelHeader />
+                </Box>
               </>
             )}
           </Box>
