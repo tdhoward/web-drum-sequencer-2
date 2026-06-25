@@ -3,6 +3,8 @@ import { saveToDB, getFromDB } from './database';
 
 export const sampleStore = {};
 
+export const getSampleBuffer = url => sampleStore[url];
+
 export const loadSample = (url) => {
   if (typeof sampleStore[url] !== 'undefined') {
     return Promise.resolve(true);
@@ -23,6 +25,9 @@ export const loadSample = (url) => {
       })
       .catch(() => false));
 };
+
+export const loadSampleBuffer = url => loadSample(url)
+  .then(success => (success ? getSampleBuffer(url) : null));
 
 export const saveToSampleStore = (file) => {
   const id = file.name;

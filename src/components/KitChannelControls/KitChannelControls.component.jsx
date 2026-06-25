@@ -8,15 +8,16 @@ import { InfoKnob } from '../InfoKnob.component';
 import { HitButton } from '../Channel/HitButton.component';
 import { ChannelHeaderLabel } from '../ChannelHeader/ChannelHeaderLabel.component';
 import { MuteSolo } from '../MuteSolo';
+import { SampleWaveform } from '../SampleWaveform.component';
 import { SampleSelect } from '../SampleSelect';
 import construction from '../../assets/images/construction-light.svg';
 
-const kitChannelGridColumns = 'minmax(8rem, 11rem) 1.2rem 3rem minmax(15rem, 1fr) repeat(4, minmax(4.75rem, auto))';
+const kitChannelGridColumns = 'minmax(8rem, 11rem) 1.2rem 3rem 15rem minmax(10rem, 1fr) repeat(4, 5.125rem)';
 
 const KitChannelList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.5rem;
   width: 100%;
 `;
 
@@ -36,7 +37,7 @@ const KitChannelRow = styled.div`
   display: grid;
   gap: 0.75rem;
   grid-template-columns: ${kitChannelGridColumns};
-  padding: 0.8rem;
+  padding: 0.5rem 0.8rem;
 
   @media (max-width: 1120px) {
     grid-template-columns: ${kitChannelGridColumns};
@@ -59,7 +60,13 @@ const KitChannelRow = styled.div`
 `;
 
 const KnobCell = styled(Box)`
-  min-width: 4.75rem;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+`;
+
+const WaveformCell = styled(Box)`
+  min-width: 0;
 `;
 
 const MoveImage = styled(Image)`
@@ -87,6 +94,7 @@ export const KitChannelHeader = () => (
     <Box />
     <ChannelHeaderLabel centerText>Hit</ChannelHeaderLabel>
     <ChannelHeaderLabel>Sample</ChannelHeaderLabel>
+    <ChannelHeaderLabel centerText>Waveform</ChannelHeaderLabel>
     <ChannelHeaderLabel centerText>Pitch</ChannelHeaderLabel>
     <ChannelHeaderLabel centerText>Pan</ChannelHeaderLabel>
     <ChannelHeaderLabel centerText>Vol</ChannelHeaderLabel>
@@ -151,9 +159,12 @@ export class KitChannelControlsComponent extends React.Component {
                 onMouseDown={() => onPressHitButton(channel)}
               />
             </Box>
-            <Box minWidth="15rem">
+            <Box minWidth="0">
               <SampleSelect channel={getSampleSelectChannel(channel)} showLabel={false} />
             </Box>
+            <WaveformCell>
+              <SampleWaveform sampleUrl={channel.sample} />
+            </WaveformCell>
             {detuneSupported ? (
               <KnobCell>
                 <InfoKnob
