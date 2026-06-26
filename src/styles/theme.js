@@ -106,16 +106,81 @@ const classicDarkColors = {
   waveformGuide: 'rgba(152, 255, 193, 0.08)',
 };
 
+const highContrastDarkPalette = {
+  ...classicDarkPalette,
+  nearWhite: '#FFFFFF',
+  lightGray: '#D8DEE9',
+  gray: '#A7B1BC',
+  steel: '#8A97A8',
+  darkGray: '#1F2933',
+  nearBlack: '#0B1014',
+  green: '#39BFA7',
+  lightGreen: '#72E0D1',
+  darkGreen: '#0D665B',
+  red: '#E85F6A',
+  lightRed: '#FF7A85',
+  darkRed: '#7A2B34',
+  gold: '#F6C85F',
+  primary: '#F6C85F',
+  primaryDark: '#FFE08A',
+  secondary: '#72E0D1',
+  blue: '#4AA8FF',
+  darkBlue: '#1F6FB8',
+};
+
+const highContrastDarkColors = {
+  ...highContrastDarkPalette,
+
+  surfaceApp: highContrastDarkPalette.nearBlack,
+  surfacePanel: '#101820',
+  surfacePanelRaised: highContrastDarkPalette.darkGray,
+  surfaceControl: '#020609',
+  surfaceControlHover: highContrastDarkPalette.steel,
+  surfaceOverlay: 'rgba(0, 0, 0, 0.86)',
+  surfaceInverse: '#FFFFFF',
+
+  borderDefault: highContrastDarkPalette.steel,
+  borderHover: highContrastDarkPalette.lightGray,
+  borderSubtle: 'rgba(255, 255, 255, 0.14)',
+
+  textPrimary: highContrastDarkPalette.nearWhite,
+  textSecondary: highContrastDarkPalette.lightGray,
+  textMuted: highContrastDarkPalette.gray,
+  textInverse: highContrastDarkPalette.nearBlack,
+
+  accentPrimary: highContrastDarkPalette.gold,
+  accentPrimaryActive: highContrastDarkPalette.primaryDark,
+  accentPrimaryGlow: 'rgba(246, 200, 95, 0.48)',
+
+  actionPrimary: highContrastDarkPalette.blue,
+  actionPrimaryHover: highContrastDarkPalette.darkBlue,
+
+  errorBorder: highContrastDarkPalette.lightRed,
+  danger: highContrastDarkPalette.brightRed,
+  dangerSubtle: highContrastDarkPalette.brightRed30,
+  warning: highContrastDarkPalette.yellow,
+  warningSubtle: highContrastDarkPalette.yellow30,
+  waveform: highContrastDarkPalette.gold,
+  waveformGuide: 'rgba(246, 200, 95, 0.16)',
+};
+
 export const classicDarkTheme = createTheme({
   id: 'classicDark',
   name: 'Classic Dark',
   colors: classicDarkColors,
 });
 
+export const highContrastDarkTheme = createTheme({
+  id: 'highContrastDark',
+  name: 'High Contrast Dark',
+  colors: highContrastDarkColors,
+});
+
 export const DEFAULT_THEME_ID = classicDarkTheme.id;
 
 export const colorThemes = {
   [classicDarkTheme.id]: classicDarkTheme,
+  [highContrastDarkTheme.id]: highContrastDarkTheme,
 };
 
 export default classicDarkTheme;

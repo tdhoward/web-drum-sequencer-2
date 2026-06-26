@@ -25,3 +25,4 @@ export * from './CurrentKitDisplay';
 export * from './WorkspacePanel';
 export * from './KitChannelControls';
 export * from './KitWorkspaceControls';
+export * from './ThemeSelector';

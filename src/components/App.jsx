@@ -2,7 +2,6 @@ import React from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { ThemeProvider } from 'styled-components';
-import { colorThemes, DEFAULT_THEME_ID } from '../styles/theme';
 import GlobalStyles from '../styles/globalStyles';
 import {
   Box,
@@ -19,9 +18,10 @@ import {
   WorkspacePanel,
 } from '.';
 import { selectedWorkspaceSelector, WORKSPACES } from '../common/workspace';
+import { selectedThemeSelector } from '../common/uiPreferences';
 
-const AppComponent = ({ selectedWorkspace }) => (
-  <ThemeProvider theme={colorThemes[DEFAULT_THEME_ID]}>
+const AppComponent = ({ selectedTheme, selectedWorkspace }) => (
+  <ThemeProvider theme={selectedTheme}>
     <>
       <GlobalStyles />
       <Box
@@ -71,10 +71,12 @@ const AppComponent = ({ selectedWorkspace }) => (
 
 
 AppComponent.propTypes = {
+  selectedTheme: PropTypes.object.isRequired,
   selectedWorkspace: PropTypes.oneOf(Object.values(WORKSPACES)).isRequired,
 };
 
 const mapStateToProps = state => ({
+  selectedTheme: selectedThemeSelector(state),
   selectedWorkspace: selectedWorkspaceSelector(state),
 });
 

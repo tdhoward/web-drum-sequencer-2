@@ -15,6 +15,7 @@ import {
   samplesReducer,
   patternPacksReducer,
   workspaceReducer,
+  uiPreferencesReducer,
 } from './common';
 
 export default combineReducers({
@@ -24,6 +25,7 @@ export default combineReducers({
   kitChannelAssignments: kitChannelAssignmentsReducer,
   samples: samplesReducer,
   patternPacks: patternPacksReducer,
+  uiPreferences: uiPreferencesReducer,
   patterns: patternsReducer,
   playbackSession: playbackSessionReducer,
   tempo: tempoReducer,
