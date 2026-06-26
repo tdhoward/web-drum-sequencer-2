@@ -1,3 +1,5 @@
+import { VALID_PERCUSSION_TYPES } from './percussion';
+
 const hasEntity = (collection, id) => Boolean(id && collection?.entities?.[id]);
 
 const getKitChannelLaneIds = (kit, kitChannels) => (
@@ -6,6 +8,16 @@ const getKitChannelLaneIds = (kit, kitChannels) => (
   const kitChannel = kitChannels?.entities?.[channelId];
   if (kitChannel?.laneId && !laneIds.includes(kitChannel.laneId)) {
     laneIds.push(kitChannel.laneId);
+  }
+  return laneIds;
+}, []);
+
+const getKitAssignmentLaneIds = (kit, kitChannelAssignments) => (
+  kitChannelAssignments?.ids || []
+).reduce((laneIds, assignmentId) => {
+  const assignment = kitChannelAssignments.entities[assignmentId];
+  if (assignment?.kitId === kit?.id && assignment.laneId && !laneIds.includes(assignment.laneId)) {
+    laneIds.push(assignment.laneId);
   }
   return laneIds;
 }, []);
@@ -20,6 +32,7 @@ export const validateSequencerModelState = (state = {}) => {
     song,
     kits,
     kitChannels,
+    kitChannelAssignments,
     samples,
     patterns,
     notes,
@@ -65,16 +78,43 @@ export const validateSequencerModelState = (state = {}) => {
     if (!hasEntity(samples, kitChannel.sampleId)) {
       addError(errors, `kitChannel ${channelId} references missing sampleId: ${kitChannel.sampleId}`);
     }
+    if (!VALID_PERCUSSION_TYPES.includes(kitChannel.percussionType)) {
+      addError(errors, `kitChannel ${channelId} has invalid percussionType: ${kitChannel.percussionType}`);
+    }
+    if (kitChannel.tags && !Array.isArray(kitChannel.tags)) {
+      addError(errors, `kitChannel ${channelId} tags must be an array`);
+    }
+  });
+
+  (kitChannelAssignments?.ids || []).forEach((assignmentId) => {
+    const assignment = kitChannelAssignments.entities[assignmentId];
+    if (!hasEntity(kits, assignment.kitId)) {
+      addError(errors, `kitChannelAssignment ${assignmentId} references missing kitId: ${assignment.kitId}`);
+    }
+    if (!hasEntity(kitChannels, assignment.kitChannelId)) {
+      addError(errors, `kitChannelAssignment ${assignmentId} references missing kitChannelId: ${assignment.kitChannelId}`);
+      return;
+    }
+    if (kitChannels.entities[assignment.kitChannelId].kitId !== assignment.kitId) {
+      addError(errors, `kitChannelAssignment ${assignmentId} kitId does not match kitChannel ${assignment.kitChannelId}`);
+    }
+    if (!assignment.laneId) {
+      addError(errors, `kitChannelAssignment ${assignmentId} is missing laneId`);
+    }
   });
 
   const selectedKitLaneIds = getKitChannelLaneIds(selectedKit, kitChannels);
+  const selectedKitAssignmentLaneIds = getKitAssignmentLaneIds(selectedKit, kitChannelAssignments);
+  const selectedPlayableLaneIds = selectedKitAssignmentLaneIds.length
+    ? selectedKitAssignmentLaneIds
+    : selectedKitLaneIds;
   (song.patternIds || []).forEach((patternId) => {
     const pattern = patterns?.entities?.[patternId];
     if (!pattern) {
       return;
     }
     (pattern.laneIds || []).forEach((laneId) => {
-      if (!selectedKitLaneIds.includes(laneId)) {
+      if (!selectedPlayableLaneIds.includes(laneId)) {
         addError(errors, `pattern ${patternId} laneId has no selected-kit channel: ${laneId}`);
       }
     });

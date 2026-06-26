@@ -4,6 +4,7 @@ import {
   normalizeKitChannelsState,
   sampleIdFromUrl,
 } from '../sequencerModel';
+import { PERCUSSION_TYPES } from '../percussion';
 import { createDefaultKitChannelsState } from '../defaultSequencerState';
 
 export const channelsInitialState = createDefaultKitChannelsState();
@@ -93,6 +94,7 @@ export const channelsSlice = createSlice({
         ...action.payload,
         kitId: action.payload.kitId || DEFAULT_KIT_ID,
         laneId: action.payload.laneId || action.payload.id,
+        percussionType: action.payload.percussionType || PERCUSSION_TYPES.GENERIC_PERCUSSION,
         sampleId: action.payload.sampleId || sampleIdFromUrl(action.payload.sample),
       };
       state.ids.push(channel.id);

@@ -85,4 +85,26 @@ describe('sequencer model invariants', () => {
       `kitChannel ${kitChannelId} references missing sampleId: missing-sample`,
     );
   });
+
+  test('detects kit channels with invalid percussion types', () => {
+    const state = clone(createDefaultSequencerState());
+    const kitChannelId = state.kitChannels.ids[0];
+
+    state.kitChannels.entities[kitChannelId].percussionType = 'laser_whistle';
+
+    expect(validateSequencerModelState(state)).toContain(
+      `kitChannel ${kitChannelId} has invalid percussionType: laser_whistle`,
+    );
+  });
+
+  test('detects assignments that reference missing kit channels', () => {
+    const state = clone(createDefaultSequencerState());
+    const assignmentId = state.kitChannelAssignments.ids[0];
+
+    state.kitChannelAssignments.entities[assignmentId].kitChannelId = 'missing-channel';
+
+    expect(validateSequencerModelState(state)).toContain(
+      `kitChannelAssignment ${assignmentId} references missing kitChannelId: missing-channel`,
+    );
+  });
 });

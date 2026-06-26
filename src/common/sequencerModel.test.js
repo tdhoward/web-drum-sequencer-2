@@ -6,8 +6,10 @@ import {
   migrateToNormalizedSequencerState,
   normalizeChannelsState,
   normalizeNotesState,
+  sampleIdFromUrl,
   stepToBeat,
 } from './sequencerModel';
+import { PERCUSSION_TYPES } from './percussion';
 import { channelsSelector } from './channels';
 import { notesSelector } from './notes';
 import { patternSelector } from './song';
@@ -132,9 +134,43 @@ describe('kit-aware migration', () => {
     expect(migrated.song.selectedKitId).toBe(DEFAULT_KIT_ID);
     expect(migrated.kits.entities[DEFAULT_KIT_ID].channelIds).toEqual(['kick']);
     expect(migrated.kitChannels.entities.kick.laneId).toBe('kick');
+    expect(migrated.kitChannelAssignments.entities.kick).toEqual({
+      id: 'kick',
+      kitId: DEFAULT_KIT_ID,
+      laneId: 'kick',
+      kitChannelId: 'kick',
+      confidence: 'manual',
+    });
     expect(migrated.kitChannels.entities.kick.sampleId).toBe('sample:kick.mp3');
     expect(migrated.samples.entities['sample:kick.mp3'].url).toBe('kick.mp3');
     expect(migrated.patterns.entities['pattern-0'].laneIds).toEqual(['kick']);
     expect(migrated.notes.entities['kick-1'].laneId).toBe('kick');
+  });
+});
+
+describe('kit channel normalization', () => {
+  test('preserves percussion metadata and defaults missing types to generic percussion', () => {
+    const normalized = normalizeChannelsState([
+      {
+        id: 'kick',
+        sample: 'kick.mp3',
+        gain: 1,
+        percussionType: PERCUSSION_TYPES.BASS_DRUM,
+        register: 'low',
+      },
+      {
+        id: 'mystery',
+        sample: 'mystery.mp3',
+        gain: 1,
+      },
+    ]);
+
+    expect(normalized.entities.kick).toEqual(expect.objectContaining({
+      percussionType: PERCUSSION_TYPES.BASS_DRUM,
+      register: 'low',
+      sampleId: sampleIdFromUrl('kick.mp3'),
+    }));
+    expect(normalized.entities.mystery.percussionType)
+      .toBe(PERCUSSION_TYPES.GENERIC_PERCUSSION);
   });
 });

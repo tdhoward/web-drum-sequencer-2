@@ -2,6 +2,7 @@ import presets from '../presets';
 import {
   DEFAULT_KIT_ID,
   createKitsState,
+  createKitChannelAssignmentsState,
   createPatternsState,
   createSamplesState,
   createSongState,
@@ -37,6 +38,11 @@ export const createDefaultKitsState = () => createKitsState(
 
 export const createDefaultSamplesState = () => createSamplesState(DEFAULT_PRESET.channels);
 
+export const createDefaultKitChannelAssignmentsState = () => createKitChannelAssignmentsState(
+  DEFAULT_PRESET.channels,
+  DEFAULT_KIT_ID,
+);
+
 export const createDefaultNotesState = () => normalizeNotesState(
   DEFAULT_PRESET.notes,
   createDefaultPatternsState().ids,
@@ -48,6 +54,7 @@ export const createDefaultSequencerState = () => ({
   patterns: createDefaultPatternsState(),
   kits: createDefaultKitsState(),
   kitChannels: createDefaultKitChannelsState(),
+  kitChannelAssignments: createDefaultKitChannelAssignmentsState(),
   samples: createDefaultSamplesState(),
   notes: createDefaultNotesState(),
 });

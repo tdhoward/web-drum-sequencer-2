@@ -6,43 +6,59 @@ export default {
   swing: 0.4,
   channels: [
     {
-      id: 'e75658e5-e17b-47dd-b8ca-4d03b06068d9',
+      id: 'hiphop-bd-1',
+      name: 'Bass Drum 1',
+      percussionType: 'bass_drum',
+      register: 'low',
       sample: samples.HipHopBd1,
       gain: 1,
     },
     {
-      id: 'empty_channel',
+      id: 'hiphop-bd-2',
+      name: 'Bass Drum 2',
+      percussionType: 'bass_drum',
+      register: 'low',
       sample: samples.HipHopBd2,
       gain: 1,
     },
     {
-      id: '8c754c56-6cdc-479a-95b2-890ce93856c2',
+      id: 'hiphop-sd-1',
+      name: 'Snare 1',
+      percussionType: 'snare_drum',
       sample: samples.HipHopSd1,
       gain: 1,
     },
     {
-      id: '6182dd6e-188c-4157-9b97-86d904f446d5',
+      id: 'hiphop-sd-2',
+      name: 'Snare 2',
+      percussionType: 'snare_drum',
       sample: samples.HipHopSd2,
       gain: 0.6,
     },
     {
-      id: '5c34f5d0-6605-471b-95f1-eea186f332ea',
+      id: 'hiphop-ch-1',
+      name: 'Closed Hat 1',
+      percussionType: 'closed_hi_hat',
       sample: samples.HipHopCh1,
       gain: 1,
     },
     {
-      id: '3a8d1712-d85b-4a1c-b812-4e16da1f3731',
+      id: 'hiphop-ch-2',
+      name: 'Closed Hat 2',
+      percussionType: 'closed_hi_hat',
       sample: samples.HipHopCh2,
       gain: 0.46,
     },
     {
-      id: '26feb931-cfb9-4a93-a0ab-6f9ca189bb40',
+      id: 'hiphop-oh',
+      name: 'Open Hat',
+      percussionType: 'open_hi_hat',
       sample: samples.HipHopOh,
       gain: 0.33,
     },
   ],
   notes: {
-    empty_channel: [
+    'hiphop-bd-2': [
       [
         {
           beat: 1,
@@ -124,7 +140,7 @@ export default {
       ],
       [],
     ],
-    '8c754c56-6cdc-479a-95b2-890ce93856c2': [
+    'hiphop-sd-1': [
       [
         {
           beat: 2,
@@ -222,7 +238,7 @@ export default {
         },
       ],
     ],
-    '5c34f5d0-6605-471b-95f1-eea186f332ea': [
+    'hiphop-ch-1': [
       [
         {
           beat: 1.5,
@@ -364,7 +380,7 @@ export default {
         },
       ],
     ],
-    '3a8d1712-d85b-4a1c-b812-4e16da1f3731': [
+    'hiphop-ch-2': [
       [
         {
           beat: 1,
@@ -498,7 +514,7 @@ export default {
         },
       ],
     ],
-    '6182dd6e-188c-4157-9b97-86d904f446d5': [
+    'hiphop-sd-2': [
       [
         {
           beat: 4,
@@ -564,7 +580,7 @@ export default {
         },
       ],
     ],
-    '26feb931-cfb9-4a93-a0ab-6f9ca189bb40': [
+    'hiphop-oh': [
       [
         {
           beat: 4.5,
@@ -634,7 +650,7 @@ export default {
         },
       ],
     ],
-    'e75658e5-e17b-47dd-b8ca-4d03b06068d9': [
+    'hiphop-bd-1': [
       [
         {
           beat: 2.75,

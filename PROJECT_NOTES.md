@@ -33,7 +33,7 @@ The app should be organized around three main workspaces:
 
 The Pattern and Song workspaces may show a compact display of the current kit, but full kit editing belongs on the Kit workspace.
 
-Also, we should be able to swap Kits and still use the same Pattern.  This requires us to associate each Kit channel with a particular type of standardized drum, such as the typical options for drum tablature.  We'll need to figure out how exactly to implement that, but just know that is the goal.
+Also, we should be able to swap Kits and still use the same Pattern. Patterns should remain attached to logical lanes, while the selected kit supplies channels/samples for those lanes. Kit channels now carry standardized percussion metadata such as `percussionType`, optional `articulation`, optional `register`, and optional `tags`. This lets the app resolve a pattern made for one kit onto another kit without rewriting the pattern notes.
 
 ## Important architectural direction
 
@@ -46,9 +46,21 @@ Preferred model direction:
 * A kit is a first-class object.
 * A pattern is a first-class object.
 * A song is a first-class object.
+* Kit channels should have user-facing names separate from sample file names.
+* Kit channels should have standardized percussion metadata. User-created channels can start as `generic_percussion` and be corrected through a simple control later.
+* Kit switching should use an explicit lane-to-kit-channel assignment result, not mutate note data.
+* Resolver output should be inspectable: proposed mappings, confidence, reasons, and unresolved lanes.
 * Default model creation should be centralized.
 * Avoid scattering hard-coded default kits, channels, patterns, and songs across multiple UI components.
 * Avoid adding compatibility shims for old app data unless required.
+
+Current model baseline:
+
+* `src/common/percussion.js` defines the controlled percussion vocabulary and the pure `resolveKitChannelMapping` resolver.
+* `kitChannel.percussionType` is required by invariant checks and defaults to `generic_percussion` for new/legacy channels.
+* `kitChannelAssignments` exists as the forward path for applying resolved lane-to-channel mappings.
+* Bundled factory presets use semantic channel IDs and explicit channel names/percussion metadata; `empty_channel` has been removed from factory preset data.
+* The compatibility UI/audio path still reads channel arrays through selectors, so further UI migration should be incremental.
 
 ## UI direction
 
@@ -63,6 +75,13 @@ Preferred top-level pages/workspaces:
 The navigation could use tab-like buttons near the existing top controls, such as the Install button area, as long as it fits the visual style of the app.
 
 The Kit page should become the only place for kit management. The Pattern and Song pages should show only current-kit selection.
+
+When kit switching is exposed in the UI, prefer a review/apply flow:
+
+* If every lane maps confidently, the app may apply the mapping directly.
+* If mappings are low confidence or unresolved, show a dialog with the proposed mapping.
+* The dialog should let the user choose a target channel, mute/ignore an unresolved lane, or accept the fallback.
+* User corrections should update assignments, not rewrite notes.
 
 ## Development style
 
@@ -92,30 +111,31 @@ The app previously had problems where manual sample triggering worked but sequen
 
 Impulse response assets may exist in the project. We may eventually want to use these to expand the reverb options.
 
-## Suggested first Codex tasks
+## Suggested Codex tasks
 
-A good first analysis task is:
+A useful follow-up analysis task is:
 
 ```text
-Inspect the current WDS2 repo and find where kit preset selection, pattern loading, and default model creation are implemented. Summarize what is currently coupled together and propose the smallest next refactor to separate kit data from pattern data. Do not edit files yet.
+Inspect how the current compatibility selectors and audio scheduler resolve notes to kit channels. Propose the smallest next step toward using kitChannelAssignments directly without breaking playback.
 ```
 
-A good first editing task after that is:
+A useful follow-up editing task is:
 
 ```text
-Proceed with the smallest safe refactor from that plan. Keep the app building. After editing, run the normal build command and show a concise diff summary.
+Wire kitChannelAssignments into the playback/channel selector path incrementally. Preserve existing playback behavior, keep tests passing, and add focused tests around assignment-based note resolution.
 ```
 
 ## Current priorities
 
 Near-term priorities:
 
-1. Centralize default model creation.
-2. Make kits first-class data.
-3. Separate kit preset loading from pattern loading.
-4. Add or improve workspace navigation for Kit, Pattern, and Song.
-5. Build out kit management UI.
-6. Keep Pattern and Song workspaces focused on their own responsibilities.
+1. Use `kitChannelAssignments` in selectors/playback instead of relying only on `kitChannel.laneId`.
+2. Add UI controls for channel name and percussion type in the Kit workspace.
+3. Build a first kit-switching flow that calls the resolver and applies high-confidence mappings.
+4. Add a review dialog for low-confidence or unresolved mappings.
+5. Continue separating kit preset loading from pattern loading.
+6. Build out kit management UI: create, select, rename, delete, duplicate.
+7. Keep Pattern and Song workspaces focused on their own responsibilities.
 
 ## Non-goals for now
 

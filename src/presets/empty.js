@@ -17,12 +17,15 @@ export default {
   swing: 0,
   channels: [
     {
-      id: 'empty_channel',
+      id: 'bass_drum',
+      name: 'Bass Drum',
+      percussionType: 'bass_drum',
+      register: 'low',
       sample: samples[0].url,
       gain: 1,
     },
   ],
   notes: {
-    empty_channel: EMPTY_NOTE_ROW,
+    bass_drum: EMPTY_NOTE_ROW,
   },
 };

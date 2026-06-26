@@ -69,11 +69,22 @@ kit
   name
   channelIds[]
 
+kitChannelAssignment
+  id
+  kitId
+  laneId
+  kitChannelId
+  confidence
+
 kitChannel
   id
   kitId
   laneId
   name
+  percussionType
+  articulation
+  register
+  tags[]
   sampleId
   gain
   pan
@@ -89,6 +100,39 @@ sample
   url
   sourceType
   fileName
+```
+
+`percussionType` is a controlled, machine-readable role used for kit
+translation. The first vocabulary is intentionally small: `bass_drum`,
+`snare_drum`, `closed_hi_hat`, `open_hi_hat`, `pedal_hi_hat`, `clap`,
+`rimshot`, `tom_high`, `tom_mid`, `tom_low`, `ride_cymbal`, `crash_cymbal`,
+`cymbal`, `shaker`, `tambourine`, `cowbell`, `clave`, and
+`generic_percussion`.
+
+User-created channels can start as `generic_percussion` and be corrected later.
+Factory kits should provide explicit `name` and `percussionType` values so
+patterns can be remapped to another kit without rewriting note data.
+
+## Kit channel mapping
+
+Kit switching should be treated as an explicit lane-to-kit-channel assignment,
+not as note mutation. The resolver produces an inspectable mapping result with
+confidence and reasons so a later review dialog can ask the user to approve or
+correct uncertain assignments.
+
+The current compatibility UI still reads `kitChannel.laneId`, but
+`kitChannelAssignments` is the forward path for applying a resolved mapping.
+
+```text
+kitChannelMappingResult
+  mappings[]
+    laneId
+    targetKitChannelId
+    confidence
+    reason
+  unresolved[]
+    laneId
+    reason
 ```
 
 ## Compatibility selectors

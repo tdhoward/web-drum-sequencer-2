@@ -6,38 +6,60 @@ export default {
   swing: 0.2,
   channels: [
     {
-      id: 'empty_channel',
+      id: 'tr707-bd',
+      name: 'Bass Drum',
+      percussionType: 'bass_drum',
+      register: 'low',
       sample: samples.tr707Bd,
       gain: 1,
     },
     {
-      id: '19a36a53-a907-41f2-baef-394f0fbf0403',
+      id: 'tr707-sd-low',
+      name: 'Snare Low',
+      percussionType: 'snare_drum',
+      register: 'low',
+      sample: samples.tr707SdLow,
+      gain: 1,
+    },
+    {
+      id: 'tr707-sd-high',
+      name: 'Snare High',
+      percussionType: 'snare_drum',
+      register: 'high',
       sample: samples.tr707SdHigh,
       gain: 1,
     },
     {
-      id: 'ca0d0d5f-61af-45a4-8d36-8648d20e3132',
+      id: 'tr707-ch',
+      name: 'Closed Hat',
+      percussionType: 'closed_hi_hat',
       sample: samples.tr707Ch,
       gain: 0.19,
     },
     {
-      id: '69aa5d1a-085a-4083-93c5-b3aa7a334278',
+      id: 'tr707-oh',
+      name: 'Open Hat',
+      percussionType: 'open_hi_hat',
       sample: samples.tr707Oh,
       gain: 0.32,
     },
     {
-      id: '5a2f4293-159f-46e9-a9de-52eaeb326483',
+      id: 'tr707-clap',
+      name: 'Clap',
+      percussionType: 'clap',
       sample: samples.tr707Clap,
       gain: 0.75,
     },
     {
-      id: '1449a5d5-79ea-4332-83e0-d5513a82d16f',
+      id: 'tr707-tamb',
+      name: 'Tambourine',
+      percussionType: 'tambourine',
       sample: samples.tr707Tamb,
       gain: 0.37,
     },
   ],
   notes: {
-    empty_channel: [
+    'tr707-bd': [
       [
         {
           beat: 1,
@@ -167,7 +189,7 @@ export default {
         },
       ],
     ],
-    'd65e1669-fbce-49ee-8bfc-dc7928407385': [
+    'tr707-sd-low': [
       [],
       [
         {
@@ -186,7 +208,7 @@ export default {
       [],
       [],
     ],
-    '19a36a53-a907-41f2-baef-394f0fbf0403': [
+    'tr707-sd-high': [
       [
         {
           beat: 2,
@@ -271,7 +293,7 @@ export default {
         },
       ],
     ],
-    'ca0d0d5f-61af-45a4-8d36-8648d20e3132': [
+    'tr707-ch': [
       [
         {
           beat: 1,
@@ -460,7 +482,7 @@ export default {
         },
       ],
     ],
-    '69aa5d1a-085a-4083-93c5-b3aa7a334278': [
+    'tr707-oh': [
       [],
       [
         {
@@ -485,7 +507,7 @@ export default {
         },
       ],
     ],
-    '5a2f4293-159f-46e9-a9de-52eaeb326483': [
+    'tr707-clap': [
       [
         {
           beat: 4,
@@ -562,7 +584,7 @@ export default {
         },
       ],
     ],
-    '1449a5d5-79ea-4332-83e0-d5513a82d16f': [
+    'tr707-tamb': [
       [],
       [
         {

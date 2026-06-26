@@ -1,3 +1,5 @@
+import { PERCUSSION_TYPES } from './percussion';
+
 export const DEFAULT_SONG_ID = 'song-1';
 export const DEFAULT_KIT_ID = 'default-kit';
 export const DEFAULT_PATTERN_COUNT = 8;
@@ -105,6 +107,7 @@ export const normalizeKitChannelsState = (
         ...channel,
         kitId: channel.kitId || kitId,
         laneId,
+        percussionType: channel.percussionType || PERCUSSION_TYPES.GENERIC_PERCUSSION,
         sampleId: channel.sampleId || sampleIdFromUrl(sampleUrl),
       },
     };
@@ -112,6 +115,23 @@ export const normalizeKitChannelsState = (
 });
 
 export const normalizeChannelsState = normalizeKitChannelsState;
+
+export const createKitChannelAssignmentsState = (
+  channels = [],
+  kitId = DEFAULT_KIT_ID,
+) => ({
+  ids: channels.map(channel => channel.id),
+  entities: channels.reduce((entities, channel) => ({
+    ...entities,
+    [channel.id]: {
+      id: channel.id,
+      kitId: channel.kitId || kitId,
+      laneId: channelToLaneId(channel),
+      kitChannelId: channel.id,
+      confidence: channel.assignmentConfidence || 'manual',
+    },
+  }), {}),
+});
 
 export const getPatternLengthInQuarterBeats = ({
   timeSignature = DEFAULT_PATTERN_SETTINGS.timeSignature,
@@ -286,6 +306,8 @@ export const migrateToKitSequencerState = (state = {}, fallbackPreset) => {
     patterns,
     kits: normalizedState.kits || createKitsState(channels, kitId),
     kitChannels: normalizedState.kitChannels || normalizeKitChannelsState(channels, kitId),
+    kitChannelAssignments: normalizedState.kitChannelAssignments
+      || createKitChannelAssignmentsState(channels, kitId),
     samples: normalizedState.samples || createSamplesState(channels),
     notes: normalizeExistingNotesStateToLanes(normalizedState.notes),
   };

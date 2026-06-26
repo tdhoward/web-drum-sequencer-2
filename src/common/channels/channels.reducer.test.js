@@ -144,7 +144,7 @@ describe('replaceChannels', () => {
       channelsInitialState,
       replaceChannels([
         {
-          id: 'empty_channel',
+          id: 'bass_drum',
           sample: 'test',
           gain: 1,
         },

@@ -6,38 +6,54 @@ export default {
   swing: 0.3,
   channels: [
     {
-      id: 'empty_channel',
+      id: 'ace-bd',
+      name: 'Bass Drum',
+      percussionType: 'bass_drum',
+      register: 'low',
       sample: samples.AcetoneBd,
       gain: 1,
     },
     {
-      id: 'efd00923-e1b5-4bcd-b99c-2cbde8d92634',
+      id: 'ace-sd-short',
+      name: 'Snare Short',
+      percussionType: 'snare_drum',
+      articulation: 'short',
       sample: samples.AcetoneSd1,
       gain: 0.73,
     },
     {
-      id: '6bf16a32-f8a1-4910-9046-be8b8c81591e',
+      id: 'ace-ch',
+      name: 'Closed Hat',
+      percussionType: 'closed_hi_hat',
       sample: samples.AcetoneCh,
       gain: 0.28,
     },
     {
-      id: 'ab6ea4cd-f211-43a3-95ae-9a1cf7459de2',
+      id: 'ace-oh',
+      name: 'Open Hat',
+      percussionType: 'open_hi_hat',
       sample: samples.AcetoneOh,
       gain: 0.46,
     },
     {
-      id: '8d761f84-9f82-48b3-bfa1-a11c7a7deeff',
+      id: 'ace-perc-low',
+      name: 'Percussion Low',
+      percussionType: 'generic_percussion',
+      register: 'low',
       sample: samples.AcetonePerc1,
       gain: 0.45,
     },
     {
-      id: '8735d786-5ac0-4b36-a3fb-c58a55ee2b08',
+      id: 'ace-perc-high',
+      name: 'Percussion High',
+      percussionType: 'generic_percussion',
+      register: 'high',
       sample: samples.AcetonePerc2,
       gain: 0.41,
     },
   ],
   notes: {
-    empty_channel: [
+    'ace-bd': [
       [
         {
           beat: 1,
@@ -187,7 +203,7 @@ export default {
         },
       ],
     ],
-    'efd00923-e1b5-4bcd-b99c-2cbde8d92634': [
+    'ace-sd-short': [
       [
         {
           beat: 2,
@@ -289,7 +305,7 @@ export default {
         },
       ],
     ],
-    '6bf16a32-f8a1-4910-9046-be8b8c81591e': [
+    'ace-ch': [
       [
         {
           beat: 1,
@@ -471,7 +487,7 @@ export default {
         },
       ],
     ],
-    'ab6ea4cd-f211-43a3-95ae-9a1cf7459de2': [
+    'ace-oh': [
       [
         {
           beat: 4.5,
@@ -532,7 +548,7 @@ export default {
         },
       ],
     ],
-    '8d761f84-9f82-48b3-bfa1-a11c7a7deeff': [
+    'ace-perc-low': [
       [
         {
           beat: 1,
@@ -620,7 +636,7 @@ export default {
         },
       ],
     ],
-    '8735d786-5ac0-4b36-a3fb-c58a55ee2b08': [
+    'ace-perc-high': [
       [],
       [
         {

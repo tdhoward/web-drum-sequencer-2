@@ -6,73 +6,106 @@ export default {
   swing: 0,
   channels: [
     {
-      id: 'empty_channel',
+      id: 'tr808-bd-short',
+      name: 'BD Short',
+      percussionType: 'bass_drum',
+      articulation: 'short',
+      register: 'low',
       sample: samples.tr808BdShort,
       gain: 0.83,
     },
     {
-      id: 'eb405dca-32d1-4867-b7e0-ef37198f5fee',
+      id: 'tr808-bd-long',
+      name: 'BD Long',
+      percussionType: 'bass_drum',
+      articulation: 'long',
+      register: 'low',
       sample: samples.tr808BdLong,
       gain: 1,
     },
     {
-      id: '59fe4d57-c587-441b-b10d-9a2b54d588fd',
+      id: 'tr808-sd',
+      name: 'Snare',
+      percussionType: 'snare_drum',
       sample: samples.tr808Sd,
       gain: 1,
     },
     {
-      id: '6a2a5e54-8cbc-4e7e-a81c-68fc4b34c0bc',
+      id: 'tr808-clap',
+      name: 'Clap',
+      percussionType: 'clap',
       sample: samples.tr808Clap,
       gain: 0.85,
     },
     {
-      id: '9b6de154-8a6e-4941-80db-4b9f47d9c241',
+      id: 'tr808-ch',
+      name: 'Closed Hat',
+      percussionType: 'closed_hi_hat',
       sample: samples.tr808Ch,
       gain: 0.21,
     },
     {
-      id: 'fb2edb2c-3d21-49fd-98d8-459b153fb083',
+      id: 'tr808-oh',
+      name: 'Open Hat',
+      percussionType: 'open_hi_hat',
       sample: samples.tr808Oh,
       gain: 0.28,
     },
     {
-      id: '27f949f4-f5f7-4846-abfb-1d0e544b5bff',
+      id: 'tr808-cowbell',
+      name: 'Cowbell',
+      percussionType: 'cowbell',
       sample: samples.tr808Cowbell,
       gain: 0.55,
     },
     {
-      id: 'd8d65425-e980-43a6-b3b3-1c14b55b8c94',
+      id: 'tr808-cym',
+      name: 'Cymbal',
+      percussionType: 'cymbal',
       sample: samples.tr808Cym,
       gain: 0.37,
     },
     {
-      id: 'dbbfd24a-0f5d-409f-b4ed-ec330b47e2e5',
+      id: 'tr808-clave',
+      name: 'Clave',
+      percussionType: 'clave',
       sample: samples.tr808Clav,
       gain: 0.31,
     },
     {
-      id: '206fcf08-67ff-4e98-905e-2495383fb83c',
+      id: 'tr808-rimshot',
+      name: 'Rimshot',
+      percussionType: 'rimshot',
       sample: samples.tr808Rs,
       gain: 0.43,
     },
     {
-      id: '0ea2f943-2144-4434-92f7-8d689d49633a',
+      id: 'tr808-ht',
+      name: 'High Tom',
+      percussionType: 'tom_high',
+      register: 'high',
       sample: samples.tr808Ht,
       gain: 0.71,
     },
     {
-      id: '2f090e95-37f7-4c49-b0c5-eb35d64216c8',
+      id: 'tr808-mt',
+      name: 'Mid Tom',
+      percussionType: 'tom_mid',
+      register: 'mid',
       sample: samples.tr808Mt,
       gain: 0.59,
     },
     {
-      id: '816f7250-0afb-4353-bc6c-84ad97f9b8c6',
+      id: 'tr808-lt',
+      name: 'Low Tom',
+      percussionType: 'tom_low',
+      register: 'low',
       sample: samples.tr808Lt,
       gain: 0.71,
     },
   ],
   notes: {
-    empty_channel: [
+    'tr808-bd-short': [
       [],
       [],
       [],
@@ -125,7 +158,7 @@ export default {
       ],
       [],
     ],
-    'eb405dca-32d1-4867-b7e0-ef37198f5fee': [
+    'tr808-bd-long': [
       [
         {
           beat: 1,
@@ -176,7 +209,7 @@ export default {
         },
       ],
     ],
-    '59fe4d57-c587-441b-b10d-9a2b54d588fd': [
+    'tr808-sd': [
       [
         {
           beat: 4,
@@ -253,7 +286,7 @@ export default {
         },
       ],
     ],
-    '6a2a5e54-8cbc-4e7e-a81c-68fc4b34c0bc': [
+    'tr808-clap': [
       [
         {
           beat: 2,
@@ -322,7 +355,7 @@ export default {
         },
       ],
     ],
-    '9b6de154-8a6e-4941-80db-4b9f47d9c241': [
+    'tr808-ch': [
       [
         {
           beat: 1,
@@ -544,7 +577,7 @@ export default {
         },
       ],
     ],
-    'fb2edb2c-3d21-49fd-98d8-459b153fb083': [
+    'tr808-oh': [
       [
         {
           beat: 4.5,
@@ -578,7 +611,7 @@ export default {
       [],
       [],
     ],
-    '27f949f4-f5f7-4846-abfb-1d0e544b5bff': [
+    'tr808-cowbell': [
       [
         {
           beat: 2.75,
@@ -624,7 +657,7 @@ export default {
         },
       ],
     ],
-    'd8d65425-e980-43a6-b3b3-1c14b55b8c94': [
+    'tr808-cym': [
       [],
       [],
       [
@@ -644,7 +677,7 @@ export default {
         },
       ],
     ],
-    'dbbfd24a-0f5d-409f-b4ed-ec330b47e2e5': [
+    'tr808-clave': [
       [],
       [],
       [
@@ -696,7 +729,7 @@ export default {
       [],
       [],
     ],
-    '206fcf08-67ff-4e98-905e-2495383fb83c': [
+    'tr808-rimshot': [
       [],
       [
         {
@@ -752,7 +785,7 @@ export default {
       [],
       [],
     ],
-    '0ea2f943-2144-4434-92f7-8d689d49633a': [
+    'tr808-ht': [
       [],
       [],
       [],
@@ -781,7 +814,7 @@ export default {
       ],
       [],
     ],
-    '2f090e95-37f7-4c49-b0c5-eb35d64216c8': [
+    'tr808-mt': [
       [],
       [],
       [],
@@ -796,7 +829,7 @@ export default {
       [],
       [],
     ],
-    '816f7250-0afb-4353-bc6c-84ad97f9b8c6': [
+    'tr808-lt': [
       [],
       [
         {

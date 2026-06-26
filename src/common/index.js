@@ -10,5 +10,7 @@ export * from './song';
 export * from './patterns';
 export * from './kits';
 export * from './samples';
+export * from './kitChannelAssignments';
 export * from './compatibility.selectors';
 export * from './workspace';
+export * from './percussion';

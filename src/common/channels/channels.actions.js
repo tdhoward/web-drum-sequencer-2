@@ -5,6 +5,7 @@ import factorySamples from '../../samples.config';
 import { setSelectedChannel } from '../master';
 import { selectedKitIdSelector } from '../song';
 import { addSampleFromUrl } from '../samples';
+import { PERCUSSION_TYPES } from '../percussion';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import { channelsSlice } from './channels.reducer';
 
@@ -50,6 +51,7 @@ export const newChannel = () => (dispatch, getState) => {
     id: channelId,
     kitId,
     laneId: channelId,
+    percussionType: PERCUSSION_TYPES.GENERIC_PERCUSSION,
     sample: factorySamples[0].url,
     gain: 1,
     pitchCoarse: 0,
