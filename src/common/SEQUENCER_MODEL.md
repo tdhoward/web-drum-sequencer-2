@@ -56,6 +56,39 @@ note
   velocity
 ```
 
+## Pattern packs
+
+Factory pattern content is selected separately from kits. A pattern pack is a
+named bank of related pattern slots, currently matching the app's eight-pattern
+workflow. Loading a pattern pack updates pattern lanes, notes, tempo/swing, and
+kit-channel assignments for the selected kit. It must not replace the selected
+kit or mutate kit channel/sample data.
+
+Kit preset loading is the inverse operation: it replaces kit channels/samples
+and rebuilds lane assignments for the currently loaded pattern content, but it
+must not replace pattern lanes, notes, tempo, or swing.
+
+```text
+patternPack
+  id
+  name
+  bpm
+  swing
+  lanes[]
+    laneId
+    name
+    percussionType
+    articulation
+    register
+    tags[]
+  notes
+```
+
+The Pattern workspace pack dropdown selects the whole pack, such as `Hip Hop
+Swing`; the existing pattern buttons select a pattern slot inside that pack.
+Individual pattern import/export can be added later on top of the same lane and
+note model.
+
 ## Global kit library
 
 Kits are global library objects. Songs reference a selected kit, but the same kit

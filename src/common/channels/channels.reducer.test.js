@@ -6,6 +6,7 @@ import {
   addChannel,
   removeChannel,
   replaceChannels,
+  replaceKitChannels,
   setChannelPitchCoarse,
   setChannelPitchFine,
   setChannelReverb,
@@ -151,5 +152,21 @@ describe('replaceChannels', () => {
       ]),
     );
     expect(state.ids.length).toEqual(1);
+  });
+});
+
+describe('replaceKitChannels', () => {
+  test('should replace existing kit channels without pattern notes payload', () => {
+    const state = channelsReducer(
+      channelsInitialState,
+      replaceKitChannels([
+        {
+          id: 'bass_drum',
+          sample: 'test',
+          gain: 1,
+        },
+      ]),
+    );
+    expect(state.ids).toEqual(['bass_drum']);
   });
 });

@@ -45,6 +45,9 @@ export const samplesSlice = createSlice({
       })
       .addCase(channelsSlice.actions.replaceChannels, (state, action) => {
         return createSamplesState(action.payload.channels);
+      })
+      .addCase(channelsSlice.actions.replaceKitChannels, (state, action) => {
+        return createSamplesState(action.payload.channels);
       });
   },
 });

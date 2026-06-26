@@ -13,6 +13,7 @@ import {
   channelsReducer,
   kitChannelAssignmentsReducer,
   samplesReducer,
+  patternPacksReducer,
   workspaceReducer,
 } from './common';
 
@@ -22,6 +23,7 @@ export default combineReducers({
   kitChannels: channelsReducer,
   kitChannelAssignments: kitChannelAssignmentsReducer,
   samples: samplesReducer,
+  patternPacks: patternPacksReducer,
   patterns: patternsReducer,
   playbackSession: playbackSessionReducer,
   tempo: tempoReducer,

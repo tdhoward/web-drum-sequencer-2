@@ -9,6 +9,7 @@ export * from './Marker';
 export * from './FancyButton.component';
 export * from './AddChannelButton';
 export * from './PresetSelector';
+export * from './PatternPackSelector';
 export * from './MasterControls';
 export * from './Modal.component';
 export * from './Logo.component';

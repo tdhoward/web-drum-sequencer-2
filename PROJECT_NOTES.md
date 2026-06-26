@@ -22,7 +22,8 @@ The app should be organized around three main workspaces:
 2. Pattern workspace
 
    * Edit beat patterns.
-   * Patterns should reference or use the current kit, but pattern data should not contain full kit definitions.
+   * Patterns should reference logical lanes and resolve through the current kit, but pattern data should not contain full kit definitions.
+   * Built-in rhythm content should be selected as human-readable pattern packs, such as `Hip Hop Swing`, with the existing pattern buttons selecting slots inside the loaded pack.
    * Pattern editing should stay focused on sequencing notes, timing, steps, accents/velocity if supported, and pattern-level behavior.
 
 3. Song workspace
@@ -50,6 +51,8 @@ Preferred model direction:
 * Kit channels should have standardized percussion metadata. User-created channels can start as `generic_percussion` and be corrected through a simple control later.
 * Kit switching should use an explicit lane-to-kit-channel assignment result, not mutate note data.
 * Resolver output should be inspectable: proposed mappings, confidence, reasons, and unresolved lanes.
+* Default rhythm content should live in pattern packs separate from kits.
+* Loading a pattern pack should update pattern lanes, notes, tempo/swing, and kit-channel assignments, but it should not replace the current kit.
 * Default model creation should be centralized.
 * Avoid scattering hard-coded default kits, channels, patterns, and songs across multiple UI components.
 * Avoid adding compatibility shims for old app data unless required.
@@ -59,8 +62,10 @@ Current model baseline:
 * `src/common/percussion.js` defines the controlled percussion vocabulary and the pure `resolveKitChannelMapping` resolver.
 * `kitChannel.percussionType` is required by invariant checks and defaults to `generic_percussion` for new/legacy channels.
 * `kitChannelAssignments` exists as the forward path for applying resolved lane-to-channel mappings.
+* `src/patternPacks/index.js` exposes factory pattern packs with human-readable names. The Pattern workspace dropdown loads a pack; the existing 1-8 pattern buttons select slots within that pack.
 * Bundled factory presets use semantic channel IDs and explicit channel names/percussion metadata; `empty_channel` has been removed from factory preset data.
-* The compatibility UI/audio path still reads channel arrays through selectors, so further UI migration should be incremental.
+* The compatibility UI/audio path now exposes assignment lane IDs through `channelsSelector`, so loaded pack notes can play through the current kit without changing kit samples.
+* Kit preset loading changes kit channels/samples/name and rebuilds assignments, but no longer replaces notes, pattern lanes, tempo, or swing.
 
 ## UI direction
 
@@ -75,6 +80,12 @@ Preferred top-level pages/workspaces:
 The navigation could use tab-like buttons near the existing top controls, such as the Install button area, as long as it fits the visual style of the app.
 
 The Kit page should become the only place for kit management. The Pattern and Song pages should show only current-kit selection.
+
+The Pattern workspace should include:
+
+* A pattern-pack dropdown for loading a named pack.
+* The existing numbered pattern buttons for selecting one pattern slot inside the loaded pack.
+* Pattern editing controls only; kit sample/channel editing should stay in the Kit workspace.
 
 When kit switching is exposed in the UI, prefer a review/apply flow:
 
@@ -116,26 +127,24 @@ Impulse response assets may exist in the project. We may eventually want to use 
 A useful follow-up analysis task is:
 
 ```text
-Inspect how the current compatibility selectors and audio scheduler resolve notes to kit channels. Propose the smallest next step toward using kitChannelAssignments directly without breaking playback.
+Inspect the Kit workspace controls and propose the smallest UI change for editing channel display name and percussion type.
 ```
 
 A useful follow-up editing task is:
 
 ```text
-Wire kitChannelAssignments into the playback/channel selector path incrementally. Preserve existing playback behavior, keep tests passing, and add focused tests around assignment-based note resolution.
+Add Kit workspace controls for editing a channel's user-facing name and percussion type. Keep the controls compact and preserve existing playback behavior.
 ```
 
 ## Current priorities
 
 Near-term priorities:
 
-1. Use `kitChannelAssignments` in selectors/playback instead of relying only on `kitChannel.laneId`.
-2. Add UI controls for channel name and percussion type in the Kit workspace.
-3. Build a first kit-switching flow that calls the resolver and applies high-confidence mappings.
-4. Add a review dialog for low-confidence or unresolved mappings.
-5. Continue separating kit preset loading from pattern loading.
-6. Build out kit management UI: create, select, rename, delete, duplicate.
-7. Keep Pattern and Song workspaces focused on their own responsibilities.
+1. Add UI controls for channel name and percussion type in the Kit workspace.
+2. Build a first kit-switching flow that calls the resolver and applies high-confidence mappings.
+3. Add a review dialog for low-confidence or unresolved mappings.
+4. Build out kit management UI: create, select, rename, delete, duplicate.
+5. Keep Pattern and Song workspaces focused on their own responsibilities.
 
 ## Non-goals for now
 

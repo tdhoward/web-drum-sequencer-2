@@ -73,6 +73,21 @@ export const kitsSlice = createSlice({
             channelIds,
           };
         }
+      })
+      .addCase(channelsSlice.actions.replaceKitChannels, (state, action) => {
+        const kitId = action.payload.kitId || DEFAULT_KIT_ID;
+        const kit = getKit(state, kitId);
+        const channelIds = action.payload.channels.map(channel => channel.id);
+        if (kit) {
+          kit.channelIds = channelIds;
+        } else {
+          state.ids.push(kitId);
+          state.entities[kitId] = {
+            id: kitId,
+            name: 'Default Kit',
+            channelIds,
+          };
+        }
       });
   },
 });

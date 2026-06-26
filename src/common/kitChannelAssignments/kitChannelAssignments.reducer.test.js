@@ -61,4 +61,27 @@ describe('kitChannelAssignmentsReducer', () => {
       kitChannelId: 'bass_drum',
     }));
   });
+
+  test('can replace assignments from a resolver result', () => {
+    const state = kitChannelAssignmentsReducer(
+      kitChannelAssignmentsInitialState,
+      {
+        type: 'kitChannelAssignments/replaceKitChannelAssignments',
+        payload: {
+          assignments: [
+            {
+              id: 'kit-kick',
+              kitId: 'default-kit',
+              laneId: 'pattern-kick',
+              kitChannelId: 'kit-kick',
+              confidence: 'high',
+            },
+          ],
+        },
+      },
+    );
+
+    expect(state.ids).toEqual(['kit-kick']);
+    expect(state.entities['kit-kick'].laneId).toBe('pattern-kick');
+  });
 });

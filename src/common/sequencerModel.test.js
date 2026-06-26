@@ -84,6 +84,109 @@ describe('compatibility selectors', () => {
     expect(channelsSelector(state)[0].id).toBe('kick');
     expect(notesSelector(state).kick[0]).toEqual(legacyNotes.kick[0]);
   });
+
+  test('use kit channel assignments as the exposed playback lane id', () => {
+    const patterns = createPatternsState({
+      patternCount: 2,
+      laneIds: ['pattern-kick'],
+    });
+    const state = {
+      song: {
+        id: 'song-1',
+        name: 'Test Song',
+        selectedPatternId: 'pattern-0',
+        selectedKitId: DEFAULT_KIT_ID,
+        patternIds: patterns.ids,
+      },
+      kits: {
+        ids: [DEFAULT_KIT_ID],
+        entities: {
+          [DEFAULT_KIT_ID]: {
+            id: DEFAULT_KIT_ID,
+            name: 'Test Kit',
+            channelIds: ['kit-kick'],
+          },
+        },
+      },
+      kitChannels: normalizeChannelsState([
+        {
+          id: 'kit-kick',
+          laneId: 'kit-kick',
+          sample: 'kick.mp3',
+          gain: 1,
+        },
+      ]),
+      kitChannelAssignments: {
+        ids: ['kit-kick'],
+        entities: {
+          'kit-kick': {
+            id: 'kit-kick',
+            kitId: DEFAULT_KIT_ID,
+            laneId: 'pattern-kick',
+            kitChannelId: 'kit-kick',
+            confidence: 'high',
+          },
+        },
+      },
+      samples: {
+        ids: ['sample:kick.mp3'],
+        entities: {
+          'sample:kick.mp3': {
+            id: 'sample:kick.mp3',
+            url: 'kick.mp3',
+          },
+        },
+      },
+      patterns,
+      notes: normalizeNotesState({
+        'pattern-kick': legacyNotes.kick,
+      }, patterns.ids, patterns),
+    };
+
+    expect(channelsSelector(state)[0].id).toBe('pattern-kick');
+    expect(channelsSelector(state)[0].kitChannelId).toBe('kit-kick');
+    expect(notesSelector(state)['pattern-kick'][0]).toEqual(legacyNotes.kick[0]);
+  });
+
+  test('falls back to kitChannels ids if selected kit channelIds are stale', () => {
+    const state = {
+      song: {
+        selectedKitId: DEFAULT_KIT_ID,
+      },
+      kits: {
+        ids: [DEFAULT_KIT_ID],
+        entities: {
+          [DEFAULT_KIT_ID]: {
+            id: DEFAULT_KIT_ID,
+            name: 'Stale Kit',
+            channelIds: ['missing-channel'],
+          },
+        },
+      },
+      kitChannels: normalizeChannelsState([
+        {
+          id: 'available-channel',
+          sample: 'available.wav',
+          gain: 1,
+        },
+      ]),
+      kitChannelAssignments: {
+        ids: [],
+        entities: {},
+      },
+      samples: {
+        ids: ['sample:available.wav'],
+        entities: {
+          'sample:available.wav': {
+            id: 'sample:available.wav',
+            url: 'available.wav',
+          },
+        },
+      },
+    };
+
+    expect(channelsSelector(state)[0].id).toBe('available-channel');
+  });
 });
 
 describe('redux-persist migration', () => {

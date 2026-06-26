@@ -1,5 +1,5 @@
 import { loadSample } from '../../services/sampleStore';
-import { setNotes, initializeChannelNotes, removeChannelNotes } from '../notes';
+import { initializeChannelNotes, removeChannelNotes } from '../notes';
 import { uuid } from '../../services/uuid';
 import factorySamples from '../../samples.config';
 import { setSelectedChannel } from '../master';
@@ -20,6 +20,7 @@ export const {
   removeChannel,
   updateChannelOrder,
   replaceChannels,
+  replaceKitChannels,
   sampleLoaded,
   setChannelSample,
   setChannelReverb,
@@ -34,14 +35,13 @@ export const loadSampleStatefully = (dispatch, channel) => {
   });
 };
 
-export const loadChannels = (channels, notes) => (dispatch, getState) => {
+export const loadChannels = channels => (dispatch, getState) => {
   const kitId = selectedKitIdSelector(getState());
   channels.forEach((channel) => {
     dispatch(addSampleFromUrl(channel.sample, 'factory'));
     loadSampleStatefully(dispatch, channel);
   });
-  dispatch(replaceChannels(channels, notes, kitId));
-  dispatch(setNotes(notes));
+  dispatch(replaceKitChannels(channels, kitId));
 };
 
 export const newChannel = () => (dispatch, getState) => {

@@ -17,6 +17,14 @@ export const kitChannelAssignmentsSlice = createSlice({
   name: 'kitChannelAssignments',
   initialState: kitChannelAssignmentsInitialState,
   reducers: {
+    replaceKitChannelAssignments(state, action) {
+      state.ids = [];
+      state.entities = {};
+      action.payload.assignments.forEach((assignment) => {
+        state.ids.push(assignment.id);
+        state.entities[assignment.id] = assignment;
+      });
+    },
     setKitChannelAssignment: {
       reducer(state, action) {
         const {
@@ -59,6 +67,7 @@ export const kitChannelAssignmentsSlice = createSlice({
 });
 
 export const {
+  replaceKitChannelAssignments,
   setKitChannelAssignment,
 } = kitChannelAssignmentsSlice.actions;
 

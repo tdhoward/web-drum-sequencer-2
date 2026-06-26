@@ -37,7 +37,7 @@ export class SavePresetModalComponent extends React.Component {
         >
           <label htmlFor="preset-name">
             <Text color="white" fontSize={2} height="2rem">
-              Preset Name
+              Kit Name
             </Text>
             <TextInput
               value={nameField}

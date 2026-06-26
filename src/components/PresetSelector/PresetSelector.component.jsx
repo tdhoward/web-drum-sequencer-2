@@ -37,7 +37,7 @@ export const PresetSelectorComponent = ({
       label: 'Memory',
       options: [
         {
-          label: 'Save As...',
+          label: 'Save Kit As...',
           value: 'SAVE_PRESET_AS',
         },
         {

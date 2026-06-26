@@ -156,6 +156,14 @@ export const channelsSlice = createSlice({
         return { payload: { channels, notes, kitId } };
       },
     },
+    replaceKitChannels: {
+      reducer(state, action) {
+        return normalizeKitChannelsState(action.payload.channels, action.payload.kitId);
+      },
+      prepare(channels, kitId = DEFAULT_KIT_ID) {
+        return { payload: { channels, kitId } };
+      },
+    },
   },
 });
 
