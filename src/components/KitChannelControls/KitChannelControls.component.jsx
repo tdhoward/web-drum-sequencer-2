@@ -10,6 +10,7 @@ import { ChannelHeaderLabel } from '../ChannelHeader/ChannelHeaderLabel.componen
 import { MuteSolo } from '../MuteSolo';
 import { SampleWaveform } from '../SampleWaveform.component';
 import { SampleSelect } from '../SampleSelect';
+import { AddChannelButton } from '../AddChannelButton';
 import construction from '../../assets/images/construction-light.svg';
 
 const kitChannelGridColumns = 'minmax(8rem, 11rem) 1.2rem 3rem 15rem minmax(10rem, 1fr) repeat(4, 5.125rem)';
@@ -219,6 +220,7 @@ export class KitChannelControlsComponent extends React.Component {
             </KnobCell>
           </KitChannelRow>
         ))}
+        <AddChannelButton />
       </KitChannelList>
     );
   }

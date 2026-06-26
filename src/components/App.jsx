@@ -12,7 +12,6 @@ import {
   KitChannelHeader,
   KitWorkspaceControls,
   MasterControls,
-  PatternPackSelector,
   Branding,
   GithubLink,
   FlashMessage,
@@ -44,9 +43,6 @@ const AppComponent = ({ selectedWorkspace }) => (
             <MasterControls />
             {selectedWorkspace === WORKSPACES.PATTERN && (
               <>
-                <Box mb={3} width={['100%', '18rem']}>
-                  <PatternPackSelector />
-                </Box>
                 <ChannelControls />
                 <ChannelHeader />
               </>

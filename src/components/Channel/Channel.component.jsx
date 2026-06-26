@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 import PropTypes from 'prop-types';
-import * as R from 'ramda';
 import { Toggles } from '../Toggles';
 import {
   Box,
@@ -12,12 +11,6 @@ import { RemoveButton } from './RemoveButton.component';
 import { HitButton } from './HitButton.component';
 import { MuteSolo } from '../MuteSolo';
 import construction from '../../assets/images/construction-light.svg';
-import samples from '../../samples.config';
-
-const getSampleName = (sampleURL) => {
-  const maybeName = R.find(R.propEq(sampleURL, 'url'))(samples);
-  return maybeName ? maybeName.name : sampleURL;
-};
 
 const ChannelBox = styled(Box)`
   outline: none;
@@ -51,7 +44,7 @@ export const ChannelComponent = ({
   onTouchChannel,
   selectedChannelId,
 }) => {
-  const sampleName = getSampleName(channel.sample);
+  const channelName = channel.name || channel.kitChannelId || channel.id;
   return (
     <ChannelBox
       width="100%"
@@ -78,7 +71,7 @@ export const ChannelComponent = ({
         <MoveImage src={construction} height="2.5rem" mr={3} userSelect="none" className="wds-channel-handle" />
         <Box flex="1 1 auto">
           <Text color="white" fontWeight="normal" textAlign="left" fontSize={2} userSelect="none">
-            {sampleName}
+            {channelName}
           </Text>
         </Box>
         <MuteSolo channel={channel} />
@@ -98,6 +91,8 @@ ChannelComponent.propTypes = {
   channel: PropTypes.shape({
     sample: PropTypes.string,
     id: PropTypes.string.isRequired,
+    kitChannelId: PropTypes.string,
+    name: PropTypes.string,
   }).isRequired,
   onPressRemove: PropTypes.func.isRequired,
   pattern: PropTypes.number.isRequired,
