@@ -4,8 +4,8 @@ import styled from 'styled-components';
 import { Box, Text } from '../design-system';
 
 const CurrentKitFrame = styled(Box)`
-  background: black;
-  border: 2px solid ${({ theme }) => theme.colors.steel};
+  background: ${({ theme }) => theme.colors.surfaceControl};
+  border: 2px solid ${({ theme }) => theme.colors.borderDefault};
   border-radius: 0.5em;
   min-height: 2.7rem;
   overflow: hidden;
@@ -17,10 +17,10 @@ export const CurrentKitDisplayComponent = ({ kitName }) => (
       position="absolute"
       left="0.5rem"
       top="-0.6em"
-      color="gray"
+      color="textMuted"
       fontSize="0.6rem"
       fontWeight="600"
-      bg="nearBlack"
+      bg="surfaceApp"
       pl={1}
       pr={1}
       letterSpacing="0.1em"
@@ -30,7 +30,7 @@ export const CurrentKitDisplayComponent = ({ kitName }) => (
       CURRENT KIT
     </Text>
     <CurrentKitFrame display="flex" alignItems="center" px={3}>
-      <Text color="nearWhite" fontSize={2} lineHeight="1.2em">
+      <Text color="textPrimary" fontSize={2} lineHeight="1.2em">
         {kitName}
       </Text>
     </CurrentKitFrame>

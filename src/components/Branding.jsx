@@ -1,11 +1,10 @@
 import React from 'react';
 import styled from 'styled-components';
-import theme from '../styles/theme';
 import { Logo } from './Logo.component';
 import { Box } from './design-system';
 
 const HeaderText = styled.h1`
-  color: ${theme.colors.steel};
+  color: ${({ theme }) => theme.colors.borderDefault};
   font-size: 1em;
   font-weight: 600;
   margin-left: 1.5em;

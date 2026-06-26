@@ -1,5 +1,4 @@
 import { createGlobalStyle } from 'styled-components';
-import theme from './theme';
 import jostMediumWoff2 from '../assets/fonts/jost-medium-webfont.woff2';
 import jostMediumWoff from '../assets/fonts/jost-medium-webfont.woff';
 import jostBoldWoff2 from '../assets/fonts/jost-bold-webfont.woff2';
@@ -36,7 +35,7 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   html {
-    background-color: ${theme.colors.nearBlack};
+    background-color: ${({ theme }) => theme.colors.surfaceApp};
   }
 
   * {

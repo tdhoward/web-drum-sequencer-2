@@ -1,9 +1,10 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import Select from 'react-select';
+import { useTheme } from 'styled-components';
 import { Box, ControlLabel } from '../design-system';
 import sampleOptions from '../../samples.config';
-import theme from '../../styles/theme';
+import { createSelectStyles } from '../../styles/selectStyles';
 
 const openFileInput = React.createRef();
 
@@ -55,6 +56,7 @@ export const SampleSelectComponent = ({
   userSamples,
   showLabel = true,
 }) => {
+  const theme = useTheme();
   const userOptions = userSamples.map(filename => ({
     value: filename,
     label: filename,
@@ -81,20 +83,14 @@ export const SampleSelectComponent = ({
         value={currentOption}
         isSearchable={false}
         styles={{
+          ...createSelectStyles(theme),
           container: styles => ({
             ...styles,
             height: '3rem',
           }),
-          control: styles => ({
-            ...styles,
-            backgroundColor: 'black',
-            border: `2px solid ${theme.colors.steel}`,
-            height: '100%',
-            borderRadius: '0.5em',
-          }),
           singleValue: styles => ({
             ...styles,
-            color: theme.colors.nearWhite,
+            color: theme.colors.textPrimary,
             opacity: channel.sampleLoaded ? 1 : 0.3,
           }),
           menu: styles => ({

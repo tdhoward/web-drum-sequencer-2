@@ -7,7 +7,7 @@ import { PatternSelector } from '../PatternSelector';
 import { CurrentKitDisplay } from '../CurrentKitDisplay';
 
 const ControlCluster = styled(Box)`
-  background-color: ${({ theme }) => theme.colors.nearBlack};
+  background-color: ${({ theme }) => theme.colors.surfacePanel};
   border-radius: 0.3rem;
   display: flex;
   margin: 0.5rem;

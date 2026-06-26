@@ -1,4 +1,4 @@
-const colors = {
+const classicDarkPalette = {
   nearWhite: '#F2F2F8',
   lightGray: '#C0C3C7',
   gray: '#909599',
@@ -24,7 +24,13 @@ const colors = {
   darkBlue: '#196096',
 };
 
-export default {
+const createTheme = ({
+  id,
+  name,
+  colors,
+}) => ({
+  id,
+  name,
   fontSizes: [
     11, 13, 14, 24, 32, 48, 64, 96, 128,
   ],
@@ -62,4 +68,54 @@ export default {
       },
     },
   },
+});
+
+const classicDarkColors = {
+  ...classicDarkPalette,
+
+  surfaceApp: classicDarkPalette.nearBlack,
+  surfacePanel: classicDarkPalette.nearBlack,
+  surfacePanelRaised: classicDarkPalette.darkGray,
+  surfaceControl: 'black',
+  surfaceControlHover: classicDarkPalette.steel,
+  surfaceOverlay: classicDarkPalette.black80,
+  surfaceInverse: 'white',
+
+  borderDefault: classicDarkPalette.steel,
+  borderHover: classicDarkPalette.gray,
+  borderSubtle: 'rgba(255, 255, 255, 0.06)',
+
+  textPrimary: classicDarkPalette.nearWhite,
+  textSecondary: classicDarkPalette.lightGray,
+  textMuted: classicDarkPalette.gray,
+  textInverse: classicDarkPalette.nearBlack,
+
+  accentPrimary: classicDarkPalette.secondary,
+  accentPrimaryActive: classicDarkPalette.primaryDark,
+  accentPrimaryGlow: 'rgba(152, 255, 193, 0.42)',
+
+  actionPrimary: classicDarkPalette.blue,
+  actionPrimaryHover: classicDarkPalette.darkBlue,
+
+  errorBorder: classicDarkPalette.lightRed,
+  danger: classicDarkPalette.brightRed,
+  dangerSubtle: classicDarkPalette.brightRed30,
+  warning: classicDarkPalette.yellow,
+  warningSubtle: classicDarkPalette.yellow30,
+  waveform: classicDarkPalette.secondary,
+  waveformGuide: 'rgba(152, 255, 193, 0.08)',
 };
+
+export const classicDarkTheme = createTheme({
+  id: 'classicDark',
+  name: 'Classic Dark',
+  colors: classicDarkColors,
+});
+
+export const DEFAULT_THEME_ID = classicDarkTheme.id;
+
+export const colorThemes = {
+  [classicDarkTheme.id]: classicDarkTheme,
+};
+
+export default classicDarkTheme;

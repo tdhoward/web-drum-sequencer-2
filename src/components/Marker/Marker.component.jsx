@@ -3,10 +3,16 @@ import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import { Box } from '../design-system';
 import { getCurrentBeat } from '../../services/audioContext';
-import theme from '../../styles/theme';
 
 const Container = styled(Box)`
   overflow: hidden;
+`;
+
+const MarkerBar = styled.div`
+  background-color: ${({ theme }) => theme.colors.surfacePanelRaised};
+  height: 100%;
+  position: absolute;
+  width: 0;
 `;
 
 export class MarkerComponent extends React.PureComponent {
@@ -31,14 +37,8 @@ export class MarkerComponent extends React.PureComponent {
     const { children } = this.props;
     return (
       <Container flex="1 1 auto" position="relative">
-        <div
+        <MarkerBar
           ref={(ref) => { this.marker = ref; }}
-          style={{
-            height: '100%',
-            backgroundColor: theme.colors.darkGray,
-            position: 'absolute',
-            width: 0,
-          }}
         />
         <Box position="absolute" display="flex" width="100%">
           {children}

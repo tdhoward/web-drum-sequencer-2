@@ -24,7 +24,7 @@ const KitChannelList = styled.div`
 
 const KitChannelHeaderBar = styled.div`
   align-items: center;
-  background-color: black;
+  background-color: ${({ theme }) => theme.colors.surfaceControl};
   display: grid;
   gap: 0.75rem;
   grid-template-columns: ${kitChannelGridColumns};
@@ -33,7 +33,7 @@ const KitChannelHeaderBar = styled.div`
 
 const KitChannelRow = styled.div`
   align-items: center;
-  background-color: ${({ theme }) => theme.colors.darkGray};
+  background-color: ${({ theme }) => theme.colors.surfacePanelRaised};
   border-radius: 0.3rem;
   display: grid;
   gap: 0.75rem;

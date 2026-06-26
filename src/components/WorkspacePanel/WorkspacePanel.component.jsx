@@ -34,17 +34,17 @@ const WorkspaceControlLayout = styled.div`
 
 const WorkspacePlaceholder = ({ title, body, children }) => (
   <Box
-    bg="nearBlack"
+    bg="surfacePanel"
     border="1px solid"
-    borderColor="steel"
+    borderColor="borderDefault"
     borderRadius="0.5rem"
     mt={3}
     p={[3, 3, 4]}
   >
-    <Text color="nearWhite" fontSize={3} fontWeight="bold" lineHeight="1.2em" mb={2}>
+    <Text color="textPrimary" fontSize={3} fontWeight="bold" lineHeight="1.2em" mb={2}>
       {title}
     </Text>
-    <Text color="lightGray" fontSize={2} lineHeight="1.5em" mb={children ? 3 : 0}>
+    <Text color="textSecondary" fontSize={2} lineHeight="1.5em" mb={children ? 3 : 0}>
       {body}
     </Text>
     {children}
@@ -75,7 +75,7 @@ const SongWorkspacePanel = () => (
     <LabelBox label="SONG CONTROLS">
       <WorkspaceControlLayout>
         <div className="workspace-control-copy">
-          <Text color="lightGray" fontSize={2} lineHeight="1.5em">
+          <Text color="textSecondary" fontSize={2} lineHeight="1.5em">
             Arrangement controls will be added here. The current kit is shown for context
             while the song workspace is active.
           </Text>

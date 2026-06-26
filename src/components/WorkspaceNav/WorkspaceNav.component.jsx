@@ -11,8 +11,8 @@ const workspaceOptions = [
 
 const WorkspaceTrack = styled.div`
   align-items: center;
-  background: linear-gradient(180deg, rgba(77, 82, 88, 0.96), rgba(57, 61, 66, 0.96));
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: ${({ theme }) => `linear-gradient(180deg, ${theme.colors.surfacePanelRaised}, ${theme.colors.surfacePanel})`};
+  border: 1px solid ${({ theme }) => theme.colors.borderSubtle};
   border-radius: 999px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
     inset 0 -1px 0 rgba(0, 0, 0, 0.35),
@@ -26,13 +26,13 @@ const WorkspaceTrack = styled.div`
 
 const WorkspaceButton = styled.button`
   align-items: center;
-  background: ${({ $selected, theme }) => ($selected ? theme.colors.secondary : 'transparent')};
+  background: ${({ $selected, theme }) => ($selected ? theme.colors.accentPrimary : 'transparent')};
   border: 0;
   border-radius: 999px;
-  box-shadow: ${({ $selected }) => ($selected
-    ? '0 0 0.85rem rgba(152, 255, 193, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.35)'
+  box-shadow: ${({ $selected, theme }) => ($selected
+    ? `0 0 0.85rem ${theme.colors.accentPrimaryGlow}, inset 0 1px 0 rgba(255, 255, 255, 0.35)`
     : 'none')};
-  color: ${({ $selected, theme }) => ($selected ? theme.colors.nearBlack : theme.colors.nearWhite)};
+  color: ${({ $selected, theme }) => ($selected ? theme.colors.textInverse : theme.colors.textPrimary)};
   cursor: pointer;
   display: flex;
   flex: 1;
@@ -48,12 +48,12 @@ const WorkspaceButton = styled.button`
   transition: background-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
 
   &:hover {
-    background: ${({ $selected, theme }) => ($selected ? theme.colors.secondary : 'rgba(255, 255, 255, 0.06)')};
-    color: ${({ $selected, theme }) => ($selected ? theme.colors.nearBlack : theme.colors.nearWhite)};
+    background: ${({ $selected, theme }) => ($selected ? theme.colors.accentPrimary : theme.colors.borderSubtle)};
+    color: ${({ $selected, theme }) => ($selected ? theme.colors.textInverse : theme.colors.textPrimary)};
   }
 
   &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors.secondary};
+    outline: 2px solid ${({ theme }) => theme.colors.accentPrimary};
     outline-offset: 2px;
   }
 `;

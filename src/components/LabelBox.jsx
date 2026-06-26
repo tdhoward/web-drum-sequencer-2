@@ -1,16 +1,15 @@
 import React from 'react';
 import styled from 'styled-components';
 import PropTypes from 'prop-types';
-import theme from '../styles/theme';
 import { Box, Text } from './design-system';
 
 const HoverBox = styled(Box)`
   transition: border-color 0.2s;
 
   &:hover {
-    ${({ hoverEffect }) => (
+    ${({ hoverEffect, theme }) => (
     hoverEffect
-      ? `border-color: ${theme.colors.gray};`
+      ? `border-color: ${theme.colors.borderHover};`
       : '')}
   }
 `;
@@ -19,7 +18,7 @@ export const LabelBox = ({ label, children, hoverEffect = false }) => (
   <HoverBox
     display="flex"
     border="2px solid"
-    borderColor="steel"
+    borderColor="borderDefault"
     borderRadius="0.5rem"
     p={2}
     position="relative"
@@ -30,10 +29,10 @@ export const LabelBox = ({ label, children, hoverEffect = false }) => (
       position="absolute"
       left="0.5rem"
       top="-0.6em"
-      color="gray"
+      color="textMuted"
       fontSize="0.6rem"
       fontWeight="600"
-      bg="nearBlack"
+      bg="surfaceApp"
       pl={1}
       pr={1}
       letterSpacing="0.1em"

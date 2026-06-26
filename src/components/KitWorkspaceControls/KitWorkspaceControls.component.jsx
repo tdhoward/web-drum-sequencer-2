@@ -33,7 +33,7 @@ export const KitWorkspaceControls = () => (
   <LabelBox label="KIT CONTROLS">
     <WorkspaceControlLayout>
       <div className="workspace-control-copy">
-        <Text color="lightGray" fontSize={2} lineHeight="1.5em">
+        <Text color="textSecondary" fontSize={2} lineHeight="1.5em">
           Select the active kit preset here for now. Dedicated kit naming, channel sample
           editing, and kit duplication controls will be added later.
         </Text>

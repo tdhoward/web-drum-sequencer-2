@@ -54,12 +54,12 @@ export const ChannelComponent = ({
       alignItems="stretch"
       borderRadius={0}
       onMouseDown={onTouchChannel}
-      bg={selectedChannelId === channel.id ? 'darkGray' : 'transparent'}
+      bg={selectedChannelId === channel.id ? 'surfacePanelRaised' : 'transparent'}
       outline="none"
       className="wds-draggable"
     >
       <Box
-        bg={selectedChannelId === channel.id ? 'steel' : 'darkGray'}
+        bg={selectedChannelId === channel.id ? 'surfaceControlHover' : 'surfacePanelRaised'}
         width="16rem"
         p={2}
         borderRadius="0.25rem"
@@ -70,7 +70,7 @@ export const ChannelComponent = ({
       >
         <MoveImage src={construction} height="2.5rem" mr={3} userSelect="none" className="wds-channel-handle" />
         <Box flex="1 1 auto">
-          <Text color="white" fontWeight="normal" textAlign="left" fontSize={2} userSelect="none">
+          <Text color="textPrimary" fontWeight="normal" textAlign="left" fontSize={2} userSelect="none">
             {channelName}
           </Text>
         </Box>

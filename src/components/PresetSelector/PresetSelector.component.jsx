@@ -2,7 +2,8 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Select from 'react-select';
 import * as R from 'ramda';
-import theme from '../../styles/theme';
+import { useTheme } from 'styled-components';
+import { createSelectStyles } from '../../styles/selectStyles';
 import { Box, Text } from '../design-system';
 import { SavePresetModal } from '../SavePresetModal';
 
@@ -14,6 +15,7 @@ export const PresetSelectorComponent = ({
   userPresets,
   label,
 }) => {
+  const theme = useTheme();
   const defaultPresetOptions = presets.map(preset => ({
     label: preset.name,
     value: preset,
@@ -72,10 +74,10 @@ export const PresetSelectorComponent = ({
         position="absolute"
         left="0.5rem"
         top="-0.6em"
-        color="gray"
+        color="textMuted"
         fontSize="0.6rem"
         fontWeight="600"
-        bg="nearBlack"
+        bg="surfaceApp"
         pl={1}
         pr={1}
         letterSpacing="0.1em"
@@ -100,27 +102,7 @@ export const PresetSelectorComponent = ({
           return false;
         }}
         isSearchable={false}
-        styles={{
-          container: styles => ({
-            ...styles,
-            height: '100%',
-          }),
-          control: styles => ({
-            ...styles,
-            backgroundColor: 'black',
-            border: `2px solid ${theme.colors.steel}`,
-            height: '100%',
-            borderRadius: '0.5em',
-          }),
-          singleValue: styles => ({
-            ...styles,
-            color: theme.colors.nearWhite,
-          }),
-          option: styles => ({
-            ...styles,
-            padding: '0.4em 1em',
-          }),
-        }}
+        styles={createSelectStyles(theme)}
       />
       <SavePresetModal />
     </Box>

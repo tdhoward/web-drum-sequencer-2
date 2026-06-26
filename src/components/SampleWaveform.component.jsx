@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import styled from 'styled-components';
-import theme from '../styles/theme';
+import styled, { useTheme } from 'styled-components';
+import { classicDarkTheme } from '../styles/theme';
 import { loadSampleBuffer } from '../services/sampleStore';
 
 const WaveformFrame = styled.div`
-  background: black;
-  border: 2px solid ${({ theme: styledTheme }) => styledTheme.colors.steel};
+  background: ${({ theme }) => theme.colors.surfaceControl};
+  border: 2px solid ${({ theme }) => theme.colors.borderDefault};
   border-radius: 0.3rem;
   height: 2.5rem;
   min-width: 0;
@@ -25,7 +25,7 @@ const DurationLabel = styled.span`
   background: rgba(0, 0, 0, 0.55);
   border-radius: 0.2rem;
   bottom: 0.15rem;
-  color: ${({ theme: styledTheme }) => styledTheme.colors.nearWhite};
+  color: ${({ theme }) => theme.colors.textPrimary};
   font-size: 0.65rem;
   line-height: 1;
   opacity: 0.8;
@@ -78,7 +78,12 @@ export const getWaveformPeaks = (audioBuffer, width) => {
   return peaks;
 };
 
-export const drawWaveform = (canvas, audioBuffer, color = theme.colors.secondary) => {
+export const drawWaveform = (
+  canvas,
+  audioBuffer,
+  color = classicDarkTheme.colors.waveform,
+  guideColor = classicDarkTheme.colors.waveformGuide,
+) => {
   const rect = canvas.getBoundingClientRect();
   const ratio = window.devicePixelRatio || 1;
   const width = Math.max(1, Math.floor(rect.width));
@@ -97,7 +102,7 @@ export const drawWaveform = (canvas, audioBuffer, color = theme.colors.secondary
   }
 
   context.clearRect(0, 0, canvasWidth, canvasHeight);
-  context.fillStyle = 'rgba(152, 255, 193, 0.08)';
+  context.fillStyle = guideColor;
   context.fillRect(0, Math.floor(canvasHeight / 2), canvasWidth, 1);
   const peaks = getWaveformPeaks(audioBuffer, canvasWidth);
   const centerY = canvasHeight / 2;
@@ -145,6 +150,7 @@ export const drawWaveform = (canvas, audioBuffer, color = theme.colors.secondary
 const formatDuration = duration => `${duration.toFixed(2)} s`;
 
 export const SampleWaveform = ({ sampleUrl }) => {
+  const theme = useTheme();
   const canvasRef = useRef(null);
   const frameRef = useRef(null);
   const [audioBuffer, setAudioBuffer] = useState(null);
@@ -219,9 +225,9 @@ export const SampleWaveform = ({ sampleUrl }) => {
     }
 
     if (audioBuffer && canvasSize.width > 0 && canvasSize.height > 0) {
-      drawWaveform(canvas, audioBuffer);
+      drawWaveform(canvas, audioBuffer, theme.colors.waveform, theme.colors.waveformGuide);
     }
-  }, [audioBuffer, canvasSize.width, canvasSize.height]);
+  }, [audioBuffer, canvasSize.width, canvasSize.height, theme]);
 
   return (
     <WaveformFrame ref={frameRef}>

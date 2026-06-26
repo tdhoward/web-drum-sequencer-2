@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
 import PropTypes from 'prop-types';
-import theme from '../../styles/theme';
 import {
   Box,
   Label,
@@ -14,7 +13,7 @@ const ShinyBox = styled(Box)`
   transition: border-color 0.2s;
 
   &:hover {
-    border-color: ${theme.colors.gray};
+    border-color: ${({ theme }) => theme.colors.borderHover};
   }
 `;
 
@@ -28,7 +27,7 @@ export const BPMInputComponent = ({ bpm, setBPM }) => (
   <ShinyBox
     display="flex"
     border="2px solid"
-    borderColor="steel"
+    borderColor="borderDefault"
     borderRadius="0.5rem"
     position="relative"
   >
@@ -36,10 +35,10 @@ export const BPMInputComponent = ({ bpm, setBPM }) => (
       position="absolute"
       left="0.5rem"
       top="-0.6em"
-      color="gray"
+      color="textMuted"
       fontSize="0.6rem"
       fontWeight="600"
-      bg="nearBlack"
+      bg="surfaceApp"
       pl={1}
       pr={1}
       borderRadius="3px"
@@ -62,7 +61,7 @@ export const BPMInputComponent = ({ bpm, setBPM }) => (
       fontWeight="500"
       bg="transparent"
       id="bpm"
-      color="brightRed"
+      color="danger"
       className="bpm-text-input"
       type="number"
       value={bpm}

@@ -3,9 +3,6 @@ import PropTypes from 'prop-types';
 import styled from 'styled-components';
 import * as ss from 'styled-system';
 import { Box } from '../design-system';
-import theme from '../../styles/theme';
-
-const gradient = `linear-gradient(180deg, ${theme.colors.primary} 0%, ${theme.colors.secondary} 100%)`;
 
 const BeatButton = styled.button.attrs(({
   border = 'none',
@@ -21,9 +18,9 @@ const BeatButton = styled.button.attrs(({
   outline: none;
   transition: background-color 0.1s;
   position: relative;
-  background: ${({ isActive }) => (isActive
-    ? gradient
-    : theme.colors.darkGray)};
+  background: ${({ isActive, theme }) => (isActive
+    ? `linear-gradient(180deg, ${theme.colors.accentPrimaryActive} 0%, ${theme.colors.accentPrimary} 100%)`
+    : theme.colors.surfacePanelRaised)};
 
   &:focus {
     box-shadow: 0 0 5px 5px rgba(100, 180, 255, 0.5);

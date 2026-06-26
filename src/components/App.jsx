@@ -2,7 +2,7 @@ import React from 'react';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { ThemeProvider } from 'styled-components';
-import theme from '../styles/theme';
+import { colorThemes, DEFAULT_THEME_ID } from '../styles/theme';
 import GlobalStyles from '../styles/globalStyles';
 import {
   Box,
@@ -21,7 +21,7 @@ import {
 import { selectedWorkspaceSelector, WORKSPACES } from '../common/workspace';
 
 const AppComponent = ({ selectedWorkspace }) => (
-  <ThemeProvider theme={theme}>
+  <ThemeProvider theme={colorThemes[DEFAULT_THEME_ID]}>
     <>
       <GlobalStyles />
       <Box
@@ -39,7 +39,7 @@ const AppComponent = ({ selectedWorkspace }) => (
           </Box>
         </header>
         <main>
-          <Box position="sticky" bg="nearBlack" top="0" zIndex="10" pt={2}>
+          <Box position="sticky" bg="surfaceApp" top="0" zIndex="10" pt={2}>
             <MasterControls />
             {selectedWorkspace === WORKSPACES.PATTERN && (
               <>
