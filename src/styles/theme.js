@@ -28,9 +28,14 @@ const createTheme = ({
   id,
   name,
   colors,
+  knob = {
+    skin: 'default',
+    sprites: 50,
+  },
 }) => ({
   id,
   name,
+  knob,
   fontSizes: [
     11, 13, 14, 24, 32, 48, 64, 96, 128,
   ],
@@ -164,6 +169,70 @@ const highContrastDarkColors = {
   waveformGuide: 'rgba(246, 200, 95, 0.16)',
 };
 
+const lightStudioPalette = {
+  nearWhite: '#17202A',
+  lightGray: '#52606D',
+  gray: '#6F7D8C',
+  steel: '#9EADB9',
+  darkGray: '#E5EAF0',
+  nearBlack: '#F3F6F9',
+  black80: 'rgba(19, 28, 36, 0.7)',
+  green: '#1E927D',
+  lightGreen: '#32AD96',
+  darkGreen: '#0E6E5D',
+  red: '#C94450',
+  lightRed: '#E55B67',
+  darkRed: '#8F2E37',
+  brightRed: '#D63C4A',
+  brightRed30: 'rgba(214, 60, 74, 0.22)',
+  gold: '#B87A21',
+  yellow: '#D59A1F',
+  yellow30: 'rgba(213, 154, 31, 0.26)',
+  primary: '#127E74',
+  primaryDark: '#0B675E',
+  secondary: '#1172B8',
+  blue: '#236FB4',
+  darkBlue: '#174D81',
+};
+
+const lightStudioColors = {
+  ...lightStudioPalette,
+
+  surfaceApp: lightStudioPalette.nearBlack,
+  surfacePanel: '#FFFFFF',
+  surfacePanelRaised: lightStudioPalette.darkGray,
+  surfaceControl: '#FFFFFF',
+  surfaceControlHover: '#D7E0E8',
+  surfaceOverlay: lightStudioPalette.black80,
+  surfaceInverse: '#FFFFFF',
+
+  borderDefault: lightStudioPalette.steel,
+  borderHover: lightStudioPalette.gray,
+  borderSubtle: 'rgba(23, 32, 42, 0.12)',
+
+  textPrimary: lightStudioPalette.nearWhite,
+  textSecondary: lightStudioPalette.lightGray,
+  textMuted: lightStudioPalette.gray,
+  textInverse: '#FFFFFF',
+
+  accentPrimary: lightStudioPalette.secondary,
+  accentPrimaryActive: lightStudioPalette.darkBlue,
+  accentPrimaryGlow: 'rgba(17, 114, 184, 0.28)',
+
+  actionPrimary: lightStudioPalette.blue,
+  actionPrimaryHover: lightStudioPalette.darkBlue,
+
+  errorBorder: lightStudioPalette.lightRed,
+  danger: lightStudioPalette.brightRed,
+  dangerSubtle: lightStudioPalette.brightRed30,
+  warning: lightStudioPalette.yellow,
+  warningSubtle: lightStudioPalette.yellow30,
+  waveform: lightStudioPalette.secondary,
+  waveformGuide: 'rgba(17, 114, 184, 0.1)',
+
+  brandLogo: lightStudioPalette.nearWhite,
+};
+
 export const classicDarkTheme = createTheme({
   id: 'classicDark',
   name: 'Classic Dark',
@@ -174,6 +243,20 @@ export const highContrastDarkTheme = createTheme({
   id: 'highContrastDark',
   name: 'High Contrast Dark',
   colors: highContrastDarkColors,
+  knob: {
+    skin: 'golden',
+    sprites: 50,
+  },
+});
+
+export const lightStudioTheme = createTheme({
+  id: 'lightStudio',
+  name: 'Light Studio',
+  colors: lightStudioColors,
+  knob: {
+    skin: 'light',
+    sprites: 50,
+  },
 });
 
 export const DEFAULT_THEME_ID = classicDarkTheme.id;
@@ -181,6 +264,7 @@ export const DEFAULT_THEME_ID = classicDarkTheme.id;
 export const colorThemes = {
   [classicDarkTheme.id]: classicDarkTheme,
   [highContrastDarkTheme.id]: highContrastDarkTheme,
+  [lightStudioTheme.id]: lightStudioTheme,
 };
 
 export default classicDarkTheme;

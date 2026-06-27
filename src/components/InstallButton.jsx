@@ -14,10 +14,10 @@ const InstallButtonComponent = ({ canInstall }) => (canInstall && !isStandalone
         promptToInstall();
       }}
       width="auto"
-      bg="blue"
-      color="white"
-      hoverColor="nearWhite"
-      hoverBg="darkBlue"
+      bg="actionPrimary"
+      color="surfaceInverse"
+      hoverColor="surfaceInverse"
+      hoverBg="actionPrimaryHover"
       transitionSpeed="0.2s"
       p="0.6rem 1.2rem"
     >

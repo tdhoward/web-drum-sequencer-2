@@ -9,7 +9,7 @@ export const Modal = ({ children, show }) => (
     top={0}
     width="100%"
     height="100%"
-    bg="black80"
+    bg="surfaceOverlay"
     display={show ? 'flex' : 'none'}
     zIndex={99}
     justifyContent="center"

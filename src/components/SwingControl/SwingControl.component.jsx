@@ -14,10 +14,10 @@ export const SwingControlComponent = ({
 }) => (
   <Box alignItems="center" ml={2} display="flex" flexDirection="column">
     <LabelText
-      color="gray"
+      color="textMuted"
       fontSize="0.6rem"
       fontWeight="600"
-      bg="nearBlack"
+      bg="surfaceApp"
       pl={1}
       pr={1}
       letterSpacing="0.1em"
