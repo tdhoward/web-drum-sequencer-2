@@ -40,7 +40,8 @@
     "eslint-plugin-react": "^7.33.1",
     "globals": "^16.0.0",
     "jest": "^30.4.2",
-    "vite": "^6.4.2"
+    "vite": "^6.4.2",
+    "vite-plugin-svgr": "^5.2.0"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",
