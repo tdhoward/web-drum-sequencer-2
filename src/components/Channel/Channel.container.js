@@ -3,13 +3,11 @@ import { compose, withHandlers } from 'recompose';
 import { ChannelComponent } from './Channel.component';
 import { channelSelectors } from './Channel.selectors';
 import {
-  deleteChannel,
   setSelectedChannel,
 } from '../../common';
 import { playNoteNow } from '../../services/audioScheduler';
 
 const mapDispatchToProps = {
-  deleteChannel,
   setSelectedChannel,
 };
 
@@ -21,15 +19,6 @@ const handlers = withHandlers({
   onTouchChannel: props => () => {
     const { channel, setSelectedChannel: sscs } = props;
     sscs(channel.id);
-  },
-  onPressRemove: props => () => {
-    const {
-      channel,
-      channels,
-      selectedChannelId,
-      deleteChannel: dc,
-    } = props;
-    dc(channel.id, channels, selectedChannelId);
   },
   onPressHitButton: props => () => {
     const { channel } = props;

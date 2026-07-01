@@ -9,8 +9,28 @@ import { PERCUSSION_TYPES } from '../percussion';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import { channelsSlice } from './channels.reducer';
 
+const NEW_CHANNEL_NAME_PREFIX = 'New channel';
+
+export const getNextNewChannelName = (channels = []) => {
+  const usedNumbers = channels.reduce((numbers, channel) => {
+    const match = String(channel.name || '').match(/^New channel ([1-9]\d*)$/);
+    if (match) {
+      numbers.add(Number(match[1]));
+    }
+    return numbers;
+  }, new Set());
+
+  let nextNumber = 1;
+  while (usedNumbers.has(nextNumber)) {
+    nextNumber += 1;
+  }
+
+  return `${NEW_CHANNEL_NAME_PREFIX} ${nextNumber}`;
+};
+
 export const {
   setChannelGain,
+  setChannelName,
   setChannelPan,
   setChannelPitchCoarse,
   setChannelPitchFine,
@@ -46,9 +66,16 @@ export const loadChannels = channels => (dispatch, getState) => {
 
 export const newChannel = () => (dispatch, getState) => {
   const channelId = uuid();
-  const kitId = selectedKitIdSelector(getState());
+  const state = getState();
+  const kitId = selectedKitIdSelector(state);
+  const kit = state.kits?.entities?.[kitId];
+  const kitChannels = state.kitChannels || state.channels || { entities: {} };
+  const existingKitChannels = (kit?.channelIds || kitChannels.ids || [])
+    .map(id => kitChannels.entities[id])
+    .filter(Boolean);
   const channelToAdd = {
     id: channelId,
+    name: getNextNewChannelName(existingKitChannels),
     kitId,
     laneId: channelId,
     percussionType: PERCUSSION_TYPES.GENERIC_PERCUSSION,
@@ -78,18 +105,25 @@ export const loadAndSetChannelSample = (channelID, sampleURL) => (dispatch) => {
   dispatch(setChannelSample(channelID, sampleURL));
 };
 
-export const deleteChannel = (channelID, channels, selectedChannelId) => (dispatch) => {
+const getKitChannelId = channel => channel.kitChannelId || channel.id;
+
+export const deleteChannel = (
+  channelID,
+  channels,
+  selectedChannelId,
+  laneId = channelID,
+) => (dispatch) => {
   if (channels.length === 1) {
     dispatch(newChannel());
-    dispatch(removeChannelNotes(channelID));
+    dispatch(removeChannelNotes(laneId));
     dispatch(removeChannel(channelID));
     return;
   }
 
-  if (selectedChannelId === channelID) {
-    const nextChannel = channels.find(channel => channel.id !== channelID);
+  if (selectedChannelId === channelID || selectedChannelId === laneId) {
+    const nextChannel = channels.find(channel => getKitChannelId(channel) !== channelID);
     dispatch(setSelectedChannel(nextChannel.id));
   }
-  dispatch(removeChannelNotes(channelID));
+  dispatch(removeChannelNotes(laneId));
   dispatch(removeChannel(channelID));
 };

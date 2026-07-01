@@ -3,7 +3,12 @@ import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import { Sortable } from '@shopify/draggable';
 import { detuneSupported } from '../../services/featureChecks';
-import { Box, Image, Text } from '../design-system';
+import {
+  Box,
+  Image,
+  Text,
+  TextInput,
+} from '../design-system';
 import { InfoKnob } from '../InfoKnob.component';
 import { HitButton } from '../Channel/HitButton.component';
 import { ChannelHeaderLabel } from '../ChannelHeader/ChannelHeaderLabel.component';
@@ -11,9 +16,10 @@ import { MuteSolo } from '../MuteSolo';
 import { SampleWaveform } from '../SampleWaveform.component';
 import { SampleSelect } from '../SampleSelect';
 import { AddChannelButton } from '../AddChannelButton';
+import { RemoveButton } from '../Channel/RemoveButton.component';
 import construction from '../../assets/images/construction-light.svg';
 
-const kitChannelGridColumns = 'minmax(8rem, 11rem) 1.2rem 3rem 15rem minmax(10rem, 1fr) repeat(4, 5.125rem)';
+const kitChannelGridColumns = 'minmax(8rem, 11rem) 1.2rem 3rem 15rem minmax(10rem, 1fr) repeat(4, 5.125rem) 2rem';
 
 const KitChannelList = styled.div`
   display: flex;
@@ -70,6 +76,41 @@ const WaveformCell = styled(Box)`
   min-width: 0;
 `;
 
+const ChannelNameButton = styled.button`
+  background: transparent;
+  border: 0;
+  color: ${({ theme }) => theme.colors.nearWhite};
+  cursor: text;
+  font: inherit;
+  line-height: 1.2em;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:focus {
+    outline: 1px solid ${({ theme }) => theme.colors.borderHover};
+    outline-offset: 0.2rem;
+  }
+`;
+
+const ChannelNameInput = styled(TextInput)`
+  background: ${({ theme }) => theme.colors.surfaceControl};
+  border-radius: 0.2rem;
+  color: ${({ theme }) => theme.colors.nearWhite};
+  font: inherit;
+  line-height: 1.2em;
+  min-width: 0;
+  padding: 0.25rem 0.35rem;
+  width: 100%;
+
+  &:focus {
+    outline: 1px solid ${({ theme }) => theme.colors.borderHover};
+  }
+`;
+
 const MoveImage = styled(Image)`
   cursor: move;
   opacity: 0.2;
@@ -100,10 +141,24 @@ export const KitChannelHeader = () => (
     <ChannelHeaderLabel centerText>Pan</ChannelHeaderLabel>
     <ChannelHeaderLabel centerText>Vol</ChannelHeaderLabel>
     <ChannelHeaderLabel centerText>Reverb</ChannelHeaderLabel>
+    <ChannelHeaderLabel centerText>Del</ChannelHeaderLabel>
   </KitChannelHeaderBar>
 );
 
 export class KitChannelControlsComponent extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      editingChannelId: null,
+      channelNameDraft: '',
+    };
+    this.startEditingChannelName = this.startEditingChannelName.bind(this);
+    this.setChannelNameDraft = this.setChannelNameDraft.bind(this);
+    this.commitChannelName = this.commitChannelName.bind(this);
+    this.cancelChannelNameEdit = this.cancelChannelNameEdit.bind(this);
+    this.handleChannelNameKeyDown = this.handleChannelNameKeyDown.bind(this);
+  }
+
   componentDidMount() {
     this.sortable = new Sortable([this.channelContainer], {
       draggable: '.wds-draggable',
@@ -119,9 +174,64 @@ export class KitChannelControlsComponent extends React.Component {
     });
   }
 
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.editingChannelId !== prevState.editingChannelId && this.nameInput) {
+      this.nameInput.focus();
+      this.nameInput.select();
+    }
+  }
+
   componentWillUnmount() {
     if (this.sortable) {
       this.sortable.destroy();
+    }
+  }
+
+  startEditingChannelName(channel) {
+    this.setState({
+      editingChannelId: getKitChannelId(channel),
+      channelNameDraft: channel.name || channel.id,
+    });
+  }
+
+  setChannelNameDraft(event) {
+    this.setState({
+      channelNameDraft: event.target.value,
+    });
+  }
+
+  commitChannelName(channel) {
+    const { onSetChannelName } = this.props;
+    const channelId = getKitChannelId(channel);
+    const nextName = this.state.channelNameDraft.trim();
+    const currentName = channel.name || '';
+
+    if (nextName && nextName !== currentName) {
+      onSetChannelName(channel, nextName);
+    }
+
+    if (this.state.editingChannelId === channelId) {
+      this.setState({
+        editingChannelId: null,
+        channelNameDraft: '',
+      });
+    }
+  }
+
+  cancelChannelNameEdit() {
+    this.setState({
+      editingChannelId: null,
+      channelNameDraft: '',
+    });
+  }
+
+  handleChannelNameKeyDown(channel, event) {
+    if (event.key === 'Enter') {
+      this.commitChannelName(channel);
+    }
+
+    if (event.key === 'Escape') {
+      this.cancelChannelNameEdit();
     }
   }
 
@@ -129,28 +239,52 @@ export class KitChannelControlsComponent extends React.Component {
     const {
       channels,
       onPressHitButton,
+      onPressRemove,
       onSetGain,
       onSetPan,
       onSetChannelPitchCoarse,
       onSetReverb,
     } = this.props;
+    const { editingChannelId, channelNameDraft } = this.state;
 
     return (
       <KitChannelList ref={(el) => { this.channelContainer = el; }}>
-        {channels.map(channel => (
-          <KitChannelRow key={getKitChannelId(channel)} className="wds-draggable">
-            <Box alignItems="center" display="flex" minWidth="0">
-              <MoveImage
-                src={construction}
-                height="2.5rem"
-                mr={3}
-                userSelect="none"
-                className="wds-channel-handle"
-              />
-              <Text color="nearWhite" fontSize={2} lineHeight="1.2em">
-                {channel.name || channel.id}
-              </Text>
-            </Box>
+        {channels.map((channel) => {
+          const channelId = getKitChannelId(channel);
+          const isEditingName = editingChannelId === channelId;
+
+          return (
+            <KitChannelRow key={channelId} className="wds-draggable">
+              <Box alignItems="center" display="flex" minWidth="0">
+                <MoveImage
+                  src={construction}
+                  height="2.5rem"
+                  mr={3}
+                  userSelect="none"
+                  className="wds-channel-handle"
+                />
+                {isEditingName ? (
+                  <ChannelNameInput
+                    ref={(input) => { this.nameInput = input; }}
+                    aria-label="Channel name"
+                    fontSize={2}
+                    value={channelNameDraft}
+                    onBlur={() => this.commitChannelName(channel)}
+                    onChange={this.setChannelNameDraft}
+                    onKeyDown={event => this.handleChannelNameKeyDown(channel, event)}
+                  />
+                ) : (
+                  <ChannelNameButton
+                    type="button"
+                    onDoubleClick={() => this.startEditingChannelName(channel)}
+                    title="Double-click to rename"
+                  >
+                    <Text as="span" color="nearWhite" fontSize={2} lineHeight="1.2em">
+                      {channel.name || channel.id}
+                    </Text>
+                  </ChannelNameButton>
+                )}
+              </Box>
             <Box alignItems="center" display="flex" height="100%" justifyContent="center">
               <MuteSolo channel={getKitEditChannel(channel)} />
             </Box>
@@ -218,8 +352,12 @@ export class KitChannelControlsComponent extends React.Component {
                 showLabel={false}
               />
             </KnobCell>
-          </KitChannelRow>
-        ))}
+              <Box alignItems="center" display="flex" justifyContent="center">
+                <RemoveButton onClick={() => onPressRemove(channel)} />
+              </Box>
+            </KitChannelRow>
+          );
+        })}
         <AddChannelButton />
       </KitChannelList>
     );
@@ -238,8 +376,10 @@ KitChannelControlsComponent.propTypes = {
     pan: PropTypes.number,
   })).isRequired,
   onPressHitButton: PropTypes.func.isRequired,
+  onPressRemove: PropTypes.func.isRequired,
   onUpdateChannelOrder: PropTypes.func.isRequired,
   onSetGain: PropTypes.func.isRequired,
+  onSetChannelName: PropTypes.func.isRequired,
   onSetPan: PropTypes.func.isRequired,
   onSetChannelPitchCoarse: PropTypes.func.isRequired,
   onSetReverb: PropTypes.func.isRequired,

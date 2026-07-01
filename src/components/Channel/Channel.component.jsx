@@ -7,7 +7,6 @@ import {
   Text,
   Image,
 } from '../design-system';
-import { RemoveButton } from './RemoveButton.component';
 import { HitButton } from './HitButton.component';
 import { MuteSolo } from '../MuteSolo';
 import construction from '../../assets/images/construction-light.svg';
@@ -37,7 +36,6 @@ const MoveImage = styled(Image)`
 
 export const ChannelComponent = ({
   channel,
-  onPressRemove,
   notes,
   pattern,
   onPressHitButton,
@@ -81,7 +79,6 @@ export const ChannelComponent = ({
         notes={notes[channel.id][pattern]}
         channelID={channel.id}
       />
-      <RemoveButton onClick={onPressRemove} />
     </ChannelBox>
   );
 };
@@ -94,7 +91,6 @@ ChannelComponent.propTypes = {
     kitChannelId: PropTypes.string,
     name: PropTypes.string,
   }).isRequired,
-  onPressRemove: PropTypes.func.isRequired,
   pattern: PropTypes.number.isRequired,
   onPressHitButton: PropTypes.func.isRequired,
   onTouchChannel: PropTypes.func.isRequired,

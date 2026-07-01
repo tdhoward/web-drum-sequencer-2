@@ -49,6 +49,16 @@ export const channelsSlice = createSlice({
         return { payload: { channel, gain } };
       },
     },
+    setChannelName: {
+      reducer(state, action) {
+        updateChannel(state, action.payload.channel, (channel) => {
+          channel.name = action.payload.name;
+        });
+      },
+      prepare(channel, name) {
+        return { payload: { channel, name } };
+      },
+    },
     setChannelPan: {
       reducer(state, action) {
         updateChannel(state, action.payload.channel, (channel) => {

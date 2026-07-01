@@ -2,6 +2,7 @@ import { channelsInitialState, channelsReducer } from './channels.reducer';
 import {
   setChannelSample,
   setChannelGain,
+  setChannelName,
   setChannelPan,
   addChannel,
   removeChannel,
@@ -40,6 +41,12 @@ describe('setChannelSample', () => {
 describe('setChannelGain', () => {
   test('should change gain for a channel', () => {
     expectFirstChannelField(setChannelGain(firstChannelId, 0.5), 'gain', 0.5);
+  });
+});
+
+describe('setChannelName', () => {
+  test('should change name for a channel', () => {
+    expectFirstChannelField(setChannelName(firstChannelId, 'Rim'), 'name', 'Rim');
   });
 });
 
