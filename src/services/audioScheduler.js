@@ -22,6 +22,12 @@ export const scheduleNote = (noteID, noteTime, noteChannel) => {
   }
 };
 
+export const clearScheduledNotes = () => {
+  Object.keys(schedule).forEach((noteID) => {
+    delete schedule[noteID];
+  });
+};
+
 export const isBetween = (query, a, b) => query >= a && query < b;
 
 export const getScheduledNotes = ({

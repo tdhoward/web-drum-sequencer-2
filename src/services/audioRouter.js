@@ -36,6 +36,8 @@ loadImpulseResponse(impulseResponse).then((impulseResponseArrayBuffer) => {
 const channelGainNodes = {};
 const channelPanNodes = {};
 const channelReverbNodes = {};
+const activeVoices = new Set();
+const STOP_FADE_OUT_SECONDS = 0.03;
 
 const calculateGain = (channel, soloEnabled) => {
   if (channel.muted) {
@@ -141,14 +143,42 @@ export const playNote = (noteTime, buffer, channelID, notePitch = 0) => {
   ensureChannelNodes(channelID);
 
   const source = audioCtx.createBufferSource();
+  const voiceGainNode = audioCtx.createGain();
   source.buffer = buffer;
+  voiceGainNode.gain.setValueAtTime(1, audioCtx.currentTime);
 
   if (detuneSupported) {
     source.detune.value = notePitch;
   }
 
-  source.connect(channelGainNodes[channelID]);
+  const voice = {
+    source,
+    gainNode: voiceGainNode,
+  };
+
+  source.connect(voiceGainNode);
+  voiceGainNode.connect(channelGainNodes[channelID]);
+  source.onended = () => {
+    activeVoices.delete(voice);
+  };
 
   source.start(noteTime);
+  activeVoices.add(voice);
   return source;
+};
+
+export const stopAllNotes = () => {
+  const stopTime = audioCtx.currentTime + STOP_FADE_OUT_SECONDS;
+
+  activeVoices.forEach(({ source, gainNode }) => {
+    try {
+      gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+      gainNode.gain.setValueAtTime(gainNode.gain.value, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0, stopTime);
+      source.stop(stopTime);
+    } catch {
+      // The source may have already ended between ticks.
+    }
+  });
+  activeVoices.clear();
 };

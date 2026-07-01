@@ -1,11 +1,19 @@
 import {
   isBetween,
   getScheduledNotes,
+  scheduleNote,
+  clearScheduledNotes,
 } from './audioScheduler';
+import { playNote } from './audioRouter';
 
 jest.mock('./featureChecks');
 jest.mock('./audioContext');
 jest.mock('./audioRouter');
+
+afterEach(() => {
+  clearScheduledNotes();
+  playNote.mockClear();
+});
 
 describe('isBetween', () => {
   test('should return true if query is between a and b', () => {
@@ -58,5 +66,24 @@ describe('getScheduledNotes', () => {
 
   test('should set noteTime to null if note should not be scheduled', () => {
     expect(scheduledNotes[1].time).toBeNull();
+  });
+});
+
+describe('clearScheduledNotes', () => {
+  test('should allow a note ID to be scheduled again after the schedule is cleared', () => {
+    const channel = {
+      id: 'kick',
+      sample: 'kick.wav',
+    };
+
+    scheduleNote('note-1', 1, channel);
+    scheduleNote('note-1', 2, channel);
+
+    expect(playNote).toHaveBeenCalledTimes(1);
+
+    clearScheduledNotes();
+    scheduleNote('note-1', 3, channel);
+
+    expect(playNote).toHaveBeenCalledTimes(2);
   });
 });
