@@ -9,7 +9,7 @@ const Container = styled(Box)`
 `;
 
 const MarkerBar = styled.div`
-  background-color: ${({ theme }) => theme.colors.surfacePanelRaised};
+  background-color: ${({ theme }) => theme.colors.channelHeaderMarkerBackground};
   height: 100%;
   position: absolute;
   width: 0;

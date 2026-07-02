@@ -10,7 +10,7 @@ const HeaderText = styled(Text)`
 export const ChannelHeaderLabel = ({ children, centerText = false, ...restProps }) => (
   <Box p={1} {...restProps}>
     <HeaderText
-      color="white"
+      color="channelHeaderText"
       fontWeight="700"
       fontSize="0.7rem"
       textAlign={centerText ? 'center' : 'left'}

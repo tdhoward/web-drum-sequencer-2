@@ -4,7 +4,7 @@ import { ChannelHeaderLabel } from '../ChannelHeaderLabel.component';
 import { Marker } from '../Marker';
 
 export const PatternChannelHeader = () => (
-  <Box bg="black" display="flex" mt={3}>
+  <Box bg="channelHeaderBackground" display="flex" mt={3}>
     <Box width="16rem" display="flex" mr={[2, 2, 2, 3, 4]}>
       <ChannelHeaderLabel flex="1 1 auto" mr={[2]}>
         Channels

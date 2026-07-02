@@ -30,7 +30,7 @@ const KitChannelListBox = styled.div`
 
 const KitChannelHeaderBar = styled.div`
   align-items: center;
-  background-color: ${({ theme }) => theme.colors.surfaceControl};
+  background-color: ${({ theme }) => theme.colors.channelHeaderBackground};
   display: grid;
   gap: 0.75rem;
   grid-template-columns: ${kitChannelGridColumns};
@@ -113,11 +113,12 @@ const ChannelNameInput = styled(TextInput)`
 
 const MoveImage = styled(Image)`
   cursor: move;
-  opacity: 0.2;
+  filter: ${({ theme }) => theme.colors.channelDragHandleFilter};
+  opacity: ${({ theme }) => theme.colors.channelDragHandleOpacity};
   transition: opacity 0.1s;
 
   &:hover, &:focus, &:active {
-    opacity: 0.3;
+    opacity: ${({ theme }) => theme.colors.channelDragHandleHoverOpacity};
   }
 `;
 
@@ -261,6 +262,7 @@ export class KitChannelListComponent extends React.Component {
                   height="2.5rem"
                   mr={3}
                   userSelect="none"
+                  aria-hidden="true"
                   className="wds-channel-handle"
                 />
                 {isEditingName ? (

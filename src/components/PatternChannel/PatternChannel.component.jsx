@@ -4,8 +4,8 @@ import PropTypes from 'prop-types';
 import { Toggles } from '../Toggles';
 import {
   Box,
-  Text,
   Image,
+  Text,
 } from '../design-system';
 import { HitButton } from '../ChannelButtons';
 import { MuteSolo } from '../MuteSolo';
@@ -26,11 +26,12 @@ const PatternChannelBox = styled(Box)`
 
 const MoveImage = styled(Image)`
   cursor: move;
-  opacity: 0.2;
+  filter: ${({ theme }) => theme.colors.channelDragHandleFilter};
+  opacity: ${({ theme }) => theme.colors.channelDragHandleOpacity};
   transition: opacity 0.1s;
 
   &:hover, &:focus, &:active {
-    opacity: 0.3;
+    opacity: ${({ theme }) => theme.colors.channelDragHandleHoverOpacity};
   }
 `;
 
@@ -66,7 +67,14 @@ export const PatternChannelComponent = ({
         alignItems="center"
         position="relative"
       >
-        <MoveImage src={construction} height="2.5rem" mr={3} userSelect="none" className="wds-channel-handle" />
+        <MoveImage
+          src={construction}
+          height="2.5rem"
+          mr={3}
+          userSelect="none"
+          aria-hidden="true"
+          className="wds-channel-handle"
+        />
         <Box flex="1 1 auto">
           <Text color="textPrimary" fontWeight="normal" textAlign="left" fontSize={2} userSelect="none">
             {patternChannelName}

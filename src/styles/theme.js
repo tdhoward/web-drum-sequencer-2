@@ -102,6 +102,24 @@ const classicDarkColors = {
   actionPrimary: classicDarkPalette.blue,
   actionPrimaryHover: classicDarkPalette.darkBlue,
 
+  channelHeaderBackground: 'black',
+  channelHeaderMarkerBackground: classicDarkPalette.darkGray,
+  channelHeaderText: 'white',
+
+  bpmControlBackground: 'linear-gradient(190deg, #19191D 0%, #303036 50%, #0a0e0a 51%, #29292D 100%)',
+  bpmControlText: classicDarkPalette.secondary,
+  bpmControlButtonText: classicDarkPalette.nearWhite,
+  bpmControlButtonActiveBackground: 'rgba(255, 255, 255, 0.2)',
+
+  knobLabelText: classicDarkPalette.nearWhite,
+  knobScaleText: classicDarkPalette.lightGray,
+  hitButtonBackground: classicDarkPalette.lightGray,
+  hitButtonBackgroundHover: classicDarkPalette.nearWhite,
+  hitButtonBackgroundActive: classicDarkPalette.gray,
+  channelDragHandleFilter: 'none',
+  channelDragHandleOpacity: 0.24,
+  channelDragHandleHoverOpacity: 0.36,
+
   errorBorder: classicDarkPalette.lightRed,
   danger: classicDarkPalette.brightRed,
   dangerSubtle: classicDarkPalette.brightRed30,
@@ -109,6 +127,9 @@ const classicDarkColors = {
   warningSubtle: classicDarkPalette.yellow30,
   waveform: classicDarkPalette.secondary,
   waveformGuide: 'rgba(152, 255, 193, 0.08)',
+  waveformDurationBackground: 'rgba(0, 0, 0, 0.55)',
+  waveformDurationBorder: 'rgba(255, 255, 255, 0.1)',
+  waveformDurationText: classicDarkPalette.nearWhite,
 };
 
 const highContrastDarkPalette = {
@@ -160,6 +181,24 @@ const highContrastDarkColors = {
   actionPrimary: highContrastDarkPalette.blue,
   actionPrimaryHover: highContrastDarkPalette.darkBlue,
 
+  channelHeaderBackground: '#020609',
+  channelHeaderMarkerBackground: highContrastDarkPalette.darkGray,
+  channelHeaderText: highContrastDarkPalette.nearWhite,
+
+  bpmControlBackground: 'linear-gradient(190deg, #0B1014 0%, #1F2933 50%, #020609 51%, #101820 100%)',
+  bpmControlText: highContrastDarkPalette.gold,
+  bpmControlButtonText: highContrastDarkPalette.nearWhite,
+  bpmControlButtonActiveBackground: 'rgba(255, 255, 255, 0.24)',
+
+  knobLabelText: highContrastDarkPalette.nearWhite,
+  knobScaleText: highContrastDarkPalette.lightGray,
+  hitButtonBackground: highContrastDarkPalette.lightGray,
+  hitButtonBackgroundHover: highContrastDarkPalette.nearWhite,
+  hitButtonBackgroundActive: highContrastDarkPalette.gray,
+  channelDragHandleFilter: 'none',
+  channelDragHandleOpacity: 0.36,
+  channelDragHandleHoverOpacity: 0.52,
+
   errorBorder: highContrastDarkPalette.lightRed,
   danger: highContrastDarkPalette.brightRed,
   dangerSubtle: highContrastDarkPalette.brightRed30,
@@ -167,6 +206,9 @@ const highContrastDarkColors = {
   warningSubtle: highContrastDarkPalette.yellow30,
   waveform: highContrastDarkPalette.gold,
   waveformGuide: 'rgba(246, 200, 95, 0.16)',
+  waveformDurationBackground: 'rgba(0, 0, 0, 0.68)',
+  waveformDurationBorder: 'rgba(255, 255, 255, 0.2)',
+  waveformDurationText: highContrastDarkPalette.nearWhite,
 };
 
 const lightStudioPalette = {
@@ -222,6 +264,24 @@ const lightStudioColors = {
   actionPrimary: lightStudioPalette.blue,
   actionPrimaryHover: lightStudioPalette.darkBlue,
 
+  channelHeaderBackground: '#CAD3DC',
+  channelHeaderMarkerBackground: '#B8C3CD',
+  channelHeaderText: '#3B4650',
+
+  bpmControlBackground: 'linear-gradient(190deg, #F7FAFC 0%, #E9EFF4 50%, #D8E1E9 51%, #EEF3F7 100%)',
+  bpmControlText: lightStudioPalette.nearWhite,
+  bpmControlButtonText: lightStudioPalette.lightGray,
+  bpmControlButtonActiveBackground: 'rgba(23, 32, 42, 0.12)',
+
+  knobLabelText: lightStudioPalette.lightGray,
+  knobScaleText: lightStudioPalette.gray,
+  hitButtonBackground: '#C6D1DB',
+  hitButtonBackgroundHover: '#D5DEE6',
+  hitButtonBackgroundActive: lightStudioPalette.steel,
+  channelDragHandleFilter: 'brightness(0) saturate(100%) invert(48%)',
+  channelDragHandleOpacity: 0.44,
+  channelDragHandleHoverOpacity: 0.62,
+
   errorBorder: lightStudioPalette.lightRed,
   danger: lightStudioPalette.brightRed,
   dangerSubtle: lightStudioPalette.brightRed30,
@@ -229,6 +289,9 @@ const lightStudioColors = {
   warningSubtle: lightStudioPalette.yellow30,
   waveform: lightStudioPalette.secondary,
   waveformGuide: 'rgba(17, 114, 184, 0.1)',
+  waveformDurationBackground: 'rgba(255, 255, 255, 0.82)',
+  waveformDurationBorder: 'rgba(23, 32, 42, 0.12)',
+  waveformDurationText: lightStudioPalette.lightGray,
 
   brandLogo: lightStudioPalette.nearWhite,
 };

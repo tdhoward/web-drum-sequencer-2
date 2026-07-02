@@ -7,8 +7,9 @@ export const HitButton = ({ channel, onMouseDown }) => (
     height={40}
     width={40}
     minWidth={40}
-    bg="lightGray"
-    activeBg="gray"
+    bg="hitButtonBackground"
+    hoverBg="hitButtonBackgroundHover"
+    activeBg="hitButtonBackgroundActive"
     transitionSpeed="0.1s"
     ml={2}
     p={0}

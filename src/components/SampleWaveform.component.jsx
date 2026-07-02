@@ -22,13 +22,13 @@ const WaveformCanvas = styled.canvas`
 `;
 
 const DurationLabel = styled.span`
-  background: rgba(0, 0, 0, 0.55);
+  background: ${({ theme }) => theme.colors.waveformDurationBackground};
+  border: 1px solid ${({ theme }) => theme.colors.waveformDurationBorder};
   border-radius: 0.2rem;
   bottom: 0.15rem;
-  color: ${({ theme }) => theme.colors.textPrimary};
+  color: ${({ theme }) => theme.colors.waveformDurationText};
   font-size: 0.65rem;
   line-height: 1;
-  opacity: 0.8;
   padding: 0.15rem 0.25rem;
   pointer-events: none;
   position: absolute;

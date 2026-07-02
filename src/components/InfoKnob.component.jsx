@@ -1,7 +1,16 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import styled from 'styled-components';
 import { Knob } from './Knob.component';
 import { ControlLabel, Box } from './design-system';
+
+const KnobLabel = styled(ControlLabel)`
+  color: ${({ theme }) => theme.colors.knobLabelText};
+`;
+
+const KnobScaleLabel = styled(ControlLabel)`
+  color: ${({ theme }) => theme.colors.knobScaleText};
+`;
 
 export const InfoKnob = ({
   label,
@@ -12,18 +21,18 @@ export const InfoKnob = ({
 }) => (
   <Box>
     {showLabel && (
-      <ControlLabel fontWeight="bold" mb={1} textAlign="center">
+      <KnobLabel fontWeight="bold" mb={1} textAlign="center">
         {label}
-      </ControlLabel>
+      </KnobLabel>
     )}
     <Box display="flex" alignItems="baseline">
-      <ControlLabel opacity="0.5" fontSize={1}>
+      <KnobScaleLabel fontSize={1}>
         {minLabel}
-      </ControlLabel>
+      </KnobScaleLabel>
       <Knob size={45} {...rest} />
-      <ControlLabel opacity="0.5" fontSize={1}>
+      <KnobScaleLabel fontSize={1}>
         {maxLabel}
-      </ControlLabel>
+      </KnobScaleLabel>
     </Box>
   </Box>
 );

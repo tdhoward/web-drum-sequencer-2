@@ -9,7 +9,7 @@ import {
 } from '../design-system';
 
 const ShinyBox = styled(Box)`
-  background: linear-gradient(190deg, #19191D 0%, #303036 50%,#0a0e0a 51%, #29292D 100%);
+  background: ${({ theme }) => theme.colors.bpmControlBackground};
   transition: border-color 0.2s;
 
   &:hover {
@@ -19,7 +19,7 @@ const ShinyBox = styled(Box)`
 
 const BPMButton = styled(Button)`
   &:active {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: ${({ theme }) => theme.colors.bpmControlButtonActiveBackground};
   }
 `;
 
@@ -61,7 +61,7 @@ export const BPMInputComponent = ({ bpm, setBPM }) => (
       fontWeight="500"
       bg="transparent"
       id="bpm"
-      color="danger"
+      color="bpmControlText"
       className="bpm-text-input"
       type="number"
       value={bpm}
@@ -71,7 +71,7 @@ export const BPMInputComponent = ({ bpm, setBPM }) => (
     />
     <Box display="flex" flexDirection="column">
       <BPMButton
-        color="white"
+        color="bpmControlButtonText"
         bg="transparent"
         p={0}
         flex="auto"
@@ -83,11 +83,11 @@ export const BPMInputComponent = ({ bpm, setBPM }) => (
         aria-label="Increase beat per minute"
       >
         <svg width="10px" height="6px" viewBox="0 0 12 7" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink">
-          <polygon points="0 7 12 7 6 0" fill="white" />
+          <polygon points="0 7 12 7 6 0" fill="currentColor" />
         </svg>
       </BPMButton>
       <BPMButton
-        color="white"
+        color="bpmControlButtonText"
         bg="transparent"
         p={0}
         flex="auto"
@@ -99,7 +99,7 @@ export const BPMInputComponent = ({ bpm, setBPM }) => (
         aria-label="Decrease beat per minute"
       >
         <svg width="10px" height="6px" viewBox="0 0 12 7" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink">
-          <polygon points="0 0 12 0 6 7" fill="white" />
+          <polygon points="0 0 12 0 6 7" fill="currentColor" />
         </svg>
       </BPMButton>
     </Box>
