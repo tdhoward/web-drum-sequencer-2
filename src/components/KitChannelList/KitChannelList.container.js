@@ -12,7 +12,7 @@ import {
   updateChannelOrder,
 } from '../../common';
 import { playNoteNow } from '../../services/audioScheduler';
-import { KitChannelControlsComponent } from './KitChannelControls.component';
+import { KitChannelListComponent } from './KitChannelList.component';
 
 const getKitChannelId = channel => channel.kitChannelId || channel.id;
 
@@ -72,7 +72,7 @@ const handlers = withHandlers({
   },
 });
 
-export const KitChannelControls = compose(
+export const KitChannelList = compose(
   connect(mapStateToProps, mapDispatchToProps),
   handlers,
-)(KitChannelControlsComponent);
+)(KitChannelListComponent);

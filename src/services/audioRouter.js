@@ -113,34 +113,34 @@ export const updateChannelNodes = (channels) => {
   });
 };
 
-const ensureChannelNodes = (channelID) => {
-  if (typeof channelPanNodes[channelID] === 'undefined') {
+const ensureChannelNodes = (channelId) => {
+  if (typeof channelPanNodes[channelId] === 'undefined') {
     if (stereoPannerSupported) {
-      channelPanNodes[channelID] = audioCtx.createStereoPanner();
-      channelPanNodes[channelID].connect(masterOut);
+      channelPanNodes[channelId] = audioCtx.createStereoPanner();
+      channelPanNodes[channelId].connect(masterOut);
     } else {
-      channelPanNodes[channelID] = audioCtx.createPanner();
-      channelPanNodes[channelID].panningModel = 'equalpower';
-      channelPanNodes[channelID].connect(masterOut);
+      channelPanNodes[channelId] = audioCtx.createPanner();
+      channelPanNodes[channelId].panningModel = 'equalpower';
+      channelPanNodes[channelId].connect(masterOut);
     }
   }
 
-  if (typeof channelReverbNodes[channelID] === 'undefined') {
-    channelReverbNodes[channelID] = audioCtx.createGain();
-    channelReverbNodes[channelID].gain.setValueAtTime(0, audioCtx.currentTime);
-    channelReverbNodes[channelID].connect(reverbNode);
+  if (typeof channelReverbNodes[channelId] === 'undefined') {
+    channelReverbNodes[channelId] = audioCtx.createGain();
+    channelReverbNodes[channelId].gain.setValueAtTime(0, audioCtx.currentTime);
+    channelReverbNodes[channelId].connect(reverbNode);
   }
 
-  if (typeof channelGainNodes[channelID] === 'undefined') {
-    channelGainNodes[channelID] = audioCtx.createGain();
-    channelGainNodes[channelID].gain.setValueAtTime(1, audioCtx.currentTime);
-    channelGainNodes[channelID].connect(channelPanNodes[channelID]);
-    channelGainNodes[channelID].connect(channelReverbNodes[channelID]);
+  if (typeof channelGainNodes[channelId] === 'undefined') {
+    channelGainNodes[channelId] = audioCtx.createGain();
+    channelGainNodes[channelId].gain.setValueAtTime(1, audioCtx.currentTime);
+    channelGainNodes[channelId].connect(channelPanNodes[channelId]);
+    channelGainNodes[channelId].connect(channelReverbNodes[channelId]);
   }
 };
 
-export const playNote = (noteTime, buffer, channelID, notePitch = 0) => {
-  ensureChannelNodes(channelID);
+export const playNote = (noteTime, buffer, channelId, notePitch = 0) => {
+  ensureChannelNodes(channelId);
 
   const source = audioCtx.createBufferSource();
   const voiceGainNode = audioCtx.createGain();
@@ -157,7 +157,7 @@ export const playNote = (noteTime, buffer, channelID, notePitch = 0) => {
   };
 
   source.connect(voiceGainNode);
-  voiceGainNode.connect(channelGainNodes[channelID]);
+  voiceGainNode.connect(channelGainNodes[channelId]);
   source.onended = () => {
     activeVoices.delete(voice);
   };

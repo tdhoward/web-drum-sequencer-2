@@ -10,18 +10,18 @@ import {
   TextInput,
 } from '../design-system';
 import { InfoKnob } from '../InfoKnob.component';
-import { HitButton } from '../Channel/HitButton.component';
-import { ChannelHeaderLabel } from '../ChannelHeader/ChannelHeaderLabel.component';
+import { HitButton } from '../ChannelButtons';
+import { ChannelHeaderLabel } from '../ChannelHeaderLabel.component';
 import { MuteSolo } from '../MuteSolo';
 import { SampleWaveform } from '../SampleWaveform.component';
 import { SampleSelect } from '../SampleSelect';
 import { AddChannelButton } from '../AddChannelButton';
-import { RemoveButton } from '../Channel/RemoveButton.component';
+import { RemoveButton } from '../ChannelButtons';
 import construction from '../../assets/images/construction-light.svg';
 
 const kitChannelGridColumns = 'minmax(8rem, 11rem) 1.2rem 3rem 15rem minmax(10rem, 1fr) repeat(4, 5.125rem) 2rem';
 
-const KitChannelList = styled.div`
+const KitChannelListBox = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -145,7 +145,7 @@ export const KitChannelHeader = () => (
   </KitChannelHeaderBar>
 );
 
-export class KitChannelControlsComponent extends React.Component {
+export class KitChannelListComponent extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -248,7 +248,7 @@ export class KitChannelControlsComponent extends React.Component {
     const { editingChannelId, channelNameDraft } = this.state;
 
     return (
-      <KitChannelList ref={(el) => { this.channelContainer = el; }}>
+      <KitChannelListBox ref={(el) => { this.channelContainer = el; }}>
         {channels.map((channel) => {
           const channelId = getKitChannelId(channel);
           const isEditingName = editingChannelId === channelId;
@@ -359,12 +359,12 @@ export class KitChannelControlsComponent extends React.Component {
           );
         })}
         <AddChannelButton />
-      </KitChannelList>
+      </KitChannelListBox>
     );
   }
 }
 
-KitChannelControlsComponent.propTypes = {
+KitChannelListComponent.propTypes = {
   channels: PropTypes.arrayOf(PropTypes.shape({
     id: PropTypes.string.isRequired,
     kitChannelId: PropTypes.string,

@@ -7,11 +7,11 @@ import {
   Text,
   Image,
 } from '../design-system';
-import { HitButton } from './HitButton.component';
+import { HitButton } from '../ChannelButtons';
 import { MuteSolo } from '../MuteSolo';
 import construction from '../../assets/images/construction-light.svg';
 
-const ChannelBox = styled(Box)`
+const PatternChannelBox = styled(Box)`
   outline: none;
   
   &.draggable-source--is-dragging {
@@ -34,7 +34,7 @@ const MoveImage = styled(Image)`
   }
 `;
 
-export const ChannelComponent = ({
+export const PatternChannelComponent = ({
   channel,
   notes,
   pattern,
@@ -42,9 +42,9 @@ export const ChannelComponent = ({
   onTouchChannel,
   selectedChannelId,
 }) => {
-  const channelName = channel.name || channel.kitChannelId || channel.id;
+  const patternChannelName = channel.name || channel.kitChannelId || channel.id;
   return (
-    <ChannelBox
+    <PatternChannelBox
       width="100%"
       display="flex"
       flex="1 1 auto"
@@ -69,7 +69,7 @@ export const ChannelComponent = ({
         <MoveImage src={construction} height="2.5rem" mr={3} userSelect="none" className="wds-channel-handle" />
         <Box flex="1 1 auto">
           <Text color="textPrimary" fontWeight="normal" textAlign="left" fontSize={2} userSelect="none">
-            {channelName}
+            {patternChannelName}
           </Text>
         </Box>
         <MuteSolo channel={channel} />
@@ -77,13 +77,13 @@ export const ChannelComponent = ({
       </Box>
       <Toggles
         notes={notes[channel.id][pattern]}
-        channelID={channel.id}
+        channelId={channel.id}
       />
-    </ChannelBox>
+    </PatternChannelBox>
   );
 };
 
-ChannelComponent.propTypes = {
+PatternChannelComponent.propTypes = {
   notes: PropTypes.objectOf(PropTypes.array).isRequired,
   channel: PropTypes.shape({
     sample: PropTypes.string,

@@ -1,9 +1,9 @@
 import React from 'react';
 import { Box } from '../design-system';
-import { ChannelHeaderLabel } from './ChannelHeaderLabel.component';
+import { ChannelHeaderLabel } from '../ChannelHeaderLabel.component';
 import { Marker } from '../Marker';
 
-export const ChannelHeader = () => (
+export const PatternChannelHeader = () => (
   <Box bg="black" display="flex" mt={3}>
     <Box width="16rem" display="flex" mr={[2, 2, 2, 3, 4]}>
       <ChannelHeaderLabel flex="1 1 auto" mr={[2]}>

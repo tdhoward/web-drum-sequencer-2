@@ -5,9 +5,9 @@ import { ThemeProvider } from 'styled-components';
 import GlobalStyles from '../styles/globalStyles';
 import {
   Box,
-  ChannelList,
-  ChannelHeader,
-  ChannelControls,
+  PatternChannelList,
+  PatternChannelHeader,
+  PatternWorkspaceControls,
   KitChannelHeader,
   KitWorkspaceControls,
   MasterControls,
@@ -43,8 +43,8 @@ const AppComponent = ({ selectedTheme, selectedWorkspace }) => (
             <MasterControls />
             {selectedWorkspace === WORKSPACES.PATTERN && (
               <>
-                <ChannelControls />
-                <ChannelHeader />
+                <PatternWorkspaceControls />
+                <PatternChannelHeader />
               </>
             )}
             {selectedWorkspace === WORKSPACES.KIT && (
@@ -56,7 +56,7 @@ const AppComponent = ({ selectedTheme, selectedWorkspace }) => (
               </>
             )}
           </Box>
-          {selectedWorkspace === WORKSPACES.PATTERN ? <ChannelList /> : <WorkspacePanel />}
+          {selectedWorkspace === WORKSPACES.PATTERN ? <PatternChannelList /> : <WorkspacePanel />}
         </main>
         <footer>
           <Box position="absolute" bottom={0} right={0} mr={[0, 0, 0, 1, 2, 2, 2, 3, 5]}>

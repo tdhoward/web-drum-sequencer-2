@@ -13,7 +13,7 @@ export class TogglesComponent extends React.PureComponent {
   render() {
     const {
       notes,
-      channelID,
+      channelId,
       toggleNote,
       bpm,
       playing,
@@ -26,7 +26,7 @@ export class TogglesComponent extends React.PureComponent {
           key={index}
           isActive={isActive(notes, beat)}
           onClick={() => {
-            toggleNote(channelID, pattern, beat);
+            toggleNote(channelId, pattern, beat);
           }}
           bpm={bpm}
           playing={playing}
@@ -51,7 +51,7 @@ export class TogglesComponent extends React.PureComponent {
 
 TogglesComponent.propTypes = {
   notes: PropTypes.arrayOf(PropTypes.object).isRequired,
-  channelID: PropTypes.string.isRequired,
+  channelId: PropTypes.string.isRequired,
   toggleNote: PropTypes.func.isRequired,
   bpm: PropTypes.number.isRequired,
   playing: PropTypes.bool.isRequired,

@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import { Box, Text } from '../design-system';
 import { LabelBox } from '../LabelBox';
 import { CurrentKitDisplay } from '../CurrentKitDisplay';
-import { KitChannelControls } from '../KitChannelControls';
+import { KitChannelList } from '../KitChannelList';
 import { WORKSPACES } from '../../common/workspace';
 
 const WorkspaceControlLayout = styled.div`
@@ -63,7 +63,7 @@ WorkspacePlaceholder.defaultProps = {
 
 const KitWorkspacePanel = () => (
   <Box mt={2}>
-    <KitChannelControls />
+    <KitChannelList />
   </Box>
 );
 

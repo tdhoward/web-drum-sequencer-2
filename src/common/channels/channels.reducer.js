@@ -116,12 +116,12 @@ export const channelsSlice = createSlice({
     },
     sampleLoaded: {
       reducer(state, action) {
-        updateChannel(state, action.payload.channelID, (channel) => {
+        updateChannel(state, action.payload.channelId, (channel) => {
           channel.sampleLoaded = action.payload.isLoaded;
         });
       },
-      prepare(channelID, isLoaded) {
-        return { payload: { channelID, isLoaded } };
+      prepare(channelId, isLoaded) {
+        return { payload: { channelId, isLoaded } };
       },
     },
     setChannelMuted: {

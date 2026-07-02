@@ -46,8 +46,8 @@ export const notesSlice = createSlice({
     },
     toggleNote: {
       reducer(state, action) {
-        const { channelID, pattern, beat, id } = action.payload;
-        const laneId = channelID;
+        const { channelId, pattern, beat, id } = action.payload;
+        const laneId = channelId;
         const patternId = patternIndexToId(pattern);
         const step = beatToStep(beat);
         const existingNote = state.ids
@@ -71,8 +71,8 @@ export const notesSlice = createSlice({
           velocity: 1,
         };
       },
-      prepare(channelID, pattern, beat, id) {
-        return { payload: { channelID, pattern, beat, id } };
+      prepare(channelId, pattern, beat, id) {
+        return { payload: { channelId, pattern, beat, id } };
       },
     },
   },

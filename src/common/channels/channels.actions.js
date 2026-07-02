@@ -92,38 +92,38 @@ export const newChannel = () => (dispatch, getState) => {
   loadSampleStatefully(dispatch, channelToAdd);
 };
 
-export const loadAndSetChannelSample = (channelID, sampleURL) => (dispatch) => {
-  dispatch(sampleLoaded(channelID, false));
+export const loadAndSetChannelSample = (channelId, sampleURL) => (dispatch) => {
+  dispatch(sampleLoaded(channelId, false));
   loadSample(sampleURL).then((success) => {
     if (success) {
-      dispatch(sampleLoaded(channelID, true));
+      dispatch(sampleLoaded(channelId, true));
     } else {
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
     }
   });
   dispatch(addSampleFromUrl(sampleURL, 'user'));
-  dispatch(setChannelSample(channelID, sampleURL));
+  dispatch(setChannelSample(channelId, sampleURL));
 };
 
 const getKitChannelId = channel => channel.kitChannelId || channel.id;
 
 export const deleteChannel = (
-  channelID,
+  channelId,
   channels,
   selectedChannelId,
-  laneId = channelID,
+  laneId = channelId,
 ) => (dispatch) => {
   if (channels.length === 1) {
     dispatch(newChannel());
     dispatch(removeChannelNotes(laneId));
-    dispatch(removeChannel(channelID));
+    dispatch(removeChannel(channelId));
     return;
   }
 
-  if (selectedChannelId === channelID || selectedChannelId === laneId) {
-    const nextChannel = channels.find(channel => getKitChannelId(channel) !== channelID);
+  if (selectedChannelId === channelId || selectedChannelId === laneId) {
+    const nextChannel = channels.find(channel => getKitChannelId(channel) !== channelId);
     dispatch(setSelectedChannel(nextChannel.id));
   }
   dispatch(removeChannelNotes(laneId));
-  dispatch(removeChannel(channelID));
+  dispatch(removeChannel(channelId));
 };

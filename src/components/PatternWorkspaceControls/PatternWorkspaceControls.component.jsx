@@ -6,7 +6,7 @@ import { PatternPackSelector } from '../PatternPackSelector';
 import { PatternSelector } from '../PatternSelector';
 import { CurrentKitDisplay } from '../CurrentKitDisplay';
 
-const ControlCluster = styled(Box)`
+const PatternControlCluster = styled(Box)`
   background-color: ${({ theme }) => theme.colors.surfacePanel};
   border-radius: 0.3rem;
   display: flex;
@@ -17,7 +17,7 @@ const ControlCluster = styled(Box)`
   padding: 0.8rem;
 `;
 
-const ChannelControlsLayout = styled.div`
+const PatternWorkspaceControlsLayout = styled.div`
   align-items: stretch;
   display: flex;
   flex-wrap: wrap;
@@ -40,18 +40,18 @@ const ChannelControlsLayout = styled.div`
   }
 `;
 
-export const ChannelControlsComponent = () => (
+export const PatternWorkspaceControls = () => (
   <LabelBox label="PATTERN CONTROLS">
-    <ChannelControlsLayout>
+    <PatternWorkspaceControlsLayout>
       <div className="pattern-workspace-controls">
-        <ControlCluster>
+        <PatternControlCluster>
           <CurrentKitDisplay />
           <Box width={['100%', '18rem']}>
             <PatternPackSelector />
           </Box>
           <PatternSelector />
-        </ControlCluster>
+        </PatternControlCluster>
       </div>
-    </ChannelControlsLayout>
+    </PatternWorkspaceControlsLayout>
   </LabelBox>
 );

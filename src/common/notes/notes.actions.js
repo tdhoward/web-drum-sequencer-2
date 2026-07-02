@@ -16,9 +16,9 @@ const findExistingNote = (state, laneId, patternId, step) => state.notes.ids
     && note.patternId === patternId
     && note.step === step);
 
-export const toggleNote = (channelID, patternIndex, beat) => (dispatch, getState) => {
+export const toggleNote = (channelId, patternIndex, beat) => (dispatch, getState) => {
   const state = getState();
-  const laneId = channelID;
+  const laneId = channelId;
   const patternId = patternIndexToId(patternIndex);
   const pattern = patternsSelector(state).entities[patternId];
   const step = beatToStep(beat, pattern);

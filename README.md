@@ -6,9 +6,10 @@ A browser-based drum machine and sequencer built with the Web Audio API, React, 
 The original web app can be found here:  https://wds-1.com
 
 ## Features
+ * Kit, Pattern, and Song workspaces
  * Swap drum samples
  * Choose drum samples from file
- * Pattern selector to save up to 8 patterns per drum kit
+ * Pattern pack and pattern slot selectors
  * BPM and swing control
  * Sample hit buttons
  * Gain and pan

@@ -15,16 +15,16 @@ export const playNoteNow = (noteChannel) => {
   playNote(null, sampleStore[noteChannel.sample], noteChannel.id, pitch);
 };
 
-export const scheduleNote = (noteID, noteTime, noteChannel) => {
-  if (typeof schedule[noteID] === 'undefined') {
+export const scheduleNote = (noteId, noteTime, noteChannel) => {
+  if (typeof schedule[noteId] === 'undefined') {
     const pitch = pitchToCents(noteChannel);
-    schedule[noteID] = playNote(noteTime, sampleStore[noteChannel.sample], noteChannel.id, pitch);
+    schedule[noteId] = playNote(noteTime, sampleStore[noteChannel.sample], noteChannel.id, pitch);
   }
 };
 
 export const clearScheduledNotes = () => {
-  Object.keys(schedule).forEach((noteID) => {
-    delete schedule[noteID];
+  Object.keys(schedule).forEach((noteId) => {
+    delete schedule[noteId];
   });
 };
 

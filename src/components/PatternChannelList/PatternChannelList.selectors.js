@@ -1,6 +1,6 @@
 import { createStructuredSelector } from 'reselect';
 import { channelsSelector } from '../../common';
 
-export const channelListSelectors = createStructuredSelector({
+export const patternChannelListSelectors = createStructuredSelector({
   channels: channelsSelector,
 });

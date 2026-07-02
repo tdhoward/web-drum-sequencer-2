@@ -1,11 +1,10 @@
 import { connect } from 'react-redux';
 import { compose, withHandlers } from 'recompose';
-import { ChannelListComponent } from './ChannelList.component';
-import { channelListSelectors } from './ChannelList.selectors';
-import { toggleNote, updateChannelOrder } from '../../common';
+import { PatternChannelListComponent } from './PatternChannelList.component';
+import { patternChannelListSelectors } from './PatternChannelList.selectors';
+import { updateChannelOrder } from '../../common';
 
 const mapDispatchToProps = {
-  toggleNote,
   updateChannelOrder,
 };
 
@@ -16,7 +15,7 @@ const handlers = withHandlers({
   },
 });
 
-export const ChannelList = compose(
-  connect(channelListSelectors, mapDispatchToProps),
+export const PatternChannelList = compose(
+  connect(patternChannelListSelectors, mapDispatchToProps),
   handlers,
-)(ChannelListComponent);
+)(PatternChannelListComponent);

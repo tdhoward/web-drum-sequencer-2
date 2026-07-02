@@ -87,6 +87,14 @@ The Pattern workspace should include:
 * The existing numbered pattern buttons for selecting one pattern slot inside the loaded pack.
 * Pattern editing controls only; kit sample/channel editing should stay in the Kit workspace.
 
+Current UI/component naming baseline:
+
+* Workspace-level control bars should use `WorkspaceControls` names, such as `PatternWorkspaceControls` and `KitWorkspaceControls`.
+* Pattern sequencing rows/headers should use `PatternChannel` names, such as `PatternChannelList` and `PatternChannelHeader`.
+* Kit channel editing rows should use `KitChannelList`. Avoid generic names like `ChannelControls` for workspace-specific surfaces.
+* Shared channel pieces should stay outside workspace-specific folders, such as `ChannelButtons` and `ChannelHeaderLabel`.
+* User-facing channel column labels should stay generic (`Channels` and `Channel`) unless a specific workflow needs extra clarity.
+
 When kit switching is exposed in the UI, prefer a review/apply flow:
 
 * If every lane maps confidently, the app may apply the mapping directly.
@@ -127,20 +135,20 @@ Impulse response assets may exist in the project. We may eventually want to use 
 A useful follow-up analysis task is:
 
 ```text
-Inspect the Kit workspace controls and propose the smallest UI change for editing channel display name and percussion type.
+Inspect the Kit channel list and propose the smallest UI change for editing percussion type.
 ```
 
 A useful follow-up editing task is:
 
 ```text
-Add Kit workspace controls for editing a channel's user-facing name and percussion type. Keep the controls compact and preserve existing playback behavior.
+Add Kit workspace controls for editing a channel's percussion type alongside the existing channel name editing. Keep the controls compact and preserve existing playback behavior.
 ```
 
 ## Current priorities
 
 Near-term priorities:
 
-1. Add UI controls for channel name and percussion type in the Kit workspace.
+1. Add UI controls for percussion type in the Kit workspace.
 2. Build a first kit-switching flow that calls the resolver and applies high-confidence mappings.
 3. Add a review dialog for low-confidence or unresolved mappings.
 4. Build out kit management UI: create, select, rename, delete, duplicate.

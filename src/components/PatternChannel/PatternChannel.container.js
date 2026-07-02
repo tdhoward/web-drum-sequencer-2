@@ -1,7 +1,7 @@
 import { connect } from 'react-redux';
 import { compose, withHandlers } from 'recompose';
-import { ChannelComponent } from './Channel.component';
-import { channelSelectors } from './Channel.selectors';
+import { PatternChannelComponent } from './PatternChannel.component';
+import { patternChannelSelectors } from './PatternChannel.selectors';
 import {
   setSelectedChannel,
 } from '../../common';
@@ -12,10 +12,6 @@ const mapDispatchToProps = {
 };
 
 const handlers = withHandlers({
-  onSelectSample: props => (sample) => {
-    const { loadAndSetChannelSample: scs, channel } = props;
-    scs(channel.id, sample.value);
-  },
   onTouchChannel: props => () => {
     const { channel, setSelectedChannel: sscs } = props;
     sscs(channel.id);
@@ -26,7 +22,7 @@ const handlers = withHandlers({
   },
 });
 
-export const Channel = compose(
-  connect(channelSelectors, mapDispatchToProps),
+export const PatternChannel = compose(
+  connect(patternChannelSelectors, mapDispatchToProps),
   handlers,
-)(ChannelComponent);
+)(PatternChannelComponent);

@@ -3,13 +3,13 @@ import styled from 'styled-components';
 import PropTypes from 'prop-types';
 import { Sortable } from '@shopify/draggable';
 import { Box } from '../design-system';
-import { Channel } from '../Channel';
+import { PatternChannel } from '../PatternChannel';
 
-const ChannelListBox = styled(Box)`
+const PatternChannelListBox = styled(Box)`
   outline: none;
 `;
 
-export class ChannelListComponent extends React.Component {
+export class PatternChannelListComponent extends React.Component {
   componentDidMount() {
     const sortable = new Sortable([this.channelContainer], {
       draggable: '.wds-draggable',
@@ -28,14 +28,14 @@ export class ChannelListComponent extends React.Component {
   render() {
     const { channels } = this.props;
     return (
-      <ChannelListBox mt={2} ref={(el) => { this.channelContainer = el; }}>
-        {channels.map(channel => <Channel key={channel.id} channel={channel} />)}
-      </ChannelListBox>
+      <PatternChannelListBox mt={2} ref={(el) => { this.channelContainer = el; }}>
+        {channels.map(channel => <PatternChannel key={channel.id} channel={channel} />)}
+      </PatternChannelListBox>
     );
   }
 }
 
-ChannelListComponent.propTypes = {
+PatternChannelListComponent.propTypes = {
   channels: PropTypes.arrayOf(PropTypes.object).isRequired,
   onUpdateChannelOrder: PropTypes.func.isRequired,
 };
