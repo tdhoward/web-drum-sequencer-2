@@ -68,6 +68,7 @@ class KnobTheme:
 
     knob_radius: float = 0.41
     knob_color: Color = (63, 74, 83)
+    knob_darken_amt: float = 0.83
     light_color: Color = (225, 235, 245)
     shadow_color: Color = (5, 7, 10)
     pointer_color: Color = (246, 246, 248)
@@ -180,7 +181,7 @@ class GoldenKnobTheme(KnobTheme):
 
 @dataclass
 class LightKnobTheme(KnobTheme):
-    knob_color: Color = (212, 216, 222)
+    knob_color: Color = (232, 236, 242)
     light_color: Color = (255, 210, 180)
     shadow_color: Color = (120, 90, 75)
     pointer_color: Color = (120, 80, 62)
@@ -189,9 +190,12 @@ class LightKnobTheme(KnobTheme):
     shadow_opacity: float = 0.38
     shadow_blur: float = 0.050
     face_ambient: float = 0.72
-    face_diffuse: float = 0.34
-    rim_ambient: float = 0.38
-    rim_diffuse: float = 0.34
+    face_diffuse: float = 0.4
+    rim_ambient: float = 0.45
+    rim_diffuse: float = 0.45
+    knob_darken_amt: float = 0.0
+    bevel_strength: float = 1.0
+    bevel_ring_width: float = 0.08
 
 
 THEME_CLASSES: dict[str, type[KnobTheme]] = {
@@ -307,7 +311,7 @@ class KnobRenderer:
         t = self.theme
         px = img.load()
 
-        rim_base = darken(t.knob_color, 0.83)
+        rim_base = darken(t.knob_color, t.knob_darken_amt)
         rim_light = mix(rim_base, t.light_color, 0.11)
         face_base = t.knob_color
         face_edge_shadow = darken(face_base, 0.30)

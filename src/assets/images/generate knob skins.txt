@@ -4,3 +4,6 @@ python knob_skin_generator.py --style default --strip --png knob_skins/default.p
 python knob_skin_generator.py --style golden --strip --png knob_skins/golden.png
 python knob_skin_generator.py --style blue --strip --png knob_skins/blue.png
 python knob_skin_generator.py --style light --strip --png knob_skins/light.png
+
+For a single frame of a specific theme:
+python knob_skin_generator.py --style light --frame 00 --png out/test.png
