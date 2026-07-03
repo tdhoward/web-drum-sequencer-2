@@ -10,9 +10,8 @@ import presets from '../../presets';
 import patternPacks from '../../patternPacks';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import type {
-  KitChannelInput,
+  FactoryPresetChannel,
   LegacyNotes,
-  PatternPack,
   PatternPackLane,
   SequencerRootState,
   SongState,
@@ -29,13 +28,9 @@ export const {
 
 type Dispatch = (action: unknown) => unknown;
 
-type PresetChannel = KitChannelInput & {
-  sample: string;
-};
-
 type KitPreset = {
   name: string;
-  channels: PresetChannel[];
+  channels: FactoryPresetChannel[];
   bpm?: number;
   swing?: number;
   notes?: LegacyNotes;
@@ -49,21 +44,20 @@ type PresetRootState = SequencerRootState & {
   };
 };
 
-const typedPresets = presets as KitPreset[];
-const typedPatternPacks = patternPacks as PatternPack[];
-
 const getSelectedKitId = (state: SequencerRootState): string => (
   state.song?.selectedKitId || 'default-kit'
 );
 
-const channelForKit = (kitId: string) => (channel: PresetChannel): PresetChannel & { kitId: string } => ({
+const channelForKit = (
+  kitId: string,
+) => (channel: FactoryPresetChannel): FactoryPresetChannel & { kitId: string } => ({
   ...channel,
   kitId,
 });
 
 const getCurrentPatternLanes = (state: PresetRootState): PatternPackLane[] => {
   const selectedPatternPackId = state.patternPacks?.selectedPatternPackId;
-  const selectedPatternPack = typedPatternPacks.find(
+  const selectedPatternPack = patternPacks.find(
     patternPack => patternPack.id === selectedPatternPackId,
   );
   if (selectedPatternPack) {
@@ -118,12 +112,13 @@ export const erasePreset = (presetName: string) => (
 ) => {
   const state = getState();
   const kitId = getSelectedKitId(state);
-  const { mappingResult, assignments } = resolveAssignmentsForPreset(typedPresets[0], kitId, state);
-  dispatch(loadChannels(typedPresets[0].channels));
-  dispatch(setKitName(kitId, typedPresets[0].name));
-  dispatch(setPreset(typedPresets[0].name));
+  const emptyPreset = presets[0];
+  const { mappingResult, assignments } = resolveAssignmentsForPreset(emptyPreset, kitId, state);
+  dispatch(loadChannels(emptyPreset.channels));
+  dispatch(setKitName(kitId, emptyPreset.name));
+  dispatch(setPreset(emptyPreset.name));
   dispatch(replaceKitChannelAssignments({ assignments }));
-  dispatch(setSelectedChannel(mappingResult.mappings[0]?.laneId || typedPresets[0].channels[0].id));
+  dispatch(setSelectedChannel(mappingResult.mappings[0]?.laneId || emptyPreset.channels[0].id));
   dispatch(deletePreset(presetName));
   dispatch(showFlashMessage(FLASH_MESSAGES.PRESET_DELETED));
   return mappingResult;

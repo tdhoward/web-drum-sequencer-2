@@ -11,11 +11,9 @@ export type PresetsState = {
   preset: string;
 };
 
-const typedDefaultPresets = defaultPresets as UserPreset[];
-
 export const presetsInitialState: PresetsState = {
   userPresets: [],
-  preset: typedDefaultPresets[1].name,
+  preset: defaultPresets[1].name,
 };
 
 export const presetsSlice = createSlice({

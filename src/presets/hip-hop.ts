@@ -1,6 +1,7 @@
 import { samples } from '../samples.config';
+import type { FactoryPreset } from '../common/sequencerModel';
 
-export default {
+const preset = {
   name: 'Hip Hop',
   bpm: 98,
   swing: 0.4,
@@ -722,4 +723,6 @@ export default {
       ],
     ],
   },
-};
+} satisfies FactoryPreset;
+
+export default preset;

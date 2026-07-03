@@ -25,10 +25,6 @@ type NamedChannel = {
   name?: string;
 };
 
-type SampleOption = {
-  url: string;
-};
-
 type SampleChannel = KitChannelInput & {
   sample: string;
 };
@@ -111,7 +107,7 @@ export const newChannel = (): Thunk => (dispatch, getState) => {
     kitId,
     laneId: channelId,
     percussionType: PERCUSSION_TYPES.GENERIC_PERCUSSION,
-    sample: (factorySamples as SampleOption[])[0].url,
+    sample: factorySamples[0].url,
     gain: 1,
     pitchCoarse: 0,
     pitchFine: 0,

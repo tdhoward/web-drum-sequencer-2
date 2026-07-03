@@ -90,9 +90,14 @@ export const samples = {
   HipHopCh1,
   HipHopCh2,
   HipHopOh,
+} as const;
+
+export type SampleOption = {
+  name: string;
+  url: string;
 };
 
-const sampleOptions = [
+const sampleOptions: SampleOption[] = [
   {
     name: '707 Bass',
     url: tr707Bd,

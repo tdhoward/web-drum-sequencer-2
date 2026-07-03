@@ -1,6 +1,7 @@
 import { samples } from '../samples.config';
+import type { FactoryPreset } from '../common/sequencerModel';
 
-export default {
+const preset = {
   name: '808',
   bpm: 105,
   swing: 0,
@@ -859,4 +860,6 @@ export default {
       [],
     ],
   },
-};
+} satisfies FactoryPreset;
+
+export default preset;

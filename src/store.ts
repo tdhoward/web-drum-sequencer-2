@@ -18,20 +18,18 @@ import {
   migrateToKitSequencerState,
   migrateToNormalizedSequencerState,
 } from './common/sequencerModel';
-import type { LegacyPreset, LegacySequencerState } from './common/sequencerModel';
+import type { LegacySequencerState } from './common/sequencerModel';
 import presets from './presets';
-
-const typedPresets = presets as LegacyPreset[];
 
 export const migrations = {
   1: () => ({}),
   2: () => ({}),
   3: () => ({}),
   4: (state: LegacySequencerState = {}) => (
-    migrateToNormalizedSequencerState(state, typedPresets[1])
+    migrateToNormalizedSequencerState(state, presets[1])
   ),
   5: (state: LegacySequencerState = {}) => (
-    migrateToKitSequencerState(state, typedPresets[1])
+    migrateToKitSequencerState(state, presets[1])
   ),
 };
 

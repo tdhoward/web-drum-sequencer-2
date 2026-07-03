@@ -1,6 +1,12 @@
 import presets from '../presets';
+import type {
+  FactoryPreset,
+  FactoryPresetChannel,
+  PatternPack,
+  PatternPackLane,
+} from '../common/sequencerModel';
 
-const patternPackIdsByName = {
+const patternPackIdsByName: Record<string, string> = {
   Empty: 'empty',
   808: 'electro-808',
   'Ace Drum': 'ace-drum-grooves',
@@ -9,7 +15,7 @@ const patternPackIdsByName = {
   707: 'tr-707-grooves',
 };
 
-const patternPackNamesByName = {
+const patternPackNamesByName: Record<string, string> = {
   Empty: 'Empty',
   808: 'Electro 808',
   'Ace Drum': 'Ace Drum Grooves',
@@ -18,12 +24,12 @@ const patternPackNamesByName = {
   707: 'TR-707 Grooves',
 };
 
-const slugify = value => String(value)
+const slugify = (value: string): string => String(value)
   .toLowerCase()
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-|-$/g, '');
 
-const channelToLane = channel => ({
+const channelToLane = (channel: FactoryPresetChannel): PatternPackLane => ({
   id: channel.laneId || channel.id,
   laneId: channel.laneId || channel.id,
   name: channel.name || channel.id,
@@ -33,7 +39,7 @@ const channelToLane = channel => ({
   tags: channel.tags,
 });
 
-const presetToPatternPack = preset => ({
+const presetToPatternPack = (preset: FactoryPreset): PatternPack => ({
   id: patternPackIdsByName[preset.name] || slugify(preset.name),
   name: patternPackNamesByName[preset.name] || preset.name,
   bpm: preset.bpm,
@@ -42,4 +48,6 @@ const presetToPatternPack = preset => ({
   notes: preset.notes,
 });
 
-export default presets.map(presetToPatternPack);
+const patternPacks: PatternPack[] = presets.map(presetToPatternPack);
+
+export default patternPacks;

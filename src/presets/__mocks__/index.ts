@@ -1,7 +1,10 @@
-export default [
+import type { FactoryPreset } from '../../common/sequencerModel';
+
+const presets: FactoryPreset[] = [
   {
     name: 'Roland 707',
     bpm: 130,
+    swing: 0,
     channels: [
       {
         id: 'channel-id',
@@ -9,11 +12,12 @@ export default [
         gain: 1,
       },
     ],
-    notes: [],
+    notes: {},
   },
   {
     name: 'Roland 707',
     bpm: 130,
+    swing: 0,
     channels: [
       {
         id: 'channel-id',
@@ -21,6 +25,8 @@ export default [
         gain: 1,
       },
     ],
-    notes: [],
+    notes: {},
   },
 ];
+
+export default presets;

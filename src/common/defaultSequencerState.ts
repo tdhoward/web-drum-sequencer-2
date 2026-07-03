@@ -13,7 +13,6 @@ import type {
   KitChannelAssignmentsState,
   KitChannelsState,
   KitsState,
-  LegacyPreset,
   NotesState,
   PatternsState,
   SamplesState,
@@ -21,13 +20,7 @@ import type {
   SongState,
 } from './sequencerModel';
 
-type NamedLegacyPreset = LegacyPreset & {
-  name: string;
-};
-
-const typedPresets = presets as NamedLegacyPreset[];
-
-export const DEFAULT_PRESET = typedPresets[1];
+export const DEFAULT_PRESET = presets[1];
 export const DEFAULT_KIT_NAME = DEFAULT_PRESET.name;
 
 export const defaultLaneIds = DEFAULT_PRESET.channels.map(channel => channel.laneId || channel.id);

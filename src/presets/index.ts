@@ -4,5 +4,8 @@ import lDrum from './ldrum';
 import sevenohseven from './707';
 import eightoheight from './808';
 import ace from './ace';
+import type { FactoryPreset } from '../common/sequencerModel';
 
-export default [empty, eightoheight, ace, lDrum, hipHop, sevenohseven];
+const presets: FactoryPreset[] = [empty, eightoheight, ace, lDrum, hipHop, sevenohseven];
+
+export default presets;

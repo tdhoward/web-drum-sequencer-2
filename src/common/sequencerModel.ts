@@ -144,6 +144,17 @@ export type LegacyPreset = {
   notes: LegacyNotes;
 };
 
+export type FactoryPresetChannel = KitChannelInput & {
+  sample: string;
+};
+
+export type FactoryPreset = LegacyPreset & {
+  name: string;
+  bpm: number;
+  swing: number;
+  channels: FactoryPresetChannel[];
+};
+
 export type LegacySequencerState = Partial<SequencerModelState> & {
   channels?: KitChannelInput[] | KitChannelsState;
   notes?: LegacyNotes | NotesState;

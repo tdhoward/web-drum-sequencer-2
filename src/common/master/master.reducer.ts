@@ -1,20 +1,12 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import presets from '../../presets';
 
-type MasterPreset = {
-  channels: {
-    id: string;
-  }[];
-};
-
-const typedPresets = presets as MasterPreset[];
-
 export type MasterState = {
   selectedChannel?: string;
 };
 
 export const masterInitialState: MasterState = {
-  selectedChannel: typedPresets[1].channels[0].id,
+  selectedChannel: presets[1].channels[0].id,
 };
 
 export const masterSlice = createSlice({

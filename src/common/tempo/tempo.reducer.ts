@@ -1,21 +1,14 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import presets from '../../presets';
 
-type TempoPreset = {
-  bpm: number;
-  swing: number;
-};
-
-const typedPresets = presets as TempoPreset[];
-
 export type TempoState = {
   bpm: number;
   swing: number;
 };
 
 export const tempoInitialState: TempoState = {
-  bpm: typedPresets[1].bpm,
-  swing: typedPresets[1].swing,
+  bpm: presets[1].bpm,
+  swing: presets[1].swing,
 };
 
 export const tempoSlice = createSlice({
