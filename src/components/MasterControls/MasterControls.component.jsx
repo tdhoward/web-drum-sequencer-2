@@ -6,7 +6,6 @@ import { BPMInput } from '../BPMInput';
 import { SwingControl } from '../SwingControl';
 import { VolumeMeter } from '../VolumeMeter.component';
 import { WorkspaceNav } from '../WorkspaceNav';
-import { ThemeSelector } from '../ThemeSelector';
 
 const MasterControlsLayout = styled.div`
   align-items: stretch;
@@ -53,7 +52,6 @@ export const MasterControls = () => (
       <SwingControl />
     </Box>
     <div className="right-controls">
-      <ThemeSelector />
       <WorkspaceNav />
     </div>
   </MasterControlsLayout>

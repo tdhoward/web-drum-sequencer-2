@@ -18,6 +18,7 @@ export * from './PatternWorkspaceControls';
 export * from './FlashMessage';
 export * from './SwingControl';
 export * from './Branding';
+export * from './AppMenu';
 export * from './InstallButton';
 export * from './VolumeMeter.component';
 export * from './WorkspaceNav';
