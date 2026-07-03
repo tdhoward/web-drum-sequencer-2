@@ -1,10 +1,27 @@
-import { VALID_PERCUSSION_TYPES } from './percussion';
+import { isValidPercussionType } from './percussion';
+import type {
+  EntityState,
+  Kit,
+  KitChannelAssignmentsState,
+  KitChannelsState,
+  KitsState,
+  NotesState,
+  PatternsState,
+  SamplesState,
+  SequencerModelState,
+} from './sequencerModel';
 
-const hasEntity = (collection, id) => Boolean(id && collection?.entities?.[id]);
+const hasEntity = <TEntity>(
+  collection: EntityState<TEntity> | undefined,
+  id?: string,
+): boolean => Boolean(id && collection?.entities?.[id]);
 
-const getKitChannelLaneIds = (kit, kitChannels) => (
+const getKitChannelLaneIds = (
+  kit: Kit | undefined,
+  kitChannels: KitChannelsState | undefined,
+): string[] => (
   kit?.channelIds || []
-).reduce((laneIds, channelId) => {
+).reduce<string[]>((laneIds, channelId) => {
   const kitChannel = kitChannels?.entities?.[channelId];
   if (kitChannel?.laneId && !laneIds.includes(kitChannel.laneId)) {
     laneIds.push(kitChannel.laneId);
@@ -12,22 +29,39 @@ const getKitChannelLaneIds = (kit, kitChannels) => (
   return laneIds;
 }, []);
 
-const getKitAssignmentLaneIds = (kit, kitChannelAssignments) => (
+const getKitAssignmentLaneIds = (
+  kit: Kit | undefined,
+  kitChannelAssignments: KitChannelAssignmentsState | undefined,
+): string[] => (
   kitChannelAssignments?.ids || []
-).reduce((laneIds, assignmentId) => {
-  const assignment = kitChannelAssignments.entities[assignmentId];
-  if (assignment?.kitId === kit?.id && assignment.laneId && !laneIds.includes(assignment.laneId)) {
+).reduce<string[]>((laneIds, assignmentId) => {
+  const assignment = kitChannelAssignments?.entities[assignmentId];
+  if (
+    assignment
+    && assignment.kitId === kit?.id
+    && assignment.laneId
+    && !laneIds.includes(assignment.laneId)
+  ) {
     laneIds.push(assignment.laneId);
   }
   return laneIds;
 }, []);
 
-const addError = (errors, message) => {
+const addError = (errors: string[], message: string): void => {
   errors.push(message);
 };
 
-export const validateSequencerModelState = (state = {}) => {
-  const errors = [];
+type SequencerModelStateInput = Partial<SequencerModelState> & {
+  kits?: KitsState;
+  kitChannels?: KitChannelsState;
+  kitChannelAssignments?: KitChannelAssignmentsState;
+  samples?: SamplesState;
+  patterns?: PatternsState;
+  notes?: NotesState;
+};
+
+export const validateSequencerModelState = (state: SequencerModelStateInput = {}): string[] => {
+  const errors: string[] = [];
   const {
     song,
     kits,
@@ -59,8 +93,8 @@ export const validateSequencerModelState = (state = {}) => {
   });
 
   (kits?.ids || []).forEach((kitId) => {
-    const kit = kits.entities[kitId];
-    (kit.channelIds || []).forEach((channelId) => {
+    const kit = kits?.entities[kitId];
+    (kit?.channelIds || []).forEach((channelId) => {
       if (!hasEntity(kitChannels, channelId)) {
         addError(errors, `kit ${kitId} references missing kitChannelId: ${channelId}`);
       }
@@ -68,7 +102,10 @@ export const validateSequencerModelState = (state = {}) => {
   });
 
   (kitChannels?.ids || []).forEach((channelId) => {
-    const kitChannel = kitChannels.entities[channelId];
+    const kitChannel = kitChannels?.entities[channelId];
+    if (!kitChannel) {
+      return;
+    }
     if (!hasEntity(kits, kitChannel.kitId)) {
       addError(errors, `kitChannel ${channelId} references missing kitId: ${kitChannel.kitId}`);
     }
@@ -78,7 +115,7 @@ export const validateSequencerModelState = (state = {}) => {
     if (!hasEntity(samples, kitChannel.sampleId)) {
       addError(errors, `kitChannel ${channelId} references missing sampleId: ${kitChannel.sampleId}`);
     }
-    if (!VALID_PERCUSSION_TYPES.includes(kitChannel.percussionType)) {
+    if (!isValidPercussionType(kitChannel.percussionType)) {
       addError(errors, `kitChannel ${channelId} has invalid percussionType: ${kitChannel.percussionType}`);
     }
     if (kitChannel.tags && !Array.isArray(kitChannel.tags)) {
@@ -87,7 +124,10 @@ export const validateSequencerModelState = (state = {}) => {
   });
 
   (kitChannelAssignments?.ids || []).forEach((assignmentId) => {
-    const assignment = kitChannelAssignments.entities[assignmentId];
+    const assignment = kitChannelAssignments?.entities[assignmentId];
+    if (!assignment) {
+      return;
+    }
     if (!hasEntity(kits, assignment.kitId)) {
       addError(errors, `kitChannelAssignment ${assignmentId} references missing kitId: ${assignment.kitId}`);
     }
@@ -95,7 +135,7 @@ export const validateSequencerModelState = (state = {}) => {
       addError(errors, `kitChannelAssignment ${assignmentId} references missing kitChannelId: ${assignment.kitChannelId}`);
       return;
     }
-    if (kitChannels.entities[assignment.kitChannelId].kitId !== assignment.kitId) {
+    if (kitChannels?.entities[assignment.kitChannelId].kitId !== assignment.kitId) {
       addError(errors, `kitChannelAssignment ${assignmentId} kitId does not match kitChannel ${assignment.kitChannelId}`);
     }
     if (!assignment.laneId) {
@@ -121,7 +161,10 @@ export const validateSequencerModelState = (state = {}) => {
   });
 
   (notes?.ids || []).forEach((noteId) => {
-    const note = notes.entities[noteId];
+    const note = notes?.entities[noteId];
+    if (!note) {
+      return;
+    }
     const pattern = patterns?.entities?.[note.patternId];
     if (!pattern) {
       addError(errors, `note ${noteId} references missing patternId: ${note.patternId}`);
@@ -135,4 +178,6 @@ export const validateSequencerModelState = (state = {}) => {
   return errors;
 };
 
-export const isSequencerModelStateValid = state => validateSequencerModelState(state).length === 0;
+export const isSequencerModelStateValid = (state: SequencerModelStateInput): boolean => (
+  validateSequencerModelState(state).length === 0
+);

@@ -185,6 +185,10 @@ export const getPercussionTypeLabel = (percussionType: string): string => (
   getPercussionTypeDetails(percussionType).label
 );
 
+export const isValidPercussionType = (percussionType: string): percussionType is PercussionType => (
+  VALID_PERCUSSION_TYPES.includes(percussionType as PercussionType)
+);
+
 const COMPATIBLE_TYPES: Partial<Record<PercussionType, PercussionType[]>> = {
   [PERCUSSION_TYPES.SNARE_DRUM]: [
     PERCUSSION_TYPES.CLAP,
