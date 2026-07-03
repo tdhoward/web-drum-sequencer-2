@@ -1,4 +1,4 @@
-export const swing = (beatTime, swingAmount) => {
+export const swing = (beatTime: number, swingAmount: number): number => {
   const SWING_TIMING = 0.5; // eight note cycles
   const MAX_SWING = 0.95;
 

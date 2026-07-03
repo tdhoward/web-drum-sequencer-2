@@ -59,10 +59,10 @@ Preferred model direction:
 
 Current model baseline:
 
-* `src/common/percussion.js` defines the controlled percussion vocabulary and the pure `resolveKitChannelMapping` resolver.
+* `src/common/percussion.ts` defines the controlled percussion vocabulary and the pure `resolveKitChannelMapping` resolver.
 * `kitChannel.percussionType` is required by invariant checks and defaults to `generic_percussion` for new/legacy channels.
 * `kitChannelAssignments` exists as the forward path for applying resolved lane-to-channel mappings.
-* `src/patternPacks/index.js` exposes factory pattern packs with human-readable names. The Pattern workspace dropdown loads a pack; the existing 1-8 pattern buttons select slots within that pack.
+* `src/patternPacks/index.ts` exposes factory pattern packs with human-readable names. The Pattern workspace dropdown loads a pack; the existing 1-8 pattern buttons select slots within that pack.
 * Bundled factory presets use semantic channel IDs and explicit channel names/percussion metadata; `empty_channel` has been removed from factory preset data.
 * The compatibility UI/audio path now exposes assignment lane IDs through `channelsSelector`, so loaded pack notes can play through the current kit without changing kit samples.
 * Kit preset loading changes kit channels/samples/name and rebuilds assignments, but no longer replaces notes, pattern lanes, tempo, or swing.
@@ -106,7 +106,7 @@ When kit switching is exposed in the UI, prefer a review/apply flow:
 
 Prefer small, focused, incremental changes.
 
-TypeScript migration has started. The project has a `tsconfig.json` and `npm run typecheck`; JavaScript remains supported through `allowJs`, and new conversions should focus first on low-blast-radius model/state files before broad component rewrites.
+TypeScript migration is in progress. The project has a `tsconfig.json` and `npm run typecheck`; JavaScript remains supported through `allowJs` while component, test, and remaining service files are migrated. Model/state files, factory preset and pattern-pack data, sample config, common barrel exports, and several small service utilities have already been converted.
 
 Before making changes:
 
