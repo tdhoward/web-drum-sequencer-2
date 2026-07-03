@@ -4,7 +4,7 @@ import { Box } from '../design-system';
 
 export const ToggleGroup = ({ children }) => (
   <Box
-    bg="black"
+    bg="sequencerGroupBackground"
     p={[2, 2, 2, 2, 2, 3]}
     borderRadius="3em"
     flex="1 1 auto"

@@ -106,6 +106,15 @@ const classicDarkColors = {
   channelHeaderMarkerBackground: classicDarkPalette.darkGray,
   channelHeaderText: 'white',
 
+  sequencerGroupBackground: 'black',
+  sequencerBeatInactiveBackground: classicDarkPalette.darkGray,
+
+  patternSelectorBackground: classicDarkPalette.lightGray,
+  patternSelectorText: 'rgba(0, 0, 0, 0.5)',
+  patternSelectorSelectedBackground: classicDarkPalette.secondary,
+  patternSelectorSelectedText: 'rgba(0, 0, 0, 0.5)',
+  patternSelectorActiveBackground: classicDarkPalette.primaryDark,
+
   bpmControlBackground: 'linear-gradient(190deg, #19191D 0%, #303036 50%, #0a0e0a 51%, #29292D 100%)',
   bpmControlText: classicDarkPalette.secondary,
   bpmControlButtonText: classicDarkPalette.nearWhite,
@@ -184,6 +193,15 @@ const highContrastDarkColors = {
   channelHeaderBackground: '#020609',
   channelHeaderMarkerBackground: highContrastDarkPalette.darkGray,
   channelHeaderText: highContrastDarkPalette.nearWhite,
+
+  sequencerGroupBackground: '#020609',
+  sequencerBeatInactiveBackground: highContrastDarkPalette.darkGray,
+
+  patternSelectorBackground: highContrastDarkPalette.lightGray,
+  patternSelectorText: highContrastDarkPalette.nearBlack,
+  patternSelectorSelectedBackground: highContrastDarkPalette.gold,
+  patternSelectorSelectedText: highContrastDarkPalette.nearBlack,
+  patternSelectorActiveBackground: highContrastDarkPalette.primaryDark,
 
   bpmControlBackground: 'linear-gradient(190deg, #0B1014 0%, #1F2933 50%, #020609 51%, #101820 100%)',
   bpmControlText: highContrastDarkPalette.gold,
@@ -267,6 +285,15 @@ const lightStudioColors = {
   channelHeaderBackground: '#CAD3DC',
   channelHeaderMarkerBackground: '#B8C3CD',
   channelHeaderText: '#3B4650',
+
+  sequencerGroupBackground: '#D7E0E8',
+  sequencerBeatInactiveBackground: 'rgb(245, 250, 255)',
+
+  patternSelectorBackground: '#B8C3CD',
+  patternSelectorText: '#3B4650',
+  patternSelectorSelectedBackground: lightStudioPalette.secondary,
+  patternSelectorSelectedText: '#FFFFFF',
+  patternSelectorActiveBackground: lightStudioPalette.darkBlue,
 
   bpmControlBackground: 'linear-gradient(190deg, #F7FAFC 0%, #E9EFF4 50%, #D8E1E9 51%, #EEF3F7 100%)',
   bpmControlText: lightStudioPalette.nearWhite,

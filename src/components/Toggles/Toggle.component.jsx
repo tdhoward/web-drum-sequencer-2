@@ -20,7 +20,7 @@ const BeatButton = styled.button.attrs(({
   position: relative;
   background: ${({ isActive, theme }) => (isActive
     ? `linear-gradient(180deg, ${theme.colors.accentPrimaryActive} 0%, ${theme.colors.accentPrimary} 100%)`
-    : theme.colors.surfacePanelRaised)};
+    : theme.colors.sequencerBeatInactiveBackground)};
 
   &:focus {
     box-shadow: 0 0 5px 5px rgba(100, 180, 255, 0.5);

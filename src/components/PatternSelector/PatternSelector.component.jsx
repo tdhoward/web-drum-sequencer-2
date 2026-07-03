@@ -12,7 +12,7 @@ export const PatternSelectorComponent = ({ onSelectPattern, pattern }) => {
       height="1.3rem"
       width="1.3rem"
       borderRadius={2}
-      bg={pattern === buttonNumber ? 'accentPrimary' : 'textSecondary'}
+      bg={pattern === buttonNumber ? 'patternSelectorSelectedBackground' : 'patternSelectorBackground'}
       ml="1px"
       mr="1px"
       mt="1px"
@@ -22,8 +22,8 @@ export const PatternSelectorComponent = ({ onSelectPattern, pattern }) => {
       }}
       fontWeight="500"
       fontSize="0.7em"
-      color="rgba(0,0,0,0.5)"
-      activeBg="accentPrimaryActive"
+      color={pattern === buttonNumber ? 'patternSelectorSelectedText' : 'patternSelectorText'}
+      activeBg="patternSelectorActiveBackground"
       disabled={pattern === buttonNumber}
       aria-label={`Enable pattern ${buttonNumber}`}
       lineHeight="1.4em"
