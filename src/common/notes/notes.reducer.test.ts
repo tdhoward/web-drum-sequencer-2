@@ -56,7 +56,6 @@ describe('removeNote', () => {
   test('should remove a note', () => {
     const state = notesReducer(testNotes, removeNote({
       id: 'bing',
-      laneId: 'bongo',
     }));
     expect(state.ids).not.toContain('bing');
     expect(state.entities.bing).toBeUndefined();

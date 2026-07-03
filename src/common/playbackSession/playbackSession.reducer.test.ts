@@ -35,7 +35,10 @@ describe('stopPlayback', () => {
   });
 
   test('should ignore accidental event arguments', () => {
-    const action = stopPlayback({ type: 'click' });
+    const stopPlaybackFromEvent = stopPlayback as unknown as (
+      event: unknown,
+    ) => ReturnType<typeof stopPlayback>;
+    const action = stopPlaybackFromEvent({ type: 'click' });
     expect(action.payload).toBeUndefined();
   });
 });
