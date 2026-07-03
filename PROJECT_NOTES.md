@@ -106,6 +106,8 @@ When kit switching is exposed in the UI, prefer a review/apply flow:
 
 Prefer small, focused, incremental changes.
 
+TypeScript migration has started. The project has a `tsconfig.json` and `npm run typecheck`; JavaScript remains supported through `allowJs`, and new conversions should focus first on low-blast-radius model/state files before broad component rewrites.
+
 Before making changes:
 
 1. Inspect the current repo structure.

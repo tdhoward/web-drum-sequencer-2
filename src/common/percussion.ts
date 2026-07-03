@@ -17,11 +17,82 @@ export const PERCUSSION_TYPES = {
   COWBELL: 'cowbell',
   CLAVE: 'clave',
   GENERIC_PERCUSSION: 'generic_percussion',
+} as const;
+
+export type PercussionType = typeof PERCUSSION_TYPES[keyof typeof PERCUSSION_TYPES];
+
+export type PercussionTypeDetails = {
+  label: string;
+  abbreviation: string;
 };
 
-export const VALID_PERCUSSION_TYPES = Object.values(PERCUSSION_TYPES);
+export type PercussionTypeOption = PercussionTypeDetails & {
+  type: PercussionType;
+};
 
-export const PERCUSSION_TYPE_DETAILS = {
+export type KitChannelMetadata = {
+  id?: string;
+  laneId?: string;
+  name?: string;
+  percussionType?: string;
+  articulation?: string;
+  register?: string;
+  tags?: string[];
+  [key: string]: unknown;
+};
+
+export type TargetKitChannel = KitChannelMetadata & {
+  id: string;
+};
+
+export type PatternLane = string | KitChannelMetadata;
+
+export type EnrichedPatternLane = KitChannelMetadata & {
+  id: string;
+  laneId: string;
+};
+
+export type MappingConfidence = 'high' | 'medium' | 'low' | 'unresolved';
+
+export type KitChannelMapping = {
+  laneId: string;
+  source: EnrichedPatternLane;
+  targetKitChannelId: string;
+  target: TargetKitChannel;
+  confidence: MappingConfidence;
+  reason: string;
+};
+
+export type UnresolvedKitChannelMapping = {
+  laneId: string;
+  source: EnrichedPatternLane;
+  reason: string;
+};
+
+export type KitChannelMappingResult = {
+  mappings: KitChannelMapping[];
+  unresolved: UnresolvedKitChannelMapping[];
+};
+
+export type ResolveKitChannelMappingArgs = {
+  patternLanes?: PatternLane[];
+  sourceKitChannels?: KitChannelMetadata[];
+  targetKitChannels?: TargetKitChannel[];
+};
+
+type CandidateScore = {
+  score: number;
+  confidence: MappingConfidence;
+  reason: string;
+};
+
+type MappingCandidate = CandidateScore & {
+  channel: TargetKitChannel;
+};
+
+export const VALID_PERCUSSION_TYPES: PercussionType[] = Object.values(PERCUSSION_TYPES);
+
+export const PERCUSSION_TYPE_DETAILS: Record<PercussionType, PercussionTypeDetails> = {
   [PERCUSSION_TYPES.BASS_DRUM]: {
     label: 'Bass Drum',
     abbreviation: 'BD',
@@ -96,25 +167,25 @@ export const PERCUSSION_TYPE_DETAILS = {
   },
 };
 
-export const PERCUSSION_TYPE_OPTIONS = VALID_PERCUSSION_TYPES.map(type => ({
+export const PERCUSSION_TYPE_OPTIONS: PercussionTypeOption[] = VALID_PERCUSSION_TYPES.map(type => ({
   type,
   ...PERCUSSION_TYPE_DETAILS[type],
 }));
 
-export const getPercussionTypeDetails = percussionType => (
-  PERCUSSION_TYPE_DETAILS[percussionType]
+export const getPercussionTypeDetails = (percussionType: string): PercussionTypeDetails => (
+  PERCUSSION_TYPE_DETAILS[percussionType as PercussionType]
   || PERCUSSION_TYPE_DETAILS[PERCUSSION_TYPES.GENERIC_PERCUSSION]
 );
 
-export const getPercussionTypeAbbreviation = percussionType => (
+export const getPercussionTypeAbbreviation = (percussionType: string): string => (
   getPercussionTypeDetails(percussionType).abbreviation
 );
 
-export const getPercussionTypeLabel = percussionType => (
+export const getPercussionTypeLabel = (percussionType: string): string => (
   getPercussionTypeDetails(percussionType).label
 );
 
-const COMPATIBLE_TYPES = {
+const COMPATIBLE_TYPES: Partial<Record<PercussionType, PercussionType[]>> = {
   [PERCUSSION_TYPES.SNARE_DRUM]: [
     PERCUSSION_TYPES.CLAP,
     PERCUSSION_TYPES.RIMSHOT,
@@ -201,32 +272,51 @@ const COMPATIBLE_TYPES = {
   ],
 };
 
-const getLaneId = lane => lane?.laneId || lane?.id || lane;
+const getLaneId = (lane: PatternLane): string => {
+  if (typeof lane === 'string') {
+    return lane;
+  }
 
-const getChannelLaneId = channel => channel?.laneId || channel?.id;
+  return lane.laneId || lane.id || '';
+};
 
-const enrichPatternLane = (patternLane, sourceKitChannels) => {
+const getChannelLaneId = (channel: KitChannelMetadata): string | undefined => (
+  channel.laneId || channel.id
+);
+
+const enrichPatternLane = (
+  patternLane: PatternLane,
+  sourceKitChannels: KitChannelMetadata[],
+): EnrichedPatternLane => {
   const laneId = getLaneId(patternLane);
   const sourceChannel = sourceKitChannels.find(channel => getChannelLaneId(channel) === laneId);
+  const patternLaneDetails = typeof patternLane === 'string' ? {} : patternLane;
+
   return {
-    ...sourceChannel,
-    ...(typeof patternLane === 'string' ? {} : patternLane),
+    ...(sourceChannel || {}),
+    ...patternLaneDetails,
     id: laneId,
     laneId,
   };
 };
 
-const isCompatibleType = (sourceType, targetType) => (
-  COMPATIBLE_TYPES[sourceType] || []
-).includes(targetType);
+const isCompatibleType = (sourceType?: string, targetType?: string): boolean => {
+  if (!sourceType || !targetType) {
+    return false;
+  }
 
-const scoreCandidate = (lane, channel) => {
+  return (
+    COMPATIBLE_TYPES[sourceType as PercussionType] || []
+  ).includes(targetType as PercussionType);
+};
+
+const scoreCandidate = (lane: EnrichedPatternLane, channel: TargetKitChannel): CandidateScore => {
   const laneId = lane.laneId || lane.id;
   const channelLaneId = getChannelLaneId(channel);
-  const sameType = lane.percussionType && lane.percussionType === channel.percussionType;
-  const sameArticulation = lane.articulation
-    && lane.articulation === channel.articulation;
-  const sameRegister = lane.register && lane.register === channel.register;
+  const sameType = Boolean(lane.percussionType && lane.percussionType === channel.percussionType);
+  const sameArticulation = Boolean(lane.articulation
+    && lane.articulation === channel.articulation);
+  const sameRegister = Boolean(lane.register && lane.register === channel.register);
 
   if (laneId && laneId === channelLaneId) {
     return {
@@ -283,7 +373,11 @@ const scoreCandidate = (lane, channel) => {
   };
 };
 
-const findBestCandidate = (lane, targetKitChannels, usedChannelIds) => targetKitChannels
+const findBestCandidate = (
+  lane: EnrichedPatternLane,
+  targetKitChannels: TargetKitChannel[],
+  usedChannelIds: Set<string>,
+): MappingCandidate | undefined => targetKitChannels
   .filter(channel => !usedChannelIds.has(channel.id))
   .map(channel => ({
     channel,
@@ -296,12 +390,12 @@ export const resolveKitChannelMapping = ({
   patternLanes = [],
   sourceKitChannels = [],
   targetKitChannels = [],
-} = {}) => {
-  const usedChannelIds = new Set();
+}: ResolveKitChannelMappingArgs = {}): KitChannelMappingResult => {
+  const usedChannelIds = new Set<string>();
 
   return patternLanes
     .map(patternLane => enrichPatternLane(patternLane, sourceKitChannels))
-    .reduce((result, lane) => {
+    .reduce<KitChannelMappingResult>((result, lane) => {
       const candidate = findBestCandidate(lane, targetKitChannels, usedChannelIds);
       const laneId = lane.laneId || lane.id;
 
