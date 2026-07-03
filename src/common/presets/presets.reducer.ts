@@ -1,26 +1,38 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import defaultPresets from '../../presets';
 
-export const presetsInitialState = {
+export type UserPreset = {
+  name: string;
+  [key: string]: unknown;
+};
+
+export type PresetsState = {
+  userPresets: UserPreset[];
+  preset: string;
+};
+
+const typedDefaultPresets = defaultPresets as UserPreset[];
+
+export const presetsInitialState: PresetsState = {
   userPresets: [],
-  preset: defaultPresets[1].name,
+  preset: typedDefaultPresets[1].name,
 };
 
 export const presetsSlice = createSlice({
   name: 'presets',
   initialState: presetsInitialState,
   reducers: {
-    setPreset(state, action) {
+    setPreset(state, action: PayloadAction<string>) {
       state.preset = action.payload;
     },
-    savePreset(state, action) {
+    savePreset(state, action: PayloadAction<UserPreset>) {
       state.userPresets = state.userPresets.map(
         userPreset => (userPreset.name === action.payload.name
           ? action.payload
           : userPreset),
       );
     },
-    savePresetAs(state, action) {
+    savePresetAs(state, action: PayloadAction<UserPreset>) {
       state.userPresets = [
         ...state.userPresets.filter(
           userPreset => userPreset.name !== action.payload.name,
@@ -28,7 +40,7 @@ export const presetsSlice = createSlice({
         action.payload,
       ];
     },
-    deletePreset(state, action) {
+    deletePreset(state, action: PayloadAction<string>) {
       state.userPresets = state.userPresets.filter(
         userPreset => userPreset.name !== action.payload,
       );

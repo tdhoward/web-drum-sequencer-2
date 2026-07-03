@@ -3,15 +3,19 @@ import { loadAndSetChannelSample } from '../channels';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import { userSamplesSlice } from './userSamples.reducer';
 
+type Dispatch = (action: unknown) => unknown;
+
 export const {
   addUserSample,
   removeUserSample,
   clearUserSamples,
 } = userSamplesSlice.actions;
 
-export const saveUserSample = (channel, files) => (dispatch) => {
+export const saveUserSample = (channel: string, files: FileList | File[]) => (
+  dispatch: Dispatch,
+): void => {
   saveToSampleStore(files[0])
-    .then((sampleURL) => {
+    .then((sampleURL: string) => {
       dispatch(addUserSample(sampleURL));
       dispatch(loadAndSetChannelSample(channel, sampleURL));
     })

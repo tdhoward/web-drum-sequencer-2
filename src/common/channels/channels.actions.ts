@@ -3,16 +3,43 @@ import { initializeChannelNotes, removeChannelNotes } from '../notes';
 import { uuid } from '../../services/uuid';
 import factorySamples from '../../samples.config';
 import { setSelectedChannel } from '../master';
-import { selectedKitIdSelector } from '../song';
 import { addSampleFromUrl } from '../samples';
 import { PERCUSSION_TYPES } from '../percussion';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
+import { DEFAULT_KIT_ID } from '../sequencerModel';
+import type {
+  KitChannel,
+  KitChannelInput,
+  KitChannelsState,
+  SequencerRootState,
+} from '../sequencerModel';
 import { channelsSlice } from './channels.reducer';
 
 const NEW_CHANNEL_NAME_PREFIX = 'New channel';
 
-export const getNextNewChannelName = (channels = []) => {
-  const usedNumbers = channels.reduce((numbers, channel) => {
+type Dispatch = (action: unknown) => unknown;
+
+type Thunk = (dispatch: Dispatch, getState: () => SequencerRootState) => unknown;
+
+type NamedChannel = {
+  name?: string;
+};
+
+type SampleOption = {
+  url: string;
+};
+
+type SampleChannel = KitChannelInput & {
+  sample: string;
+};
+
+type DeletableChannel = {
+  id: string;
+  kitChannelId?: string;
+};
+
+export const getNextNewChannelName = (channels: NamedChannel[] = []): string => {
+  const usedNumbers = channels.reduce<Set<number>>((numbers, channel) => {
     const match = String(channel.name || '').match(/^New channel ([1-9]\d*)$/);
     if (match) {
       numbers.add(Number(match[1]));
@@ -47,17 +74,21 @@ export const {
   setChannelReverb,
 } = channelsSlice.actions;
 
-export const loadSampleStatefully = (dispatch, channel) => {
+export const loadSampleStatefully = (dispatch: Dispatch, channel: SampleChannel): void => {
   dispatch(sampleLoaded(channel.id, false));
-  loadSample(channel.sample).then((success) => {
+  loadSample(channel.sample).then((success: boolean) => {
     if (success) {
       dispatch(sampleLoaded(channel.id, true));
     }
   });
 };
 
-export const loadChannels = channels => (dispatch, getState) => {
-  const kitId = selectedKitIdSelector(getState());
+const getSelectedKitId = (state: SequencerRootState): string => (
+  state.song?.selectedKitId || DEFAULT_KIT_ID
+);
+
+export const loadChannels = (channels: SampleChannel[]): Thunk => (dispatch, getState) => {
+  const kitId = getSelectedKitId(getState());
   channels.forEach((channel) => {
     dispatch(addSampleFromUrl(channel.sample, 'factory'));
     loadSampleStatefully(dispatch, channel);
@@ -65,22 +96,22 @@ export const loadChannels = channels => (dispatch, getState) => {
   dispatch(replaceKitChannels(channels, kitId));
 };
 
-export const newChannel = () => (dispatch, getState) => {
+export const newChannel = (): Thunk => (dispatch, getState) => {
   const channelId = uuid();
   const state = getState();
-  const kitId = selectedKitIdSelector(state);
+  const kitId = getSelectedKitId(state);
   const kit = state.kits?.entities?.[kitId];
-  const kitChannels = state.kitChannels || state.channels || { entities: {} };
+  const kitChannels: KitChannelsState = state.kitChannels || state.channels || { ids: [], entities: {} };
   const existingKitChannels = (kit?.channelIds || kitChannels.ids || [])
     .map(id => kitChannels.entities[id])
-    .filter(Boolean);
-  const channelToAdd = {
+    .filter((channel): channel is KitChannel => Boolean(channel));
+  const channelToAdd: SampleChannel = {
     id: channelId,
     name: getNextNewChannelName(existingKitChannels),
     kitId,
     laneId: channelId,
     percussionType: PERCUSSION_TYPES.GENERIC_PERCUSSION,
-    sample: factorySamples[0].url,
+    sample: (factorySamples as SampleOption[])[0].url,
     gain: 1,
     pitchCoarse: 0,
     pitchFine: 0,
@@ -88,14 +119,16 @@ export const newChannel = () => (dispatch, getState) => {
   };
   dispatch(addSampleFromUrl(channelToAdd.sample, 'factory'));
   dispatch(addChannel(channelToAdd));
-  dispatch(initializeChannelNotes(channelToAdd.id));
+  dispatch(initializeChannelNotes());
   dispatch(setSelectedChannel(channelToAdd.id));
   loadSampleStatefully(dispatch, channelToAdd);
 };
 
-export const loadAndSetChannelSample = (channelId, sampleURL) => (dispatch) => {
+export const loadAndSetChannelSample = (channelId: string, sampleURL: string) => (
+  dispatch: Dispatch,
+): void => {
   dispatch(sampleLoaded(channelId, false));
-  loadSample(sampleURL).then((success) => {
+  loadSample(sampleURL).then((success: boolean) => {
     if (success) {
       dispatch(sampleLoaded(channelId, true));
     } else {
@@ -106,14 +139,14 @@ export const loadAndSetChannelSample = (channelId, sampleURL) => (dispatch) => {
   dispatch(setChannelSample(channelId, sampleURL));
 };
 
-const getKitChannelId = channel => channel.kitChannelId || channel.id;
+const getKitChannelId = (channel: DeletableChannel): string => channel.kitChannelId || channel.id;
 
 export const deleteChannel = (
-  channelId,
-  channels,
-  selectedChannelId,
+  channelId: string,
+  channels: DeletableChannel[],
+  selectedChannelId: string,
   laneId = channelId,
-) => (dispatch) => {
+) => (dispatch: Dispatch): void => {
   if (channels.length === 1) {
     dispatch(newChannel());
     dispatch(removeChannelNotes(laneId));
@@ -123,7 +156,7 @@ export const deleteChannel = (
 
   if (selectedChannelId === channelId || selectedChannelId === laneId) {
     const nextChannel = channels.find(channel => getKitChannelId(channel) !== channelId);
-    dispatch(setSelectedChannel(nextChannel.id));
+    dispatch(setSelectedChannel(nextChannel?.id));
   }
   dispatch(removeChannelNotes(laneId));
   dispatch(removeChannel(channelId));

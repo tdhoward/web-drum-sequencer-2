@@ -18,7 +18,7 @@ import {
   uiPreferencesReducer,
 } from './common';
 
-export default combineReducers({
+const rootReducer = combineReducers({
   song: songReducer,
   kits: kitsReducer,
   kitChannels: channelsReducer,
@@ -36,3 +36,7 @@ export default combineReducers({
   userSamples: userSamplesReducer,
   workspace: workspaceReducer,
 });
+
+export type RootState = ReturnType<typeof rootReducer>;
+
+export default rootReducer;
