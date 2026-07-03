@@ -1,8 +1,8 @@
 import { fetchFile, decodeFile, decodeAudio } from './fileUtils';
 
-const impulseResponses = {};
+const impulseResponses: Record<string, AudioBuffer> = {};
 
-export const loadImpulseResponse = (fileName) => {
+export const loadImpulseResponse = (fileName: string): Promise<AudioBuffer> => {
   if (typeof impulseResponses[fileName] !== 'undefined') {
     return Promise.resolve(impulseResponses[fileName]);
   }
