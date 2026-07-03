@@ -16,21 +16,33 @@ const MarkerBar = styled.div`
 `;
 
 export class MarkerComponent extends React.PureComponent {
+  constructor(props) {
+    super(props);
+    this.animationFrame = null;
+    this.marker = null;
+    this.updateMarker = this.updateMarker.bind(this);
+  }
+
   componentDidMount() {
-    this.updateMarker.bind(this);
     this.updateMarker();
+  }
+
+  componentWillUnmount() {
+    if (this.animationFrame !== null) {
+      window.cancelAnimationFrame(this.animationFrame);
+    }
+    this.animationFrame = null;
+    this.marker = null;
   }
 
   updateMarker() {
     const { playing, startTime, bpm } = this.props;
-    if (playing) {
+    if (playing && this.marker) {
       const currentBeat = getCurrentBeat(bpm, startTime);
       const progress = (currentBeat - 1) / 4 * 100;
       this.marker.style.width = `${progress}%`;
     }
-    window.requestAnimationFrame(() => {
-      this.updateMarker();
-    });
+    this.animationFrame = window.requestAnimationFrame(this.updateMarker);
   }
 
   render() {
