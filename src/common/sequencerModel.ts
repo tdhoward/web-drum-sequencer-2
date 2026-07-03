@@ -120,6 +120,11 @@ export type SequencerModelState = {
   notes: NotesState;
 };
 
+export type SequencerRootState = Partial<SequencerModelState> & {
+  channels?: KitChannelsState;
+  [key: string]: unknown;
+};
+
 export type LegacyPreset = {
   channels: KitChannelInput[];
   notes: LegacyNotes;

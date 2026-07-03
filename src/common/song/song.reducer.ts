@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { patternIndexToId } from '../sequencerModel';
 import { createDefaultSongState } from '../defaultSequencerState';
 
@@ -8,16 +8,16 @@ export const songSlice = createSlice({
   name: 'song',
   initialState: songInitialState,
   reducers: {
-    setPattern(state, action) {
+    setPattern(state, action: PayloadAction<number>) {
       state.selectedPatternId = patternIndexToId(action.payload);
     },
-    setSelectedPatternId(state, action) {
+    setSelectedPatternId(state, action: PayloadAction<string>) {
       state.selectedPatternId = action.payload;
     },
-    setSongName(state, action) {
+    setSongName(state, action: PayloadAction<string>) {
       state.name = action.payload;
     },
-    setSelectedKitId(state, action) {
+    setSelectedKitId(state, action: PayloadAction<string>) {
       state.selectedKitId = action.payload;
     },
   },

@@ -1,7 +1,12 @@
 import { createSelector } from 'reselect';
 import { patternIdToIndex } from '../sequencerModel';
+import type { SequencerRootState, SongState } from '../sequencerModel';
 
-export const songSelector = state => state.song;
+type SongRootState = SequencerRootState & {
+  song: SongState;
+};
+
+export const songSelector = (state: SongRootState): SongState => state.song;
 
 export const selectedPatternIdSelector = createSelector(
   songSelector,

@@ -1,11 +1,29 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { createKitChannelAssignmentsState, DEFAULT_KIT_ID } from '../sequencerModel';
+import type {
+  KitChannelAssignment,
+  KitChannelAssignmentsState,
+  KitChannelInput,
+} from '../sequencerModel';
 import { createDefaultKitChannelAssignmentsState } from '../defaultSequencerState';
 import { channelsSlice } from '../channels/channels.reducer';
 
 export const kitChannelAssignmentsInitialState = createDefaultKitChannelAssignmentsState();
 
-const channelToAssignment = (channel, kitId = DEFAULT_KIT_ID) => ({
+type ReplaceKitChannelAssignmentsPayload = {
+  assignments: KitChannelAssignment[];
+};
+
+type SetKitChannelAssignmentPayload = {
+  kitChannelId: string;
+  laneId: string;
+  confidence: string;
+};
+
+const channelToAssignment = (
+  channel: KitChannelInput,
+  kitId = DEFAULT_KIT_ID,
+): KitChannelAssignment => ({
   id: channel.id,
   kitId: channel.kitId || kitId,
   laneId: channel.laneId || channel.id,
@@ -17,7 +35,7 @@ export const kitChannelAssignmentsSlice = createSlice({
   name: 'kitChannelAssignments',
   initialState: kitChannelAssignmentsInitialState,
   reducers: {
-    replaceKitChannelAssignments(state, action) {
+    replaceKitChannelAssignments(state, action: PayloadAction<ReplaceKitChannelAssignmentsPayload>) {
       state.ids = [];
       state.entities = {};
       action.payload.assignments.forEach((assignment) => {
@@ -26,7 +44,7 @@ export const kitChannelAssignmentsSlice = createSlice({
       });
     },
     setKitChannelAssignment: {
-      reducer(state, action) {
+      reducer(state, action: PayloadAction<SetKitChannelAssignmentPayload>) {
         const {
           kitChannelId,
           laneId,
@@ -38,7 +56,7 @@ export const kitChannelAssignmentsSlice = createSlice({
           assignment.confidence = confidence;
         }
       },
-      prepare(kitChannelId, laneId, confidence = 'manual') {
+      prepare(kitChannelId: string, laneId: string, confidence = 'manual') {
         return {
           payload: {
             kitChannelId,
@@ -60,7 +78,7 @@ export const kitChannelAssignmentsSlice = createSlice({
         state.ids = state.ids.filter(id => id !== action.payload);
         delete state.entities[action.payload];
       })
-      .addCase(channelsSlice.actions.replaceChannels, (state, action) => (
+      .addCase(channelsSlice.actions.replaceChannels, (state, action): KitChannelAssignmentsState => (
         createKitChannelAssignmentsState(action.payload.channels, action.payload.kitId)
       ));
   },

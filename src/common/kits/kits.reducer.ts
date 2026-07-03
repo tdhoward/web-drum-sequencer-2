@@ -1,13 +1,23 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { Draft } from 'immer';
 import { DEFAULT_KIT_ID } from '../sequencerModel';
+import type { Kit, KitsState } from '../sequencerModel';
 import { createDefaultKitsState } from '../defaultSequencerState';
 import { channelsSlice } from '../channels/channels.reducer';
 
 export const kitsInitialState = createDefaultKitsState();
 
-const getKit = (state, kitId = DEFAULT_KIT_ID) => state.entities[kitId];
+type SetKitNamePayload = {
+  kitId: string;
+  name: string;
+};
 
-const moveId = (ids, oldIndex, newIndex) => {
+const getKit = (
+  state: Draft<KitsState>,
+  kitId = DEFAULT_KIT_ID,
+): Draft<Kit> | undefined => state.entities[kitId];
+
+const moveId = (ids: string[], oldIndex: number, newIndex: number): string[] => {
   const nextIds = [...ids];
   const [movedId] = nextIds.splice(oldIndex, 1);
   nextIds.splice(newIndex, 0, movedId);
@@ -19,17 +29,17 @@ export const kitsSlice = createSlice({
   initialState: kitsInitialState,
   reducers: {
     setKitName: {
-      reducer(state, action) {
+      reducer(state, action: PayloadAction<SetKitNamePayload>) {
         const kit = getKit(state, action.payload.kitId);
         if (kit) {
           kit.name = action.payload.name;
         }
       },
-      prepare(kitId, name) {
+      prepare(kitId: string, name: string) {
         return { payload: { kitId, name } };
       },
     },
-    replaceKit(state, action) {
+    replaceKit(state, action: PayloadAction<Kit>) {
       const kit = action.payload;
       if (!state.ids.includes(kit.id)) {
         state.ids.push(kit.id);
