@@ -1,15 +1,32 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { Draft } from 'immer';
 import {
   normalizeNotesState,
   createPatternIds,
   patternIndexToId,
   beatToStep,
 } from '../sequencerModel';
+import type { LegacyNotes, Note, NotesState } from '../sequencerModel';
 import { createDefaultNotesState } from '../defaultSequencerState';
 
 export const notesInitialState = createDefaultNotesState();
 
-const removeNoteById = (state, noteId) => {
+type AddNotePayload = Note & {
+  channelId?: string;
+};
+
+type RemoveNotePayload = {
+  id: string;
+};
+
+type ToggleNotePayload = {
+  channelId: string;
+  pattern: number;
+  beat: number;
+  id: string;
+};
+
+const removeNoteById = (state: Draft<NotesState>, noteId: string): void => {
   state.ids = state.ids.filter(id => id !== noteId);
   delete state.entities[noteId];
 };
@@ -18,10 +35,10 @@ export const notesSlice = createSlice({
   name: 'notes',
   initialState: notesInitialState,
   reducers: {
-    addNote(state, action) {
+    addNote(state, action: PayloadAction<AddNotePayload>) {
       const note = {
         ...action.payload,
-        laneId: action.payload.laneId || action.payload.channelId,
+        laneId: action.payload.laneId || action.payload.channelId || '',
       };
       delete note.channelId;
       if (!state.entities[note.id]) {
@@ -29,23 +46,23 @@ export const notesSlice = createSlice({
       }
       state.entities[note.id] = note;
     },
-    removeNote(state, action) {
+    removeNote(state, action: PayloadAction<RemoveNotePayload>) {
       removeNoteById(state, action.payload.id);
     },
     initializeChannelNotes() {
       return undefined;
     },
-    removeChannelNotes(state, action) {
+    removeChannelNotes(state, action: PayloadAction<string>) {
       state.ids
         .map(id => state.entities[id])
         .filter(note => note.laneId === action.payload)
         .forEach(note => removeNoteById(state, note.id));
     },
-    setNotes(state, action) {
+    setNotes(state, action: PayloadAction<LegacyNotes>) {
       return normalizeNotesState(action.payload);
     },
     toggleNote: {
-      reducer(state, action) {
+      reducer(state, action: PayloadAction<ToggleNotePayload>) {
         const { channelId, pattern, beat, id } = action.payload;
         const laneId = channelId;
         const patternId = patternIndexToId(pattern);
@@ -71,7 +88,7 @@ export const notesSlice = createSlice({
           velocity: 1,
         };
       },
-      prepare(channelId, pattern, beat, id) {
+      prepare(channelId: string, pattern: number, beat: number, id: string) {
         return { payload: { channelId, pattern, beat, id } };
       },
     },
@@ -88,8 +105,16 @@ export const {
 
 export const legacyToggleNote = notesSlice.actions.toggleNote;
 
-export const createEmptyNotesForChannels = (channels, patternCount) => normalizeNotesState(
-  channels.reduce((notes, channel) => ({
+type EmptyNotesChannel = {
+  id: string;
+  laneId?: string;
+};
+
+export const createEmptyNotesForChannels = (
+  channels: EmptyNotesChannel[],
+  patternCount: number,
+): NotesState => normalizeNotesState(
+  channels.reduce<LegacyNotes>((notes, channel) => ({
     ...notes,
     [channel.laneId || channel.id]: createPatternIds(patternCount).map(() => []),
   }), {}),

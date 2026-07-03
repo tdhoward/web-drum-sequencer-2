@@ -3,14 +3,19 @@ import { createSelector } from 'reselect';
 import { channelsSelector } from '../channels';
 import { patternsSelector } from '../patterns';
 import { notesStateToLegacyNotes } from '../sequencerModel';
+import type { LegacyNotes, NotesState, SequencerRootState } from '../sequencerModel';
 
-export const notesStateSelector = state => state.notes;
+type NotesRootState = SequencerRootState & {
+  notes: NotesState;
+};
+
+export const notesStateSelector = (state: NotesRootState): NotesState => state.notes;
 
 export const notesSelector = createSelector(
   notesStateSelector,
   channelsSelector,
   patternsSelector,
-  (notesState, channels, patternsState) => notesStateToLegacyNotes({
+  (notesState, channels, patternsState): LegacyNotes => notesStateToLegacyNotes({
     notesState,
     patternsState,
     laneIds: channels.map(channel => channel.id),

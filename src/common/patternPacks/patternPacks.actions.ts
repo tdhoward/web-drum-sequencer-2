@@ -2,7 +2,6 @@ import { resolveKitChannelMapping } from '../percussion';
 import { setSwing, setBPM } from '../tempo';
 import { replacePatternLanes } from '../patterns';
 import { setNotes } from '../notes';
-import { selectedKitSelector } from '../kits';
 import { channelsStateSelector } from '../channels';
 import {
   mappingToAssignments,
@@ -10,18 +9,25 @@ import {
 } from '../kitChannelAssignments';
 import { setSelectedChannel } from '../master';
 import { setPattern } from '../song';
+import type { KitChannel, PatternPack, SequencerRootState } from '../sequencerModel';
 import { setSelectedPatternPack } from './patternPacks.reducer';
 
-const getSelectedKitChannels = (state) => {
-  const selectedKit = selectedKitSelector(state);
+type Dispatch = (action: unknown) => void;
+
+const getSelectedKitChannels = (state: SequencerRootState): KitChannel[] => {
+  const selectedKitId = state.song?.selectedKitId;
+  const selectedKit = selectedKitId ? state.kits?.entities?.[selectedKitId] : undefined;
   const kitChannels = channelsStateSelector(state);
   const channelIds = selectedKit?.channelIds || kitChannels.ids || [];
   return channelIds
     .map(channelId => kitChannels.entities[channelId])
-    .filter(Boolean);
+    .filter((channel): channel is KitChannel => Boolean(channel));
 };
 
-export const loadPatternPack = patternPack => (dispatch, getState) => {
+export const loadPatternPack = (patternPack: PatternPack) => (
+  dispatch: Dispatch,
+  getState: () => SequencerRootState,
+) => {
   const state = getState();
   const targetKitChannels = getSelectedKitChannels(state);
   const mappingResult = resolveKitChannelMapping({

@@ -3,14 +3,19 @@ import {
   getPatternLengthInQuarterBeats,
   getPatternTotalSteps,
 } from '../sequencerModel';
+import type { Pattern, PatternsState, SequencerRootState } from '../sequencerModel';
 import { selectedPatternIdSelector } from '../song';
 
-export const patternsSelector = state => state.patterns;
+type PatternsRootState = SequencerRootState & {
+  patterns: PatternsState;
+};
+
+export const patternsSelector = (state: PatternsRootState): PatternsState => state.patterns;
 
 export const selectedPatternSelector = createSelector(
   patternsSelector,
   selectedPatternIdSelector,
-  (patterns, selectedPatternId) => patterns.entities[selectedPatternId],
+  (patterns, selectedPatternId): Pattern | undefined => patterns.entities[selectedPatternId],
 );
 
 export const selectedPatternLengthSelector = createSelector(

@@ -1,8 +1,18 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { getAudioContext } from '../../services/audioContext';
 import { LOOKAHEAD } from '../../services/audioEngine.config';
 
-export const playbackSessionInitialState = {
+export type PlaybackSessionState = {
+  playing: boolean;
+  startTime: number | null;
+  currentBeat: number;
+};
+
+type StartPlaybackPayload = {
+  startTime: number;
+};
+
+export const playbackSessionInitialState: PlaybackSessionState = {
   playing: false,
   startTime: null,
   currentBeat: 1,
@@ -13,7 +23,7 @@ export const playbackSessionSlice = createSlice({
   initialState: playbackSessionInitialState,
   reducers: {
     startPlayback: {
-      reducer(state, action) {
+      reducer(state, action: PayloadAction<StartPlaybackPayload>) {
         state.playing = true;
         state.startTime = action.payload.startTime;
       },
@@ -34,7 +44,7 @@ export const playbackSessionSlice = createSlice({
         return { payload: undefined };
       },
     },
-    setStartTime(state, action) {
+    setStartTime(state, action: PayloadAction<number>) {
       state.startTime = action.payload;
     },
   },

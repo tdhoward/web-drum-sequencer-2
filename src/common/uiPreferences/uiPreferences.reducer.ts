@@ -1,7 +1,13 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { colorThemes, DEFAULT_THEME_ID } from '../../styles/theme';
 
-export const uiPreferencesInitialState = {
+const themeById = colorThemes as Record<string, unknown>;
+
+export type UiPreferencesState = {
+  selectedThemeId: string;
+};
+
+export const uiPreferencesInitialState: UiPreferencesState = {
   selectedThemeId: DEFAULT_THEME_ID,
 };
 
@@ -9,8 +15,8 @@ export const uiPreferencesSlice = createSlice({
   name: 'uiPreferences',
   initialState: uiPreferencesInitialState,
   reducers: {
-    setSelectedThemeId(state, action) {
-      if (colorThemes[action.payload]) {
+    setSelectedThemeId(state, action: PayloadAction<string>) {
+      if (themeById[action.payload]) {
         state.selectedThemeId = action.payload;
       }
     },

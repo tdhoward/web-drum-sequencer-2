@@ -1,13 +1,22 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 export const FLASH_MESSAGES = {
   INSTALL_PWA: 'FLASH_MESSAGE_INSTALL_PWA',
   SAMPLE_LOAD_ERROR: 'SAMPLE_LOAD_ERROR',
   PRESET_SAVED: 'PRESET_SAVED',
   PRESET_DELETED: 'PRESET_DELETED',
+} as const;
+
+export type FlashMessageKey = typeof FLASH_MESSAGES[keyof typeof FLASH_MESSAGES] | string;
+
+export type WindowState = {
+  presetPromptOpen: boolean;
+  flashMessageKey: FlashMessageKey | null;
+  flashMessageVisible: boolean;
+  canInstall: boolean;
 };
 
-export const windowInitialState = {
+export const windowInitialState: WindowState = {
   presetPromptOpen: false,
   flashMessageKey: null,
   flashMessageVisible: false,
@@ -18,7 +27,7 @@ export const windowSlice = createSlice({
   name: 'window',
   initialState: windowInitialState,
   reducers: {
-    setPresetPrompt(state, action) {
+    setPresetPrompt(state, action: PayloadAction<boolean>) {
       state.presetPromptOpen = action.payload;
     },
     setPresetNameField: {
@@ -29,7 +38,7 @@ export const windowSlice = createSlice({
         return { payload: undefined };
       },
     },
-    showFlashMessage(state, action) {
+    showFlashMessage(state, action: PayloadAction<FlashMessageKey>) {
       state.flashMessageKey = action.payload;
       state.flashMessageVisible = true;
     },
@@ -41,7 +50,7 @@ export const windowSlice = createSlice({
         return { payload: undefined };
       },
     },
-    setCanInstall(state, action) {
+    setCanInstall(state, action: PayloadAction<boolean>) {
       state.canInstall = action.payload;
     },
   },

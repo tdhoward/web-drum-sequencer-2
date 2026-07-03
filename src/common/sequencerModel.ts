@@ -110,6 +110,20 @@ export type LegacyNote = {
 
 export type LegacyNotes = Record<string, LegacyNote[][]>;
 
+export type PatternPackLane = KitChannelInput & {
+  id: string;
+  laneId?: string;
+};
+
+export type PatternPack = {
+  id: string;
+  name: string;
+  bpm: number;
+  swing: number;
+  lanes: PatternPackLane[];
+  notes: LegacyNotes;
+};
+
 export type SequencerModelState = {
   song: SongState;
   patterns: PatternsState;

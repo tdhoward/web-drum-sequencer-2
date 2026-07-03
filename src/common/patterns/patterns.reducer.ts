@@ -1,10 +1,12 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { Draft } from 'immer';
 import { createDefaultPatternsState } from '../defaultSequencerState';
+import type { PatternsState } from '../sequencerModel';
 import { channelsSlice } from '../channels/channels.reducer';
 
 export const patternsInitialState = createDefaultPatternsState();
 
-const addLaneId = (state, laneId) => {
+const addLaneId = (state: Draft<PatternsState>, laneId: string): void => {
   state.ids.forEach((patternId) => {
     const pattern = state.entities[patternId];
     if (pattern && !pattern.laneIds.includes(laneId)) {
@@ -13,7 +15,7 @@ const addLaneId = (state, laneId) => {
   });
 };
 
-const removeLaneId = (state, laneId) => {
+const removeLaneId = (state: Draft<PatternsState>, laneId: string): void => {
   state.ids.forEach((patternId) => {
     const pattern = state.entities[patternId];
     if (pattern) {
@@ -22,7 +24,11 @@ const removeLaneId = (state, laneId) => {
   });
 };
 
-const reorderLaneIds = (state, oldIndex, newIndex) => {
+const reorderLaneIds = (
+  state: Draft<PatternsState>,
+  oldIndex: number,
+  newIndex: number,
+): void => {
   state.ids.forEach((patternId) => {
     const pattern = state.entities[patternId];
     if (!pattern) {
@@ -39,7 +45,7 @@ export const patternsSlice = createSlice({
   name: 'patterns',
   initialState: patternsInitialState,
   reducers: {
-    replacePatternLanes(state, action) {
+    replacePatternLanes(state, action: PayloadAction<string[]>) {
       state.ids.forEach((patternId) => {
         state.entities[patternId].laneIds = action.payload;
       });
