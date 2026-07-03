@@ -3,6 +3,7 @@ import {
   setChannelSample,
   setChannelGain,
   setChannelName,
+  setChannelPercussionType,
   setChannelPan,
   addChannel,
   removeChannel,
@@ -14,6 +15,7 @@ import {
   setChannelMuted,
   setChannelSolo,
 } from './channels.actions';
+import { PERCUSSION_TYPES } from '../percussion';
 
 jest.mock('../../presets');
 jest.mock('../../samples.config');
@@ -47,6 +49,26 @@ describe('setChannelGain', () => {
 describe('setChannelName', () => {
   test('should change name for a channel', () => {
     expectFirstChannelField(setChannelName(firstChannelId, 'Rim'), 'name', 'Rim');
+  });
+});
+
+describe('setChannelPercussionType', () => {
+  test('should change percussion type for a channel', () => {
+    expectFirstChannelField(
+      setChannelPercussionType(firstChannelId, PERCUSSION_TYPES.RIMSHOT),
+      'percussionType',
+      PERCUSSION_TYPES.RIMSHOT,
+    );
+  });
+
+  test('should ignore invalid percussion types', () => {
+    const state = channelsReducer(
+      channelsInitialState,
+      setChannelPercussionType(firstChannelId, 'laser_whistle'),
+    );
+
+    expect(getFirstChannel(state).percussionType)
+      .toBe(getFirstChannel(channelsInitialState).percussionType);
   });
 });
 

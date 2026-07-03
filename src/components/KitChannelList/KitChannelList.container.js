@@ -6,6 +6,7 @@ import {
   selectedChannelSelector,
   setChannelGain,
   setChannelName,
+  setChannelPercussionType,
   setChannelPan,
   setChannelPitchCoarse,
   setChannelReverb,
@@ -30,6 +31,7 @@ const mapDispatchToProps = {
   deleteChannel,
   setChannelGain,
   setChannelName,
+  setChannelPercussionType,
   setChannelPan,
   setChannelPitchCoarse,
   setChannelReverb,
@@ -60,6 +62,9 @@ const handlers = withHandlers({
   },
   onSetChannelName: props => (channel, name) => {
     props.setChannelName(getKitChannelId(channel), name);
+  },
+  onSetPercussionType: props => (channel, percussionType) => {
+    props.setChannelPercussionType(getKitChannelId(channel), percussionType);
   },
   onSetPan: props => (channel, e) => {
     props.setChannelPan(getKitChannelId(channel), e.target.value);

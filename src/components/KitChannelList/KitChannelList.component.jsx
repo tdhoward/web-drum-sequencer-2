@@ -17,6 +17,11 @@ import { SampleWaveform } from '../SampleWaveform.component';
 import { SampleSelect } from '../SampleSelect';
 import { AddChannelButton } from '../AddChannelButton';
 import { RemoveButton } from '../ChannelButtons';
+import {
+  PERCUSSION_TYPE_OPTIONS,
+  getPercussionTypeAbbreviation,
+  getPercussionTypeLabel,
+} from '../../common/percussion';
 import construction from '../../assets/images/construction-light.svg';
 
 const kitChannelGridColumns = 'minmax(8rem, 11rem) 1.2rem 3rem 15rem minmax(10rem, 1fr) repeat(4, 5.125rem) 2rem';
@@ -76,11 +81,20 @@ const WaveformCell = styled(Box)`
   min-width: 0;
 `;
 
+const ChannelNameGroup = styled.div`
+  align-items: baseline;
+  display: flex;
+  min-width: 0;
+  position: relative;
+  width: 100%;
+`;
+
 const ChannelNameButton = styled.button`
   background: transparent;
   border: 0;
   color: ${({ theme }) => theme.colors.nearWhite};
   cursor: text;
+  flex: 0 1 auto;
   font: inherit;
   line-height: 1.2em;
   min-width: 0;
@@ -100,6 +114,7 @@ const ChannelNameInput = styled(TextInput)`
   background: ${({ theme }) => theme.colors.surfaceControl};
   border-radius: 0.2rem;
   color: ${({ theme }) => theme.colors.nearWhite};
+  flex: 1 1 auto;
   font: inherit;
   line-height: 1.2em;
   min-width: 0;
@@ -109,6 +124,86 @@ const ChannelNameInput = styled(TextInput)`
   &:focus {
     outline: 1px solid ${({ theme }) => theme.colors.borderHover};
   }
+`;
+
+const PercussionTypeButton = styled.button`
+  background: transparent;
+  border: 0;
+  border-radius: 0.2rem;
+  color: ${({ theme }) => theme.colors.textMuted};
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1;
+  margin-left: 0.35rem;
+  padding: 0.12rem 0.16rem;
+  touch-action: manipulation;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.borderSubtle};
+    color: ${({ theme }) => theme.colors.textPrimary};
+  }
+
+  &:focus-visible {
+    outline: 1px solid ${({ theme }) => theme.colors.borderHover};
+    outline-offset: 0.12rem;
+  }
+`;
+
+const PercussionTypeMenu = styled.div`
+  background: ${({ theme }) => theme.colors.surfaceControl};
+  border: 2px solid ${({ theme }) => theme.colors.borderDefault};
+  border-radius: 0.35rem;
+  box-shadow: 0 0.85rem 1.6rem rgba(0, 0, 0, 0.34);
+  left: 0;
+  max-height: 18rem;
+  min-width: 15rem;
+  overflow-y: auto;
+  padding: 0.35rem;
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  z-index: 20;
+`;
+
+const PercussionTypeOption = styled.button`
+  align-items: center;
+  background: ${({ $selected, theme }) => ($selected ? theme.colors.borderSubtle : 'transparent')};
+  border: 0;
+  border-radius: 0.25rem;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  cursor: pointer;
+  display: grid;
+  font-size: 0.76rem;
+  font-weight: 600;
+  gap: 0.55rem;
+  grid-template-columns: 2rem 1fr;
+  line-height: 1.2;
+  padding: 0.42rem 0.5rem;
+  text-align: left;
+  touch-action: manipulation;
+  width: 100%;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.borderSubtle};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.accentPrimary};
+    outline-offset: 1px;
+  }
+`;
+
+const PercussionTypeOptionAbbreviation = styled.span`
+  color: ${({ $selected, theme }) => ($selected ? theme.colors.accentPrimary : theme.colors.textMuted)};
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+`;
+
+const PercussionTypeOptionLabel = styled.span`
+  color: ${({ theme }) => theme.colors.textPrimary};
+  min-width: 0;
 `;
 
 const MoveImage = styled(Image)`
@@ -152,12 +247,17 @@ export class KitChannelListComponent extends React.Component {
     this.state = {
       editingChannelId: null,
       channelNameDraft: '',
+      percussionMenuChannelId: null,
     };
     this.startEditingChannelName = this.startEditingChannelName.bind(this);
     this.setChannelNameDraft = this.setChannelNameDraft.bind(this);
     this.commitChannelName = this.commitChannelName.bind(this);
     this.cancelChannelNameEdit = this.cancelChannelNameEdit.bind(this);
     this.handleChannelNameKeyDown = this.handleChannelNameKeyDown.bind(this);
+    this.togglePercussionTypeMenu = this.togglePercussionTypeMenu.bind(this);
+    this.setPercussionType = this.setPercussionType.bind(this);
+    this.handleDocumentMouseDown = this.handleDocumentMouseDown.bind(this);
+    this.handleDocumentKeyDown = this.handleDocumentKeyDown.bind(this);
   }
 
   componentDidMount() {
@@ -173,6 +273,9 @@ export class KitChannelListComponent extends React.Component {
       const { onUpdateChannelOrder } = this.props;
       onUpdateChannelOrder(oldIndex, newIndex);
     });
+
+    document.addEventListener('mousedown', this.handleDocumentMouseDown);
+    document.addEventListener('keydown', this.handleDocumentKeyDown);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -186,12 +289,16 @@ export class KitChannelListComponent extends React.Component {
     if (this.sortable) {
       this.sortable.destroy();
     }
+
+    document.removeEventListener('mousedown', this.handleDocumentMouseDown);
+    document.removeEventListener('keydown', this.handleDocumentKeyDown);
   }
 
   startEditingChannelName(channel) {
     this.setState({
       editingChannelId: getKitChannelId(channel),
       channelNameDraft: channel.name || channel.id,
+      percussionMenuChannelId: null,
     });
   }
 
@@ -236,6 +343,43 @@ export class KitChannelListComponent extends React.Component {
     }
   }
 
+  handleDocumentMouseDown(event) {
+    const isPercussionMenuClick = event.target.closest?.('.wds-percussion-type-menu');
+    const isPercussionButtonClick = event.target.closest?.('.wds-percussion-type-button');
+
+    if (!isPercussionMenuClick && !isPercussionButtonClick) {
+      this.setState({
+        percussionMenuChannelId: null,
+      });
+    }
+  }
+
+  handleDocumentKeyDown(event) {
+    if (event.key === 'Escape') {
+      this.setState({
+        percussionMenuChannelId: null,
+      });
+    }
+  }
+
+  togglePercussionTypeMenu(channel) {
+    const channelId = getKitChannelId(channel);
+    this.setState(prevState => ({
+      percussionMenuChannelId: prevState.percussionMenuChannelId === channelId
+        ? null
+        : channelId,
+    }));
+  }
+
+  setPercussionType(channel, percussionType) {
+    const { onSetPercussionType } = this.props;
+
+    onSetPercussionType(channel, percussionType);
+    this.setState({
+      percussionMenuChannelId: null,
+    });
+  }
+
   render() {
     const {
       channels,
@@ -246,13 +390,20 @@ export class KitChannelListComponent extends React.Component {
       onSetChannelPitchCoarse,
       onSetReverb,
     } = this.props;
-    const { editingChannelId, channelNameDraft } = this.state;
+    const {
+      editingChannelId,
+      channelNameDraft,
+      percussionMenuChannelId,
+    } = this.state;
 
     return (
       <KitChannelListBox ref={(el) => { this.channelContainer = el; }}>
         {channels.map((channel) => {
           const channelId = getKitChannelId(channel);
           const isEditingName = editingChannelId === channelId;
+          const isPercussionMenuOpen = percussionMenuChannelId === channelId;
+          const percussionTypeLabel = getPercussionTypeLabel(channel.percussionType);
+          const percussionTypeAbbreviation = getPercussionTypeAbbreviation(channel.percussionType);
 
           return (
             <KitChannelRow key={channelId} className="wds-draggable">
@@ -265,27 +416,67 @@ export class KitChannelListComponent extends React.Component {
                   aria-hidden="true"
                   className="wds-channel-handle"
                 />
-                {isEditingName ? (
-                  <ChannelNameInput
-                    ref={(input) => { this.nameInput = input; }}
-                    aria-label="Channel name"
-                    fontSize={2}
-                    value={channelNameDraft}
-                    onBlur={() => this.commitChannelName(channel)}
-                    onChange={this.setChannelNameDraft}
-                    onKeyDown={event => this.handleChannelNameKeyDown(channel, event)}
-                  />
-                ) : (
-                  <ChannelNameButton
+                <ChannelNameGroup>
+                  {isEditingName ? (
+                    <ChannelNameInput
+                      ref={(input) => { this.nameInput = input; }}
+                      aria-label="Channel name"
+                      fontSize={2}
+                      value={channelNameDraft}
+                      onBlur={() => this.commitChannelName(channel)}
+                      onChange={this.setChannelNameDraft}
+                      onKeyDown={event => this.handleChannelNameKeyDown(channel, event)}
+                    />
+                  ) : (
+                    <ChannelNameButton
+                      type="button"
+                      onDoubleClick={() => this.startEditingChannelName(channel)}
+                      title="Double-click to rename"
+                    >
+                      <Text as="span" color="nearWhite" fontSize={2} lineHeight="1.2em">
+                        {channel.name || channel.id}
+                      </Text>
+                    </ChannelNameButton>
+                  )}
+                  <PercussionTypeButton
+                    className="wds-percussion-type-button"
+                    aria-expanded={isPercussionMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label={`Percussion type: ${percussionTypeLabel}`}
+                    onClick={() => this.togglePercussionTypeMenu(channel)}
+                    title={`Percussion type: ${percussionTypeLabel}`}
                     type="button"
-                    onDoubleClick={() => this.startEditingChannelName(channel)}
-                    title="Double-click to rename"
                   >
-                    <Text as="span" color="nearWhite" fontSize={2} lineHeight="1.2em">
-                      {channel.name || channel.id}
-                    </Text>
-                  </ChannelNameButton>
-                )}
+                    {percussionTypeAbbreviation}
+                  </PercussionTypeButton>
+                  {isPercussionMenuOpen && (
+                    <PercussionTypeMenu
+                      className="wds-percussion-type-menu"
+                      aria-label="Select percussion type"
+                      role="menu"
+                    >
+                      {PERCUSSION_TYPE_OPTIONS.map(option => {
+                        const isSelected = option.type === channel.percussionType;
+
+                        return (
+                          <PercussionTypeOption
+                            key={option.type}
+                            $selected={isSelected}
+                            aria-checked={isSelected}
+                            onClick={() => this.setPercussionType(channel, option.type)}
+                            role="menuitemradio"
+                            type="button"
+                          >
+                            <PercussionTypeOptionAbbreviation $selected={isSelected}>
+                              {option.abbreviation}
+                            </PercussionTypeOptionAbbreviation>
+                            <PercussionTypeOptionLabel>{option.label}</PercussionTypeOptionLabel>
+                          </PercussionTypeOption>
+                        );
+                      })}
+                    </PercussionTypeMenu>
+                  )}
+                </ChannelNameGroup>
               </Box>
             <Box alignItems="center" display="flex" height="100%" justifyContent="center">
               <MuteSolo channel={getKitEditChannel(channel)} />
@@ -371,6 +562,7 @@ KitChannelListComponent.propTypes = {
     id: PropTypes.string.isRequired,
     kitChannelId: PropTypes.string,
     name: PropTypes.string,
+    percussionType: PropTypes.string,
     sample: PropTypes.string.isRequired,
     pitchCoarse: PropTypes.number,
     reverb: PropTypes.number,
@@ -382,6 +574,7 @@ KitChannelListComponent.propTypes = {
   onUpdateChannelOrder: PropTypes.func.isRequired,
   onSetGain: PropTypes.func.isRequired,
   onSetChannelName: PropTypes.func.isRequired,
+  onSetPercussionType: PropTypes.func.isRequired,
   onSetPan: PropTypes.func.isRequired,
   onSetChannelPitchCoarse: PropTypes.func.isRequired,
   onSetReverb: PropTypes.func.isRequired,

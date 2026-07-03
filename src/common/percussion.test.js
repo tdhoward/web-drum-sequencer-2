@@ -1,7 +1,30 @@
 import {
+  PERCUSSION_TYPE_OPTIONS,
   PERCUSSION_TYPES,
+  VALID_PERCUSSION_TYPES,
+  getPercussionTypeAbbreviation,
+  getPercussionTypeLabel,
   resolveKitChannelMapping,
 } from './percussion';
+
+describe('percussion type display metadata', () => {
+  test('defines a unique two-character abbreviation for every standardized percussion type', () => {
+    const abbreviations = PERCUSSION_TYPE_OPTIONS.map(option => option.abbreviation);
+
+    expect(PERCUSSION_TYPE_OPTIONS.map(option => option.type)).toEqual(VALID_PERCUSSION_TYPES);
+    expect(new Set(abbreviations).size).toBe(abbreviations.length);
+    abbreviations.forEach((abbreviation) => {
+      expect(abbreviation).toMatch(/^[A-Z0-9]{2}$/);
+    });
+  });
+
+  test('returns display metadata for known and unknown percussion types', () => {
+    expect(getPercussionTypeAbbreviation(PERCUSSION_TYPES.BASS_DRUM)).toBe('BD');
+    expect(getPercussionTypeLabel(PERCUSSION_TYPES.OPEN_HI_HAT)).toBe('Open Hi-Hat');
+    expect(getPercussionTypeAbbreviation('unknown_type')).toBe('GP');
+    expect(getPercussionTypeLabel('unknown_type')).toBe('Generic Percussion');
+  });
+});
 
 describe('resolveKitChannelMapping', () => {
   const sourceKitChannels = [

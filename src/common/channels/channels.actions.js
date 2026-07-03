@@ -31,6 +31,7 @@ export const getNextNewChannelName = (channels = []) => {
 export const {
   setChannelGain,
   setChannelName,
+  setChannelPercussionType,
   setChannelPan,
   setChannelPitchCoarse,
   setChannelPitchFine,

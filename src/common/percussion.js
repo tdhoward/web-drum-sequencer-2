@@ -21,6 +21,99 @@ export const PERCUSSION_TYPES = {
 
 export const VALID_PERCUSSION_TYPES = Object.values(PERCUSSION_TYPES);
 
+export const PERCUSSION_TYPE_DETAILS = {
+  [PERCUSSION_TYPES.BASS_DRUM]: {
+    label: 'Bass Drum',
+    abbreviation: 'BD',
+  },
+  [PERCUSSION_TYPES.SNARE_DRUM]: {
+    label: 'Snare Drum',
+    abbreviation: 'SD',
+  },
+  [PERCUSSION_TYPES.CLOSED_HI_HAT]: {
+    label: 'Closed Hi-Hat',
+    abbreviation: 'CH',
+  },
+  [PERCUSSION_TYPES.OPEN_HI_HAT]: {
+    label: 'Open Hi-Hat',
+    abbreviation: 'OH',
+  },
+  [PERCUSSION_TYPES.PEDAL_HI_HAT]: {
+    label: 'Pedal Hi-Hat',
+    abbreviation: 'PH',
+  },
+  [PERCUSSION_TYPES.CLAP]: {
+    label: 'Clap',
+    abbreviation: 'CP',
+  },
+  [PERCUSSION_TYPES.RIMSHOT]: {
+    label: 'Rimshot',
+    abbreviation: 'RS',
+  },
+  [PERCUSSION_TYPES.TOM_HIGH]: {
+    label: 'High Tom',
+    abbreviation: 'HT',
+  },
+  [PERCUSSION_TYPES.TOM_MID]: {
+    label: 'Mid Tom',
+    abbreviation: 'MT',
+  },
+  [PERCUSSION_TYPES.TOM_LOW]: {
+    label: 'Low Tom',
+    abbreviation: 'LT',
+  },
+  [PERCUSSION_TYPES.RIDE_CYMBAL]: {
+    label: 'Ride Cymbal',
+    abbreviation: 'RD',
+  },
+  [PERCUSSION_TYPES.CRASH_CYMBAL]: {
+    label: 'Crash Cymbal',
+    abbreviation: 'CR',
+  },
+  [PERCUSSION_TYPES.CYMBAL]: {
+    label: 'Cymbal',
+    abbreviation: 'CY',
+  },
+  [PERCUSSION_TYPES.SHAKER]: {
+    label: 'Shaker',
+    abbreviation: 'SH',
+  },
+  [PERCUSSION_TYPES.TAMBOURINE]: {
+    label: 'Tambourine',
+    abbreviation: 'TB',
+  },
+  [PERCUSSION_TYPES.COWBELL]: {
+    label: 'Cowbell',
+    abbreviation: 'CB',
+  },
+  [PERCUSSION_TYPES.CLAVE]: {
+    label: 'Clave',
+    abbreviation: 'CV',
+  },
+  [PERCUSSION_TYPES.GENERIC_PERCUSSION]: {
+    label: 'Generic Percussion',
+    abbreviation: 'GP',
+  },
+};
+
+export const PERCUSSION_TYPE_OPTIONS = VALID_PERCUSSION_TYPES.map(type => ({
+  type,
+  ...PERCUSSION_TYPE_DETAILS[type],
+}));
+
+export const getPercussionTypeDetails = percussionType => (
+  PERCUSSION_TYPE_DETAILS[percussionType]
+  || PERCUSSION_TYPE_DETAILS[PERCUSSION_TYPES.GENERIC_PERCUSSION]
+);
+
+export const getPercussionTypeAbbreviation = percussionType => (
+  getPercussionTypeDetails(percussionType).abbreviation
+);
+
+export const getPercussionTypeLabel = percussionType => (
+  getPercussionTypeDetails(percussionType).label
+);
+
 const COMPATIBLE_TYPES = {
   [PERCUSSION_TYPES.SNARE_DRUM]: [
     PERCUSSION_TYPES.CLAP,

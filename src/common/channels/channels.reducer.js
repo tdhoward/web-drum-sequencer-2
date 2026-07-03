@@ -4,7 +4,7 @@ import {
   normalizeKitChannelsState,
   sampleIdFromUrl,
 } from '../sequencerModel';
-import { PERCUSSION_TYPES } from '../percussion';
+import { PERCUSSION_TYPES, VALID_PERCUSSION_TYPES } from '../percussion';
 import { createDefaultKitChannelsState } from '../defaultSequencerState';
 
 export const channelsInitialState = createDefaultKitChannelsState();
@@ -57,6 +57,20 @@ export const channelsSlice = createSlice({
       },
       prepare(channel, name) {
         return { payload: { channel, name } };
+      },
+    },
+    setChannelPercussionType: {
+      reducer(state, action) {
+        if (!VALID_PERCUSSION_TYPES.includes(action.payload.percussionType)) {
+          return;
+        }
+
+        updateChannel(state, action.payload.channel, (channel) => {
+          channel.percussionType = action.payload.percussionType;
+        });
+      },
+      prepare(channel, percussionType) {
+        return { payload: { channel, percussionType } };
       },
     },
     setChannelPan: {
