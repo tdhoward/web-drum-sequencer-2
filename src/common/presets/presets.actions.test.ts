@@ -7,6 +7,11 @@ jest.mock('../../services/sampleStore', () => ({
   loadSample: jest.fn(() => Promise.resolve(true)),
 }));
 
+type DispatchedAction = {
+  type?: string;
+  payload?: unknown;
+};
+
 describe('loadPreset', () => {
   test('loads kit data and assignments without replacing pattern data', () => {
     const preset = {
@@ -29,8 +34,11 @@ describe('loadPreset', () => {
     };
     const state = {
       song: {
+        id: 'song-1',
+        name: 'Test Song',
         selectedKitId: DEFAULT_KIT_ID,
         selectedPatternId: 'pattern-0',
+        patternIds: ['pattern-0'],
       },
       patternPacks: {
         selectedPatternPackId: 'hip-hop-swing',
@@ -40,6 +48,7 @@ describe('loadPreset', () => {
         entities: {
           [DEFAULT_KIT_ID]: {
             id: DEFAULT_KIT_ID,
+            name: 'Default Kit',
             channelIds: ['tr808-bd-short'],
           },
         },
@@ -58,7 +67,14 @@ describe('loadPreset', () => {
         entities: {
           'pattern-0': {
             id: 'pattern-0',
-          laneIds: ['hiphop-bd-1'],
+            name: 'Pattern 1',
+            timeSignature: {
+              beatsPerBar: 4,
+              beatUnit: 4,
+            },
+            bars: 1,
+            stepsPerBeat: 4,
+            laneIds: ['hiphop-bd-1'],
           },
         },
       },
@@ -67,13 +83,16 @@ describe('loadPreset', () => {
         entities: {},
       },
     };
-    const actions = [];
+    const actions: DispatchedAction[] = [];
     const getState = () => state;
-    const dispatch = (action) => {
+    const dispatch = (action: unknown): unknown => {
       if (typeof action === 'function') {
-        return action(dispatch, getState);
+        return (action as (
+          nestedDispatch: typeof dispatch,
+          nestedGetState: typeof getState,
+        ) => unknown)(dispatch, getState);
       }
-      actions.push(action);
+      actions.push(action as DispatchedAction);
       return action;
     };
 
@@ -95,7 +114,8 @@ describe('loadPreset', () => {
     const assignmentAction = actions.find(
       action => action.type === 'kitChannelAssignments/replaceKitChannelAssignments',
     );
-    expect(assignmentAction.payload.assignments).toEqual([
+    const assignmentPayload = assignmentAction?.payload as { assignments: unknown[] };
+    expect(assignmentPayload.assignments).toEqual([
       expect.objectContaining({
         id: 'djembe-boom',
         laneId: 'hiphop-bd-1',

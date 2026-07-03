@@ -9,6 +9,7 @@ import {
   sampleIdFromUrl,
   stepToBeat,
 } from './sequencerModel';
+import type { KitChannelInput, LegacyNotes, LegacySequencerState } from './sequencerModel';
 import { PERCUSSION_TYPES } from './percussion';
 import { channelsSelector } from './channels';
 import { notesSelector } from './notes';
@@ -17,7 +18,7 @@ import { patternSelector } from './song';
 jest.mock('../presets');
 jest.mock('../samples.config');
 
-const legacyChannels = [
+const legacyChannels: KitChannelInput[] = [
   {
     id: 'kick',
     sample: 'kick.mp3',
@@ -25,7 +26,7 @@ const legacyChannels = [
   },
 ];
 
-const legacyNotes = {
+const legacyNotes: LegacyNotes = {
   kick: [
     [
       {
@@ -40,6 +41,8 @@ const legacyNotes = {
     [],
   ],
 };
+
+const legacyState = (state: unknown): LegacySequencerState => state as LegacySequencerState;
 
 describe('time-signature grid helpers', () => {
   test('keeps current 4/4 sixteenth-note mapping', () => {
@@ -73,10 +76,11 @@ describe('compatibility selectors', () => {
         id: 'song-1',
         name: 'Test Song',
         selectedPatternId: 'pattern-1',
+        selectedKitId: DEFAULT_KIT_ID,
         patternIds: patterns.ids,
       },
       patterns,
-      channels: normalizeChannelsState(legacyChannels, legacyNotes, patterns.ids),
+      channels: normalizeChannelsState(legacyChannels),
       notes: normalizeNotesState(legacyNotes, patterns.ids, patterns),
     };
 
@@ -134,6 +138,7 @@ describe('compatibility selectors', () => {
           'sample:kick.mp3': {
             id: 'sample:kick.mp3',
             url: 'kick.mp3',
+            sourceType: 'factory',
           },
         },
       },
@@ -151,7 +156,11 @@ describe('compatibility selectors', () => {
   test('falls back to kitChannels ids if selected kit channelIds are stale', () => {
     const state = {
       song: {
+        id: 'song-1',
+        name: 'Test Song',
         selectedKitId: DEFAULT_KIT_ID,
+        selectedPatternId: 'pattern-0',
+        patternIds: ['pattern-0'],
       },
       kits: {
         ids: [DEFAULT_KIT_ID],
@@ -180,6 +189,7 @@ describe('compatibility selectors', () => {
           'sample:available.wav': {
             id: 'sample:available.wav',
             url: 'available.wav',
+            sourceType: 'factory',
           },
         },
       },
@@ -191,14 +201,14 @@ describe('compatibility selectors', () => {
 
 describe('redux-persist migration', () => {
   test('normalizes legacy channel and note state', () => {
-    const migrated = migrateToNormalizedSequencerState({
+    const migrated = migrateToNormalizedSequencerState(legacyState({
       channels: legacyChannels,
       notes: legacyNotes,
       master: {
         pattern: 1,
         selectedChannel: 'kick',
       },
-    }, {
+    }), {
       channels: legacyChannels,
       notes: legacyNotes,
     });
@@ -222,14 +232,14 @@ describe('redux-persist migration', () => {
 
 describe('kit-aware migration', () => {
   test('moves channel settings into a globally reusable kit library', () => {
-    const migrated = migrateToKitSequencerState({
+    const migrated = migrateToKitSequencerState(legacyState({
       channels: legacyChannels,
       notes: legacyNotes,
       master: {
         pattern: 1,
         selectedChannel: 'kick',
       },
-    }, {
+    }), {
       channels: legacyChannels,
       notes: legacyNotes,
     });

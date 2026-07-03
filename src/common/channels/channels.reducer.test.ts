@@ -16,6 +16,7 @@ import {
   setChannelSolo,
 } from './channels.actions';
 import { PERCUSSION_TYPES } from '../percussion';
+import type { KitChannelsState } from '../sequencerModel';
 
 jest.mock('../../presets');
 jest.mock('../../samples.config');
@@ -23,9 +24,15 @@ jest.mock('../../services/featureChecks');
 
 const testSample = '/fake/sample/b/url.wav';
 const firstChannelId = channelsInitialState.ids[0];
-const getFirstChannel = state => state.entities[firstChannelId];
+const getFirstChannel = (state: KitChannelsState) => state.entities[firstChannelId];
 
-const expectFirstChannelField = (action, fieldName, expectedValue) => {
+type ChannelsAction = Parameters<typeof channelsReducer>[1];
+
+const expectFirstChannelField = (
+  action: ChannelsAction,
+  fieldName: string,
+  expectedValue: unknown,
+): void => {
   const state = channelsReducer(channelsInitialState, action);
   expect(getFirstChannel(state)[fieldName]).toEqual(expectedValue);
 };
@@ -141,7 +148,7 @@ describe('addChannel', () => {
       addChannel({
         id: '12345',
         gain: 1,
-        sample: {},
+        sample: 'test.wav',
       }),
     );
     expect(state.ids.length).toEqual(channelsInitialState.ids.length + 1);

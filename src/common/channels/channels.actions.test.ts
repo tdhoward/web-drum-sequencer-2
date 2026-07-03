@@ -10,6 +10,11 @@ jest.mock('../../services/sampleStore', () => ({
   loadSample: jest.fn(() => new Promise(() => {})),
 }));
 
+type DispatchedAction = {
+  type?: string;
+  payload?: unknown;
+};
+
 describe('getNextNewChannelName', () => {
   test('starts with New channel 1', () => {
     expect(getNextNewChannelName([])).toEqual('New channel 1');
@@ -17,9 +22,9 @@ describe('getNextNewChannelName', () => {
 
   test('uses the first available New channel number', () => {
     expect(getNextNewChannelName([
-      { id: 'kick', name: 'Kick' },
-      { id: 'new-1', name: 'New channel 1' },
-      { id: 'new-3', name: 'New channel 3' },
+      { name: 'Kick' },
+      { name: 'New channel 1' },
+      { name: 'New channel 3' },
     ])).toEqual('New channel 2');
   });
 });
@@ -28,13 +33,18 @@ describe('newChannel', () => {
   test('names the added channel from the selected kit channel names', () => {
     const state = {
       song: {
+        id: 'song-1',
+        name: 'Test Song',
         selectedKitId: DEFAULT_KIT_ID,
+        selectedPatternId: 'pattern-0',
+        patternIds: ['pattern-0'],
       },
       kits: {
         ids: [DEFAULT_KIT_ID],
         entities: {
           [DEFAULT_KIT_ID]: {
             id: DEFAULT_KIT_ID,
+            name: 'Default Kit',
             channelIds: ['kick', 'new-1', 'new-3'],
           },
         },
@@ -45,11 +55,18 @@ describe('newChannel', () => {
         { id: 'new-3', name: 'New channel 3', sample: 'b.wav', gain: 1 },
       ]),
     };
-    const actions = [];
+    const actions: DispatchedAction[] = [];
 
-    newChannel()(action => actions.push(action), () => state);
+    newChannel()(
+      (action) => {
+        actions.push(action as DispatchedAction);
+        return action;
+      },
+      () => state,
+    );
 
-    expect(actions.find(action => action.type === 'kitChannels/addChannel').payload)
+    const addChannelAction = actions.find(action => action.type === 'kitChannels/addChannel');
+    expect(addChannelAction?.payload)
       .toEqual(expect.objectContaining({
         id: 'new-channel-id',
         name: 'New channel 2',
@@ -71,10 +88,13 @@ describe('deleteChannel', () => {
         kitChannelId: 'kit-snare',
       },
     ];
-    const actions = [];
+    const actions: DispatchedAction[] = [];
 
     deleteChannel('kit-kick', channels, 'lane-kick', 'lane-kick')(
-      action => actions.push(action),
+      (action) => {
+        actions.push(action as DispatchedAction);
+        return action;
+      },
     );
 
     expect(actions.map(action => action.type)).toEqual([

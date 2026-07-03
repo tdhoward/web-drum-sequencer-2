@@ -6,7 +6,7 @@ import {
 
 jest.mock('../presets');
 
-const clone = value => JSON.parse(JSON.stringify(value));
+const clone = <TValue>(value: TValue): TValue => JSON.parse(JSON.stringify(value)) as TValue;
 
 describe('sequencer model invariants', () => {
   test('accepts the default kit-aware sequencer model', () => {
