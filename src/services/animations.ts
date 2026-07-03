@@ -1,21 +1,26 @@
 import { getCurrentBeat } from './audioContext';
 import { swing } from './swing';
 import { selectedPatternLengthSelector } from '../common';
+import type { RootState } from '../reducer';
 
-const draw = (store) => {
+type AnimationStore = {
+  getState: () => RootState;
+};
+
+const draw = (store: AnimationStore): void => {
   // Get some data from redux store
   const state = store.getState();
   const { bpm, swing: swingAmount } = state.tempo;
   const { playing, startTime } = state.playbackSession;
   const patternLengthInBeats = selectedPatternLengthSelector(state);
-  const currentBeat = getCurrentBeat(bpm, startTime, undefined, patternLengthInBeats);
+  const currentBeat = getCurrentBeat(bpm, startTime ?? 0, undefined, patternLengthInBeats);
 
   // Grab all the toggles and animate them
   const toggles = document.getElementsByClassName('wds-beat-marker');
   for (let i = 0; i < toggles.length; i += 1) {
-    const toggle = toggles[i];
+    const toggle = toggles[i] as HTMLElement;
     const { beat, active } = toggle.dataset;
-    const beatNum = parseFloat(beat);
+    const beatNum = parseFloat(beat || '');
     const swingBeat = swing(beatNum, swingAmount);
     const isActive = (active === 'true');
     if (playing
@@ -28,7 +33,7 @@ const draw = (store) => {
       toggle.style.transform = 'scale(1.3)';
     } else {
       toggle.style.transition = `all ${120 / bpm}s`;
-      toggle.style.opacity = 0;
+      toggle.style.opacity = '0';
       toggle.style.transform = 'scale(1)';
     }
   }
@@ -38,7 +43,7 @@ const draw = (store) => {
   });
 };
 
-export const startAnimations = (store) => {
+export const startAnimations = (store: AnimationStore): void => {
   window.requestAnimationFrame(() => {
     draw(store);
   });

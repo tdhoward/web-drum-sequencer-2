@@ -10,9 +10,11 @@ jest.mock('./featureChecks');
 jest.mock('./audioContext');
 jest.mock('./audioRouter');
 
+const mockedPlayNote = playNote as jest.Mock;
+
 afterEach(() => {
   clearScheduledNotes();
-  playNote.mockClear();
+  mockedPlayNote.mockClear();
 });
 
 describe('isBetween', () => {
@@ -43,9 +45,8 @@ describe('getScheduledNotes', () => {
 
   const scheduledNotes = getScheduledNotes({
     channel: {
-      sample: {
-        url: '/whatever.wav',
-      },
+      id: 'test-channel',
+      sample: '/whatever.wav',
     },
     channelNotes: testNotes,
     tempo: {
@@ -79,11 +80,11 @@ describe('clearScheduledNotes', () => {
     scheduleNote('note-1', 1, channel);
     scheduleNote('note-1', 2, channel);
 
-    expect(playNote).toHaveBeenCalledTimes(1);
+    expect(mockedPlayNote).toHaveBeenCalledTimes(1);
 
     clearScheduledNotes();
     scheduleNote('note-1', 3, channel);
 
-    expect(playNote).toHaveBeenCalledTimes(2);
+    expect(mockedPlayNote).toHaveBeenCalledTimes(2);
   });
 });

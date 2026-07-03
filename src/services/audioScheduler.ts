@@ -3,32 +3,83 @@ import { playNote } from './audioRouter';
 import { sampleStore } from './sampleStore';
 import { swing } from './swing';
 
-// schedule is a lookup table of all the notes currently scheduled to be played
-const schedule = {};
+type PitchInput = {
+  pitchCoarse?: number;
+  pitchFine?: number;
+};
 
-export const pitchToCents = ({ pitchCoarse = 0, pitchFine = 0 }) => Math.round(
+type NoteChannel = PitchInput & {
+  id: string;
+  sample?: string;
+};
+
+type ChannelNote = {
+  id: string;
+  beat: number;
+};
+
+type Tempo = {
+  bpm: number;
+  swing?: number;
+};
+
+type ScheduledNote = {
+  id: string;
+  time: number | null;
+  channel: NoteChannel;
+};
+
+type GetScheduledNotesArgs = {
+  channelNotes: ChannelNote[];
+  channel: NoteChannel;
+  startTime: number;
+  tempo: Tempo;
+  currentBeat: number;
+  patternLengthInBeats?: number;
+};
+
+type ScheduleNotesArgs = {
+  notes: Record<string, ChannelNote[][]>;
+  channels: NoteChannel[];
+  startTime: number;
+  pattern: number;
+  tempo: Tempo;
+  currentBeat: number;
+  patternLengthInBeats?: number;
+};
+
+// schedule is a lookup table of all the notes currently scheduled to be played
+const schedule: Record<string, unknown> = {};
+
+const getSampleBuffer = (noteChannel: NoteChannel): AudioBuffer | undefined => (
+  typeof noteChannel.sample === 'undefined'
+    ? undefined
+    : sampleStore[noteChannel.sample]
+);
+
+export const pitchToCents = ({ pitchCoarse = 0, pitchFine = 0 }: PitchInput): number => Math.round(
   pitchCoarse * 100 + pitchFine,
 );
 
-export const playNoteNow = (noteChannel) => {
+export const playNoteNow = (noteChannel: NoteChannel): void => {
   const pitch = pitchToCents(noteChannel);
-  playNote(null, sampleStore[noteChannel.sample], noteChannel.id, pitch);
+  playNote(null, getSampleBuffer(noteChannel), noteChannel.id, pitch);
 };
 
-export const scheduleNote = (noteId, noteTime, noteChannel) => {
+export const scheduleNote = (noteId: string, noteTime: number, noteChannel: NoteChannel): void => {
   if (typeof schedule[noteId] === 'undefined') {
     const pitch = pitchToCents(noteChannel);
-    schedule[noteId] = playNote(noteTime, sampleStore[noteChannel.sample], noteChannel.id, pitch);
+    schedule[noteId] = playNote(noteTime, getSampleBuffer(noteChannel), noteChannel.id, pitch);
   }
 };
 
-export const clearScheduledNotes = () => {
+export const clearScheduledNotes = (): void => {
   Object.keys(schedule).forEach((noteId) => {
     delete schedule[noteId];
   });
 };
 
-export const isBetween = (query, a, b) => query >= a && query < b;
+export const isBetween = (query: number, a: number, b: number): boolean => query >= a && query < b;
 
 export const getScheduledNotes = ({
   channelNotes,
@@ -37,7 +88,7 @@ export const getScheduledNotes = ({
   tempo,
   currentBeat,
   patternLengthInBeats = 4,
-}) => channelNotes.map(
+}: GetScheduledNotesArgs): ScheduledNote[] => channelNotes.map(
   (note) => {
     const lookaheadBeats = LOOKAHEAD * (tempo.bpm / 60);
 
@@ -81,9 +132,9 @@ export const scheduleNotes = ({
   tempo,
   currentBeat,
   patternLengthInBeats = 4,
-}) => {
+}: ScheduleNotesArgs): void => {
   // Determine which notes need to be scheduled
-  const notesToSchedule = channels.reduce(
+  const notesToSchedule = channels.reduce<ScheduledNote[]>(
     (accumulator, channel) => [
       ...accumulator,
       ...getScheduledNotes({

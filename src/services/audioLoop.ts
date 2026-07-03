@@ -9,8 +9,14 @@ import {
   setStartTime,
 } from '../common';
 import { INTERVAL } from './audioEngine.config';
+import type { RootState } from '../reducer';
 
-export const initializeAudio = (store) => {
+type AudioStore = {
+  getState: () => RootState;
+  dispatch: (action: unknown) => unknown;
+};
+
+export const initializeAudio = (store: AudioStore): void => {
   const audioCtx = getAudioContext(); // Start the clock
   setInterval(() => {
     const state = store.getState();
@@ -26,12 +32,13 @@ export const initializeAudio = (store) => {
     updateChannelNodes(channels);
 
     if (playbackSession.playing) {
-      let sT = playbackSession.startTime;
+      const playbackStartTime = playbackSession.startTime ?? audioCtx.currentTime;
+      let sT = playbackStartTime;
       // Loop if we reached the end of the pattern
       const patternLengthSeconds = (patternLengthInBeats * 60) / tempo.bpm;
-      if (audioCtx.currentTime > playbackSession.startTime + patternLengthSeconds) {
-        store.dispatch(setStartTime(playbackSession.startTime + patternLengthSeconds));
-        sT = playbackSession.startTime + patternLengthSeconds;
+      if (audioCtx.currentTime > playbackStartTime + patternLengthSeconds) {
+        store.dispatch(setStartTime(playbackStartTime + patternLengthSeconds));
+        sT = playbackStartTime + patternLengthSeconds;
       }
 
       scheduleNotes({
@@ -43,7 +50,7 @@ export const initializeAudio = (store) => {
         patternLengthInBeats,
         currentBeat: getCurrentBeat(
           tempo.bpm,
-          playbackSession.startTime,
+          playbackStartTime,
           undefined,
           patternLengthInBeats,
         ),

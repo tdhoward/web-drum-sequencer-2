@@ -9,7 +9,7 @@ import {
 } from './playbackSession.actions';
 import { LOOKAHEAD } from '../../services/audioEngine.config';
 
-jest.mock('../../services/audioContext.js');
+jest.mock('../../services/audioContext');
 
 describe('startPlayback', () => {
   test('should set playing to true', () => {
