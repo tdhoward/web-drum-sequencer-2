@@ -4,6 +4,7 @@ import { Box } from '../design-system';
 import { PlayButton } from '../PlayButton';
 import { BPMInput } from '../BPMInput';
 import { SwingControl } from '../SwingControl';
+import { HumanizeControl } from '../HumanizeControl';
 import { WorkspaceNav } from '../WorkspaceNav';
 
 const MasterControlsLayout = styled.div`
@@ -48,6 +49,7 @@ export const MasterControls = () => (
       </Box>
       <BPMInput />
       <SwingControl />
+      <HumanizeControl />
     </Box>
     <div className="right-controls">
       <WorkspaceNav />

@@ -153,6 +153,37 @@ describe('compatibility selectors', () => {
     expect(notesSelector(state)['pattern-kick'][0]).toEqual(legacyNotes.kick[0]);
   });
 
+  test('preserve non-default note velocity in legacy audio notes', () => {
+    const patterns = createPatternsState({
+      patternCount: 1,
+      laneIds: ['kick'],
+    });
+    const state = {
+      song: {
+        id: 'song-1',
+        name: 'Test Song',
+        selectedPatternId: 'pattern-0',
+        selectedKitId: DEFAULT_KIT_ID,
+        patternIds: patterns.ids,
+      },
+      patterns,
+      channels: normalizeChannelsState(legacyChannels),
+      notes: normalizeNotesState({
+        kick: [[{
+          id: 'accent',
+          beat: 1,
+          velocity: 0.7,
+        }]],
+      }, patterns.ids, patterns),
+    };
+
+    expect(notesSelector(state).kick[0][0]).toEqual({
+      id: 'accent',
+      beat: 1,
+      velocity: 0.7,
+    });
+  });
+
   test('falls back to kitChannels ids if selected kit channelIds are stale', () => {
     const state = {
       song: {

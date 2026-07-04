@@ -414,10 +414,21 @@ export const notesStateToLegacyNotes = ({
         .map(noteId => notesState.entities[noteId])
         .filter(note => note.laneId === laneId && note.patternId === patternId)
         .sort((a, b) => a.step - b.step)
-        .map(note => ({
-          beat: stepToBeat(note.step, pattern),
-          id: note.id,
-        }));
+        .map((note) => {
+          const legacyNote: LegacyNote = {
+            beat: stepToBeat(note.step, pattern),
+            id: note.id,
+          };
+
+          if (note.pitch !== 0) {
+            legacyNote.pitch = note.pitch;
+          }
+          if (note.velocity !== 1) {
+            legacyNote.velocity = note.velocity;
+          }
+
+          return legacyNote;
+        });
     });
     return legacyNotes;
   }, {});

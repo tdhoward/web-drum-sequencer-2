@@ -17,6 +17,7 @@ export * from './GithubLink.component';
 export * from './PatternWorkspaceControls';
 export * from './FlashMessage';
 export * from './SwingControl';
+export * from './HumanizeControl';
 export * from './Branding';
 export * from './AppMenu';
 export * from './InstallButton';

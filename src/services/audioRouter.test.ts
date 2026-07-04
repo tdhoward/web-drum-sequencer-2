@@ -163,4 +163,19 @@ describe('audioRouter', () => {
       expect(source.stop).toHaveBeenCalledWith(10.03);
     });
   });
+
+  test('applies per-note velocity to the voice gain node', () => {
+    jest.isolateModules(() => {
+      const { playNote } = jest.requireActual<typeof import('./audioRouter')>(
+        './audioRouter',
+      );
+      const buffer = {} as AudioBuffer;
+
+      playNote(12, buffer, 'kick', 0, 0.42);
+
+      const voiceGainNode = mockAudioContext.gainNodes[mockAudioContext.gainNodes.length - 1];
+
+      expect(voiceGainNode.gain.setValueAtTime).toHaveBeenCalledWith(0.42, 10);
+    });
+  });
 });

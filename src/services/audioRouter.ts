@@ -168,13 +168,14 @@ export const playNote = (
   buffer: AudioBuffer | undefined,
   channelId: string,
   notePitch = 0,
+  noteVelocity = 1,
 ): AudioBufferSourceNode => {
   ensureChannelNodes(channelId);
 
   const source = audioCtx.createBufferSource();
   const voiceGainNode = audioCtx.createGain();
   source.buffer = buffer ?? null;
-  voiceGainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+  voiceGainNode.gain.setValueAtTime(noteVelocity, audioCtx.currentTime);
 
   if (detuneSupported) {
     source.detune.value = notePitch;

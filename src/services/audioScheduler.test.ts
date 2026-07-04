@@ -68,6 +68,62 @@ describe('getScheduledNotes', () => {
   test('should set noteTime to null if note should not be scheduled', () => {
     expect(scheduledNotes[1].time).toBeNull();
   });
+
+  test('should preserve note velocity when humanize is zero', () => {
+    const humanizedNotes = getScheduledNotes({
+      channel: {
+        id: 'test-channel',
+        sample: '/whatever.wav',
+      },
+      channelNotes: [
+        {
+          beat: 1,
+          id: 'accent',
+          velocity: 0.7,
+        },
+      ],
+      tempo: {
+        bpm: 60,
+        humanize: 0,
+      },
+      startTime: 0,
+      currentBeat: 1,
+    });
+
+    expect(humanizedNotes[0].time).toBe(0);
+    expect(humanizedNotes[0].velocity).toBe(0.7);
+  });
+
+  test('should apply deterministic humanize timing and velocity', () => {
+    const getHumanizedNotes = () => getScheduledNotes({
+      channel: {
+        id: 'test-channel',
+        sample: '/whatever.wav',
+      },
+      channelNotes: [
+        {
+          beat: 1,
+          id: 'kick',
+          velocity: 1,
+        },
+      ],
+      tempo: {
+        bpm: 60,
+        humanize: 1,
+      },
+      startTime: 20,
+      currentBeat: 1,
+    });
+
+    const firstPass = getHumanizedNotes();
+    const secondPass = getHumanizedNotes();
+
+    expect(firstPass[0]).toEqual(secondPass[0]);
+    expect(firstPass[0].time).toBeGreaterThanOrEqual(19.94);
+    expect(firstPass[0].time).toBeLessThanOrEqual(20.06);
+    expect(firstPass[0].velocity).toBeGreaterThanOrEqual(0.65);
+    expect(firstPass[0].velocity).toBeLessThanOrEqual(1.15);
+  });
 });
 
 describe('clearScheduledNotes', () => {
@@ -86,5 +142,16 @@ describe('clearScheduledNotes', () => {
     scheduleNote('note-1', 3, channel);
 
     expect(mockedPlayNote).toHaveBeenCalledTimes(2);
+  });
+
+  test('passes note velocity to the audio router', () => {
+    const channel = {
+      id: 'kick',
+      sample: 'kick.wav',
+    };
+
+    scheduleNote('note-velocity', 1, channel, 0.72);
+
+    expect(mockedPlayNote).toHaveBeenCalledWith(1, undefined, 'kick', 0, 0.72);
   });
 });
