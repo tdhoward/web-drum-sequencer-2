@@ -1,5 +1,4 @@
 import js from '@eslint/js';
-import babelParser from '@babel/eslint-parser';
 import react from 'eslint-plugin-react';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
@@ -38,34 +37,6 @@ export default [
   },
   js.configs.recommended,
   ...typescriptConfigs,
-  {
-    files: ['src/**/*.{js,jsx}'],
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      parser: babelParser,
-      parserOptions: {
-        requireConfigFile: false,
-        ecmaFeatures: {
-          jsx: true,
-        },
-        babelOptions: {
-          presets: ['@babel/preset-react'],
-        },
-      },
-      globals: {
-        ...appGlobals,
-      },
-    },
-    plugins: {
-      react,
-    },
-    settings: reactSettings,
-    rules: {
-      ...react.configs.recommended.rules,
-      ...sharedRules,
-    },
-  },
   {
     files: ['src/**/*.{ts,tsx}'],
     languageOptions: {
