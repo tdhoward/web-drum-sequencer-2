@@ -1,5 +1,7 @@
 import { LOOKAHEAD } from './audioEngine.config';
+import { getAudioContext } from './audioContext';
 import { playNote } from './audioRouter';
+import { notifyChannelTriggered } from './channelTriggerEvents';
 import { sampleStore } from './sampleStore';
 import { swing } from './swing';
 
@@ -50,6 +52,7 @@ type ScheduleNotesArgs = {
 
 // schedule is a lookup table of all the notes currently scheduled to be played
 const schedule: Record<string, unknown> = {};
+const visualTriggerSchedule: Record<string, ReturnType<typeof globalThis.setTimeout>> = {};
 
 const getSampleBuffer = (noteChannel: NoteChannel): AudioBuffer | undefined => (
   typeof noteChannel.sample === 'undefined'
@@ -64,19 +67,50 @@ export const pitchToCents = ({ pitchCoarse = 0, pitchFine = 0 }: PitchInput): nu
 export const playNoteNow = (noteChannel: NoteChannel): void => {
   const pitch = pitchToCents(noteChannel);
   playNote(null, getSampleBuffer(noteChannel), noteChannel.id, pitch);
+  notifyChannelTriggered(noteChannel.id);
+};
+
+const clearScheduledTrigger = (noteId: string): void => {
+  const visualTrigger = visualTriggerSchedule[noteId];
+
+  if (typeof visualTrigger !== 'undefined') {
+    globalThis.clearTimeout(visualTrigger);
+    delete visualTriggerSchedule[noteId];
+  }
+};
+
+const scheduleChannelTrigger = (
+  noteId: string,
+  noteTime: number,
+  channelId: string,
+): void => {
+  clearScheduledTrigger(noteId);
+
+  const delayMs = Math.max(
+    0,
+    (noteTime - getAudioContext().currentTime) * 1000,
+  );
+
+  visualTriggerSchedule[noteId] = globalThis.setTimeout(() => {
+    delete visualTriggerSchedule[noteId];
+    notifyChannelTriggered(channelId);
+  }, delayMs);
 };
 
 export const scheduleNote = (noteId: string, noteTime: number, noteChannel: NoteChannel): void => {
   if (typeof schedule[noteId] === 'undefined') {
     const pitch = pitchToCents(noteChannel);
     schedule[noteId] = playNote(noteTime, getSampleBuffer(noteChannel), noteChannel.id, pitch);
+    scheduleChannelTrigger(noteId, noteTime, noteChannel.id);
   }
 };
 
 export const clearScheduledNotes = (): void => {
   Object.keys(schedule).forEach((noteId) => {
+    clearScheduledTrigger(noteId);
     delete schedule[noteId];
   });
+  Object.keys(visualTriggerSchedule).forEach(clearScheduledTrigger);
 };
 
 export const isBetween = (query: number, a: number, b: number): boolean => query >= a && query < b;

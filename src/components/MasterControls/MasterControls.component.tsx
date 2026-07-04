@@ -4,7 +4,6 @@ import { Box } from '../design-system';
 import { PlayButton } from '../PlayButton';
 import { BPMInput } from '../BPMInput';
 import { SwingControl } from '../SwingControl';
-import { VolumeMeter } from '../VolumeMeter.component';
 import { WorkspaceNav } from '../WorkspaceNav';
 
 const MasterControlsLayout = styled.div`
@@ -46,7 +45,6 @@ export const MasterControls = () => (
     <Box display="flex" mr={2}>
       <Box mr={2} display="flex" alignItems="center">
         <PlayButton />
-        <VolumeMeter />
       </Box>
       <BPMInput />
       <SwingControl />
