@@ -8,6 +8,8 @@ import {
 import { SampleLoadError } from '../SampleLoadError.component';
 import { PresetSaved } from '../PresetSaved.component';
 import { PresetDeleted } from '../PresetDeleted.component';
+import { PatternPackSaved } from '../PatternPackSaved.component';
+import { PatternPackDeleted } from '../PatternPackDeleted.component';
 
 type FlashMessageComponentProps = {
   messageKey?: string | null;
@@ -29,6 +31,10 @@ const getMessageComponent = (messageKey: string | null | undefined): FlashMessag
       return PresetSaved;
     case FLASH_MESSAGES.PRESET_DELETED:
       return PresetDeleted;
+    case FLASH_MESSAGES.PATTERN_PACK_SAVED:
+      return PatternPackSaved;
+    case FLASH_MESSAGES.PATTERN_PACK_DELETED:
+      return PatternPackDeleted;
     default:
       return undefined;
   }

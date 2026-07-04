@@ -1,11 +1,108 @@
-import { loadPatternPack } from './patternPacks.actions';
-import { DEFAULT_KIT_ID, normalizeKitChannelsState } from '../sequencerModel';
-import type { PatternPack } from '../sequencerModel';
+import {
+  doSavePatternPack,
+  doSavePatternPackAs,
+  loadPatternPack,
+} from './patternPacks.actions';
+import {
+  DEFAULT_KIT_ID,
+  DEFAULT_PATTERN_SETTINGS,
+  normalizeKitChannelsState,
+  normalizeNotesState,
+} from '../sequencerModel';
+import type { PatternPack, PatternsState } from '../sequencerModel';
 import { PERCUSSION_TYPES } from '../percussion';
 
 type DispatchedAction = {
   type?: string;
   payload?: unknown;
+};
+
+const createPatternsState = (laneIds: string[]): PatternsState => ({
+  ids: ['pattern-0', 'pattern-1'],
+  entities: {
+    'pattern-0': {
+      id: 'pattern-0',
+      name: 'Pattern 1',
+      ...DEFAULT_PATTERN_SETTINGS,
+      laneIds,
+    },
+    'pattern-1': {
+      id: 'pattern-1',
+      name: 'Pattern 2',
+      ...DEFAULT_PATTERN_SETTINGS,
+      laneIds,
+    },
+  },
+});
+
+const createSaveState = (userPatternPacks: PatternPack[] = []) => {
+  const patterns = createPatternsState(['kick']);
+
+  return {
+    song: {
+      id: 'song-1',
+      name: 'Test Song',
+      selectedKitId: DEFAULT_KIT_ID,
+      selectedPatternId: 'pattern-0',
+      patternIds: ['pattern-0', 'pattern-1'],
+    },
+    patternPacks: {
+      selectedPatternPackId: userPatternPacks[0]?.id || 'hip-hop-swing',
+      userPatternPacks,
+    },
+    tempo: {
+      bpm: 112,
+      swing: 0.25,
+      humanize: 0,
+    },
+    patterns,
+    notes: normalizeNotesState({
+      kick: [
+        [
+          {
+            beat: 1,
+            id: 'note-1',
+          },
+        ],
+        [],
+      ],
+    }, patterns.ids, patterns),
+    kits: {
+      ids: [DEFAULT_KIT_ID],
+      entities: {
+        [DEFAULT_KIT_ID]: {
+          id: DEFAULT_KIT_ID,
+          name: 'Default Kit',
+          channelIds: ['kit-kick'],
+        },
+      },
+    },
+    kitChannels: normalizeKitChannelsState([
+      {
+        id: 'kit-kick',
+        laneId: 'kick',
+        name: 'Kick',
+        sample: 'kick.wav',
+        percussionType: PERCUSSION_TYPES.BASS_DRUM,
+      },
+    ]),
+    kitChannelAssignments: {
+      ids: ['kit-kick'],
+      entities: {
+        'kit-kick': {
+          id: 'kit-kick',
+          kitId: DEFAULT_KIT_ID,
+          laneId: 'kick',
+          kitChannelId: 'kit-kick',
+          confidence: 'manual',
+        },
+      },
+    },
+    samples: {
+      ids: [],
+      entities: {},
+    },
+  };
 };
 
 describe('loadPatternPack', () => {
@@ -93,5 +190,88 @@ describe('loadPatternPack', () => {
         confidence: 'high',
       }),
     ]);
+  });
+});
+
+describe('doSavePatternPackAs', () => {
+  test('saves the current pattern state as a user pattern pack', () => {
+    const state = createSaveState();
+    const actions: DispatchedAction[] = [];
+
+    doSavePatternPackAs('My Patterns')(
+      (action) => {
+        actions.push(action as DispatchedAction);
+      },
+      () => state,
+    );
+
+    expect(actions.map(action => action.type)).toEqual([
+      'patternPacks/savePatternPackAs',
+      'patternPacks/setSelectedPatternPack',
+      'window/showFlashMessage',
+    ]);
+    expect(actions[0].payload).toEqual(expect.objectContaining({
+      id: 'user-my-patterns',
+      name: 'My Patterns',
+      bpm: 112,
+      swing: 0.25,
+      lanes: [
+        expect.objectContaining({
+          id: 'kick',
+          laneId: 'kick',
+          name: 'Kick',
+          percussionType: PERCUSSION_TYPES.BASS_DRUM,
+        }),
+      ],
+    }));
+    expect((actions[0].payload as PatternPack).notes.kick[0]).toEqual([
+      expect.objectContaining({
+        beat: 1,
+        id: 'note-1',
+      }),
+    ]);
+    expect(actions[1].payload).toBe('user-my-patterns');
+    expect(actions[2].payload).toBe('PATTERN_PACK_SAVED');
+  });
+});
+
+describe('doSavePatternPack', () => {
+  test('updates the selected user pattern pack', () => {
+    const userPatternPack: PatternPack = {
+      id: 'user-my-patterns',
+      name: 'My Patterns',
+      bpm: 90,
+      swing: 0,
+      lanes: [
+        {
+          id: 'kick',
+          laneId: 'kick',
+          name: 'Kick',
+        },
+      ],
+      notes: {
+        kick: [[], []],
+      },
+    };
+    const state = createSaveState([userPatternPack]);
+    const actions: DispatchedAction[] = [];
+
+    doSavePatternPack(userPatternPack.id)(
+      (action) => {
+        actions.push(action as DispatchedAction);
+      },
+      () => state,
+    );
+
+    expect(actions.map(action => action.type)).toEqual([
+      'patternPacks/savePatternPack',
+      'patternPacks/setSelectedPatternPack',
+      'window/showFlashMessage',
+    ]);
+    expect(actions[0].payload).toEqual(expect.objectContaining({
+      id: userPatternPack.id,
+      name: userPatternPack.name,
+      bpm: 112,
+    }));
   });
 });

@@ -5,12 +5,20 @@ import {
   showFlashMessage,
   clearFlashMessage,
   setCanInstall,
+  setPatternPackPrompt,
 } from './window.reducer';
 
 describe('setPresetPrompt', () => {
   test('should set presetPromptOpen to true', () => {
     const state = windowReducer(windowInitialState, setPresetPrompt(true));
     expect(state.presetPromptOpen).toBe(true);
+  });
+});
+
+describe('setPatternPackPrompt', () => {
+  test('should set patternPackPromptOpen to true', () => {
+    const state = windowReducer(windowInitialState, setPatternPackPrompt(true));
+    expect(state.patternPackPromptOpen).toBe(true);
   });
 });
 

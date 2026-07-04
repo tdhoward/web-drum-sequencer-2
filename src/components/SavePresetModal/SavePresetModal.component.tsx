@@ -17,6 +17,9 @@ type SavePresetModalComponentProps = {
   onSubmit: React.FormEventHandler<HTMLFormElement>;
   nameField: string;
   error?: string | null;
+  inputId?: string;
+  nameLabel?: string;
+  submitLabel?: string;
 };
 
 export class SavePresetModalComponent extends React.Component<SavePresetModalComponentProps> {
@@ -41,6 +44,9 @@ export class SavePresetModalComponent extends React.Component<SavePresetModalCom
       onClose,
       onSubmit,
       error,
+      inputId = 'preset-name',
+      nameLabel = 'Kit Name',
+      submitLabel = 'SAVE',
     } = this.props;
     const theme = this.context;
     return (
@@ -51,9 +57,9 @@ export class SavePresetModalComponent extends React.Component<SavePresetModalCom
           flexDirection="row"
           onSubmit={onSubmit}
         >
-          <label htmlFor="preset-name">
+          <label htmlFor={inputId}>
             <Text color="surfaceInverse" fontSize={2} height="2rem">
-              Kit Name
+              {nameLabel}
             </Text>
             <TextInput
               value={nameField}
@@ -62,7 +68,7 @@ export class SavePresetModalComponent extends React.Component<SavePresetModalCom
               fontSize={3}
               p={3}
               width="15em"
-              id="preset-name"
+              id={inputId}
               placeholder="Enter name..."
               ref={(input) => { this.nameInput = input; }}
               boxShadow={error ? `inset 0 0 0 3px ${theme.colors.errorBorder}` : ''}
@@ -79,7 +85,7 @@ export class SavePresetModalComponent extends React.Component<SavePresetModalCom
             width="4rem"
             type="submit"
           >
-            SAVE
+            {submitLabel}
           </HoverButton>
           <Button
             bg="transparent"

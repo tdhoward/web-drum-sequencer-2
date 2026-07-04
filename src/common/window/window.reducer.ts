@@ -5,12 +5,15 @@ export const FLASH_MESSAGES = {
   SAMPLE_LOAD_ERROR: 'SAMPLE_LOAD_ERROR',
   PRESET_SAVED: 'PRESET_SAVED',
   PRESET_DELETED: 'PRESET_DELETED',
+  PATTERN_PACK_SAVED: 'PATTERN_PACK_SAVED',
+  PATTERN_PACK_DELETED: 'PATTERN_PACK_DELETED',
 } as const;
 
 export type FlashMessageKey = typeof FLASH_MESSAGES[keyof typeof FLASH_MESSAGES] | string;
 
 export type WindowState = {
   presetPromptOpen: boolean;
+  patternPackPromptOpen: boolean;
   flashMessageKey: FlashMessageKey | null;
   flashMessageVisible: boolean;
   canInstall: boolean;
@@ -18,6 +21,7 @@ export type WindowState = {
 
 export const windowInitialState: WindowState = {
   presetPromptOpen: false,
+  patternPackPromptOpen: false,
   flashMessageKey: null,
   flashMessageVisible: false,
   canInstall: false,
@@ -29,6 +33,9 @@ export const windowSlice = createSlice({
   reducers: {
     setPresetPrompt(state, action: PayloadAction<boolean>) {
       state.presetPromptOpen = action.payload;
+    },
+    setPatternPackPrompt(state, action: PayloadAction<boolean>) {
+      state.patternPackPromptOpen = action.payload;
     },
     setPresetNameField: {
       reducer() {
@@ -58,6 +65,7 @@ export const windowSlice = createSlice({
 
 export const {
   setPresetPrompt,
+  setPatternPackPrompt,
   setPresetNameField,
   showFlashMessage,
   clearFlashMessage,
