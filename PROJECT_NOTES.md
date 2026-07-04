@@ -66,6 +66,9 @@ Current model baseline:
 * Bundled factory presets use semantic channel IDs and explicit channel names/percussion metadata; `empty_channel` has been removed from factory preset data.
 * The compatibility UI/audio path now exposes assignment lane IDs through `channelsSelector`, so loaded pack notes can play through the current kit without changing kit samples.
 * Kit preset loading changes kit channels/samples/name and rebuilds assignments, but no longer replaces notes, pattern lanes, tempo, or swing.
+* The master header includes BPM, Swing, and Humanize controls. `humanize` lives in tempo state as a playback-feel setting rather than authored pattern data.
+* Humanize applies deterministic Gaussian timing offsets and per-note velocity variation during scheduling. The pattern grid remains exact, and `humanize: 0` is an exact bypass.
+* The compatibility note path preserves non-default note velocity values so scheduler-time playback transforms can use them.
 
 ## UI direction
 
@@ -129,6 +132,8 @@ When editing:
 ## Known audio context
 
 The app previously had problems where manual sample triggering worked but sequencer playback did not produce sound. That issue has been fixed in the current working state. Avoid refactors that disturb the working playback path unless necessary.
+
+Humanize is part of the working playback path. The current maximum setting uses a 20ms timing standard deviation and a 12% velocity standard deviation, with bounded output and deterministic seeded randomness per note occurrence.
 
 Impulse response assets may exist in the project. We may eventually want to use these to expand the reverb options.
 

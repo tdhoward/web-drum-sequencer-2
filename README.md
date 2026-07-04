@@ -10,7 +10,7 @@ The original web app can be found here:  https://wds-1.com
  * Swap drum samples
  * Choose drum samples from file
  * Pattern pack and pattern slot selectors
- * BPM and swing control
+ * BPM, swing, and humanize playback controls
  * Sample hit buttons
  * Gain and pan
  * Reverb

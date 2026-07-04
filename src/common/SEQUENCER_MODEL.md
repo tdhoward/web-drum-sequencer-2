@@ -56,17 +56,35 @@ note
   velocity
 ```
 
+## Tempo and playback feel
+
+Tempo and playback feel are stored separately from pattern note data.
+
+```text
+tempo
+  bpm
+  swing
+  humanize
+```
+
+`bpm` and `swing` are deterministic playback timing settings. `humanize` is a
+playback-time transform: authored notes stay on the exact pattern grid, while
+the scheduler applies deterministic seeded Gaussian timing offsets and per-note
+velocity variation for each note occurrence. `humanize: 0` is an exact bypass.
+The current maximum setting uses a 20ms timing standard deviation and a 12%
+velocity standard deviation, with bounded output.
+
 ## Pattern packs
 
 Factory pattern content is selected separately from kits. A pattern pack is a
 named bank of related pattern slots, currently matching the app's eight-pattern
 workflow. Loading a pattern pack updates pattern lanes, notes, tempo/swing, and
 kit-channel assignments for the selected kit. It must not replace the selected
-kit or mutate kit channel/sample data.
+kit, mutate kit channel/sample data, or overwrite the user's Humanize setting.
 
 Kit preset loading is the inverse operation: it replaces kit channels/samples
 and rebuilds lane assignments for the currently loaded pattern content, but it
-must not replace pattern lanes, notes, tempo, or swing.
+must not replace pattern lanes, notes, tempo, swing, or humanize.
 
 ```text
 patternPack
