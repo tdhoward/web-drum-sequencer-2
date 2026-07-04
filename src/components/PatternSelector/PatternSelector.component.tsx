@@ -1,11 +1,19 @@
 import React from 'react';
-import * as R from 'ramda';
-import PropTypes from 'prop-types';
 import { LabelBox } from '../LabelBox';
 import { HoverButton } from '../design-system';
 
-export const PatternSelectorComponent = ({ onSelectPattern, pattern }) => {
-  const buttons = R.range(0, 8).map(buttonNumber => (
+type PatternSelectorComponentProps = {
+  pattern: number;
+  onSelectPattern: (pattern: number) => void;
+};
+
+const patternButtonIndexes = Array.from({ length: 8 }, (_, index) => index);
+
+export const PatternSelectorComponent = ({
+  onSelectPattern,
+  pattern,
+}: PatternSelectorComponentProps) => {
+  const buttons = patternButtonIndexes.map(buttonNumber => (
     <HoverButton
       key={`preset-${buttonNumber}`}
       p={0}
@@ -37,9 +45,4 @@ export const PatternSelectorComponent = ({ onSelectPattern, pattern }) => {
       {buttons}
     </LabelBox>
   );
-};
-
-PatternSelectorComponent.propTypes = {
-  pattern: PropTypes.number.isRequired,
-  onSelectPattern: PropTypes.func.isRequired,
 };

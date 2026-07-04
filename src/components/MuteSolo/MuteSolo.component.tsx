@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components';
-import PropTypes from 'prop-types';
 import { Box, Button, Text } from '../design-system';
 
 const MSButton = styled(Button)`
@@ -17,7 +16,24 @@ const MSText = styled(Text)`
   margin: 1px 1px 0 0;
 `;
 
-export const MuteSoloComponent = ({ onPressMuted, onPressSolo, channel }) => (
+type MuteSoloChannel = {
+  id: string;
+  kitChannelId?: string;
+  solo?: boolean;
+  muted?: boolean;
+};
+
+type MuteSoloComponentProps = {
+  onPressMuted: () => void;
+  onPressSolo: () => void;
+  channel: MuteSoloChannel;
+};
+
+export const MuteSoloComponent = ({
+  onPressMuted,
+  onPressSolo,
+  channel,
+}: MuteSoloComponentProps) => (
   <Box
     justifyContent="space-around"
     width="1.2rem"
@@ -49,14 +65,3 @@ export const MuteSoloComponent = ({ onPressMuted, onPressSolo, channel }) => (
 
   </Box>
 );
-
-MuteSoloComponent.propTypes = {
-  onPressMuted: PropTypes.func.isRequired,
-  onPressSolo: PropTypes.func.isRequired,
-  channel: PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    kitChannelId: PropTypes.string,
-    solo: PropTypes.bool,
-    muted: PropTypes.bool,
-  }).isRequired,
-};

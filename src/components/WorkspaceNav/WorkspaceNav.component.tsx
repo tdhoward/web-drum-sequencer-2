@@ -1,9 +1,23 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import styled from 'styled-components';
 import { WORKSPACES } from '../../common/workspace';
+import type { Workspace } from '../../common/workspace';
 
-const workspaceOptions = [
+type WorkspaceOption = {
+  id: Workspace;
+  label: string;
+};
+
+type WorkspaceButtonProps = {
+  $selected: boolean;
+};
+
+type WorkspaceNavComponentProps = {
+  selectedWorkspace: Workspace;
+  setSelectedWorkspace: (workspace: Workspace) => void;
+};
+
+const workspaceOptions: WorkspaceOption[] = [
   { id: WORKSPACES.KIT, label: 'Kit' },
   { id: WORKSPACES.PATTERN, label: 'Pattern' },
   { id: WORKSPACES.SONG, label: 'Song' },
@@ -24,7 +38,7 @@ const WorkspaceTrack = styled.div`
   padding: 0.2rem;
 `;
 
-const WorkspaceButton = styled.button`
+const WorkspaceButton = styled.button<WorkspaceButtonProps>`
   align-items: center;
   background: ${({ $selected, theme }) => ($selected ? theme.colors.accentPrimary : 'transparent')};
   border: 0;
@@ -58,7 +72,10 @@ const WorkspaceButton = styled.button`
   }
 `;
 
-export const WorkspaceNavComponent = ({ selectedWorkspace, setSelectedWorkspace }) => (
+export const WorkspaceNavComponent = ({
+  selectedWorkspace,
+  setSelectedWorkspace,
+}: WorkspaceNavComponentProps) => (
   <WorkspaceTrack aria-label="Workspace" role="tablist">
     {workspaceOptions.map(workspace => {
       const isSelected = selectedWorkspace === workspace.id;
@@ -78,8 +95,3 @@ export const WorkspaceNavComponent = ({ selectedWorkspace, setSelectedWorkspace 
     })}
   </WorkspaceTrack>
 );
-
-WorkspaceNavComponent.propTypes = {
-  selectedWorkspace: PropTypes.oneOf(Object.values(WORKSPACES)).isRequired,
-  setSelectedWorkspace: PropTypes.func.isRequired,
-};

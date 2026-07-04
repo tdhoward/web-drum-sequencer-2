@@ -1,7 +1,6 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import styled from 'styled-components';
-import { Knob } from './Knob.component';
+import { Knob, type KnobProps } from './Knob.component';
 import { ControlLabel, Box } from './design-system';
 
 const KnobLabel = styled(ControlLabel)`
@@ -12,13 +11,20 @@ const KnobScaleLabel = styled(ControlLabel)`
   color: ${({ theme }) => theme.colors.knobScaleText};
 `;
 
+type InfoKnobProps = Omit<KnobProps, 'size'> & {
+  label: string;
+  minLabel: string;
+  maxLabel: string;
+  showLabel?: boolean;
+};
+
 export const InfoKnob = ({
   label,
   minLabel,
   maxLabel,
   showLabel = true,
   ...rest
-}) => (
+}: InfoKnobProps) => (
   <Box>
     {showLabel && (
       <KnobLabel fontWeight="bold" mb={1} textAlign="center">
@@ -36,10 +42,3 @@ export const InfoKnob = ({
     </Box>
   </Box>
 );
-
-InfoKnob.propTypes = {
-  label: PropTypes.string.isRequired,
-  minLabel: PropTypes.string.isRequired,
-  maxLabel: PropTypes.string.isRequired,
-  showLabel: PropTypes.bool,
-};

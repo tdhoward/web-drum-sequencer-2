@@ -21,6 +21,7 @@ const Button = styled.button.attrs<ButtonDefaultProps>(({
   ${ss.borderRadius}
   ${ss.fontWeight}
   ${ss.fontSize}
+  ${ss.lineHeight}
   ${ss.alignSelf}
   ${ss.width}
   ${ss.height}

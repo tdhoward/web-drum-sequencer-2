@@ -73,6 +73,7 @@ export type ButtonProps =
   & BorderRadiusProps
   & FontWeightProps
   & FontSizeProps
+  & LineHeightProps
   & AlignSelfProps
   & FlexProps
   & PositionProps

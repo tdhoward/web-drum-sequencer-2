@@ -1,13 +1,39 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import styled from 'styled-components';
 import * as ss from 'styled-system';
 import { Box } from '../design-system';
+import type {
+  BorderRadiusProps,
+  BordersProps,
+  ColorProps,
+  HeightProps,
+  SpaceProps,
+  WidthProps,
+} from 'styled-system';
 
-const BeatButton = styled.button.attrs(({
+type BeatButtonProps =
+  & ColorProps
+  & SpaceProps
+  & WidthProps
+  & HeightProps
+  & BordersProps
+  & BorderRadiusProps
+  & {
+    $isActive: boolean;
+  };
+
+type BeatButtonDefaultProps = Pick<BeatButtonProps, 'border' | 'borderRadius'>;
+
+type ToggleProps = {
+  isActive: boolean;
+  onClick: () => void;
+  beat: number;
+};
+
+const BeatButton = styled.button.attrs<BeatButtonDefaultProps>(({
   border = 'none',
   borderRadius = '100%',
-}) => ({ border, borderRadius }))`
+}) => ({ border, borderRadius }))<BeatButtonProps>`
   ${ss.color}
   ${ss.space}
   ${ss.width}
@@ -18,7 +44,7 @@ const BeatButton = styled.button.attrs(({
   outline: none;
   transition: background-color 0.1s;
   position: relative;
-  background: ${({ isActive, theme }) => (isActive
+  background: ${({ $isActive, theme }) => ($isActive
     ? `linear-gradient(180deg, ${theme.colors.accentPrimaryActive} 0%, ${theme.colors.accentPrimary} 100%)`
     : theme.colors.sequencerBeatInactiveBackground)};
 
@@ -28,10 +54,10 @@ const BeatButton = styled.button.attrs(({
 `;
 
 
-export const Toggle = ({ isActive, onClick, beat }) => (
+export const Toggle = ({ isActive, onClick, beat }: ToggleProps) => (
   <BeatButton
     type="button"
-    isActive={isActive}
+    $isActive={isActive}
     onClick={onClick}
     width={[18, 18, 18, 18, 18, 20, 24, 26]}
     height={[18, 18, 18, 18, 18, 20, 24, 26]}
@@ -53,9 +79,3 @@ export const Toggle = ({ isActive, onClick, beat }) => (
     />
   </BeatButton>
 );
-
-Toggle.propTypes = {
-  isActive: PropTypes.bool.isRequired,
-  onClick: PropTypes.func.isRequired,
-  beat: PropTypes.number.isRequired,
-};

@@ -1,11 +1,12 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import type { ReactNode } from 'react';
 import styled from 'styled-components';
 import { Box, Text } from '../design-system';
 import { LabelBox } from '../LabelBox';
 import { CurrentKitDisplay } from '../CurrentKitDisplay';
 import { KitChannelList } from '../KitChannelList';
 import { WORKSPACES } from '../../common/workspace';
+import type { Workspace } from '../../common/workspace';
 
 const WorkspaceControlLayout = styled.div`
   align-items: center;
@@ -32,7 +33,21 @@ const WorkspaceControlLayout = styled.div`
   }
 `;
 
-const WorkspacePlaceholder = ({ title, body, children }) => (
+type WorkspacePlaceholderProps = {
+  title: string;
+  body: string;
+  children?: ReactNode;
+};
+
+type WorkspacePanelComponentProps = {
+  selectedWorkspace: Workspace;
+};
+
+const WorkspacePlaceholder = ({
+  title,
+  body,
+  children = null,
+}: WorkspacePlaceholderProps) => (
   <Box
     bg="surfacePanel"
     border="1px solid"
@@ -50,16 +65,6 @@ const WorkspacePlaceholder = ({ title, body, children }) => (
     {children}
   </Box>
 );
-
-WorkspacePlaceholder.propTypes = {
-  title: PropTypes.string.isRequired,
-  body: PropTypes.string.isRequired,
-  children: PropTypes.node,
-};
-
-WorkspacePlaceholder.defaultProps = {
-  children: null,
-};
 
 const KitWorkspacePanel = () => (
   <Box mt={2}>
@@ -88,7 +93,9 @@ const SongWorkspacePanel = () => (
   </WorkspacePlaceholder>
 );
 
-export const WorkspacePanelComponent = ({ selectedWorkspace }) => {
+export const WorkspacePanelComponent = ({
+  selectedWorkspace,
+}: WorkspacePanelComponentProps) => {
   if (selectedWorkspace === WORKSPACES.KIT) {
     return <KitWorkspacePanel />;
   }
@@ -98,8 +105,4 @@ export const WorkspacePanelComponent = ({ selectedWorkspace }) => {
   }
 
   return null;
-};
-
-WorkspacePanelComponent.propTypes = {
-  selectedWorkspace: PropTypes.oneOf(Object.values(WORKSPACES)).isRequired,
 };

@@ -16,7 +16,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["vite/client", "jest"]
+    "types": ["vite/client", "vite-plugin-svgr/client", "jest"]
   },
   "include": ["src", "__mocks__"],
   "exclude": ["dist", "node_modules"]

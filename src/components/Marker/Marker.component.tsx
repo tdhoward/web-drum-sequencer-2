@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import PropTypes from 'prop-types';
+import type { ReactNode } from 'react';
 import { Box } from '../design-system';
 import { getCurrentBeat } from '../../services/audioContext';
 
@@ -15,11 +15,13 @@ const MarkerBar = styled.div`
   width: 0;
 `;
 
-export class MarkerComponent extends React.PureComponent {
-  constructor(props) {
+export class MarkerComponent extends React.PureComponent<MarkerComponentProps> {
+  animationFrame: number | null = null;
+
+  marker: HTMLDivElement | null = null;
+
+  constructor(props: MarkerComponentProps) {
     super(props);
-    this.animationFrame = null;
-    this.marker = null;
     this.updateMarker = this.updateMarker.bind(this);
   }
 
@@ -38,7 +40,7 @@ export class MarkerComponent extends React.PureComponent {
   updateMarker() {
     const { playing, startTime, bpm } = this.props;
     if (playing && this.marker) {
-      const currentBeat = getCurrentBeat(bpm, startTime);
+      const currentBeat = getCurrentBeat(bpm, startTime ?? 0);
       const progress = (currentBeat - 1) / 4 * 100;
       this.marker.style.width = `${progress}%`;
     }
@@ -60,13 +62,9 @@ export class MarkerComponent extends React.PureComponent {
   }
 }
 
-MarkerComponent.defaultProps = {
-  startTime: null,
-};
-
-MarkerComponent.propTypes = {
-  startTime: PropTypes.number,
-  bpm: PropTypes.number.isRequired,
-  playing: PropTypes.bool.isRequired,
-  children: PropTypes.node.isRequired,
+type MarkerComponentProps = {
+  startTime?: number | null;
+  bpm: number;
+  playing: boolean;
+  children: ReactNode;
 };

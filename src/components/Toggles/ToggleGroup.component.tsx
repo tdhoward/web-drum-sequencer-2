@@ -1,8 +1,12 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import type { ReactNode } from 'react';
 import { Box } from '../design-system';
 
-export const ToggleGroup = ({ children }) => (
+type ToggleGroupProps = {
+  children: ReactNode;
+};
+
+export const ToggleGroup = ({ children }: ToggleGroupProps) => (
   <Box
     bg="sequencerGroupBackground"
     p={[2, 2, 2, 2, 2, 3]}
@@ -16,7 +20,3 @@ export const ToggleGroup = ({ children }) => (
     {children}
   </Box>
 );
-
-ToggleGroup.propTypes = {
-  children: PropTypes.node.isRequired,
-};

@@ -6,7 +6,7 @@ const HeaderText = styled(Text)`
   text-transform: uppercase;
 `;
 
-type ChannelHeaderLabelLayoutProps = Pick<BoxProps, 'width' | 'mr'>;
+type ChannelHeaderLabelLayoutProps = Pick<BoxProps, 'width' | 'mr' | 'flex'>;
 
 type ChannelHeaderLabelProps = ChannelHeaderLabelLayoutProps & {
   children: ReactNode;
