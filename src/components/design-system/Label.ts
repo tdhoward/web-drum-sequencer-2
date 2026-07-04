@@ -1,10 +1,13 @@
 import styled from 'styled-components';
 import * as ss from 'styled-system';
+import type { LabelProps } from './systemProps';
 
-const Label = styled.label.attrs(({
+type LabelDefaultProps = Pick<LabelProps, 'm' | 'p'>;
+
+const Label = styled.label.attrs<LabelDefaultProps>(({
   m = 0,
   p = 0,
-}) => ({ m, p }))`
+}) => ({ m, p }))<LabelProps>`
   ${ss.color}
   ${ss.fontWeight}
   ${ss.fontSize}

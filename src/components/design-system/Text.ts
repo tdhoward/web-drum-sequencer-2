@@ -1,12 +1,15 @@
 import styled from 'styled-components';
 import * as ss from 'styled-system';
+import type { TextProps } from './systemProps';
 
-const Text = styled.span.attrs(({
+type TextDefaultProps = Pick<TextProps, 'm' | 'p' | 'lineHeight' | 'display'>;
+
+const Text = styled.span.attrs<TextDefaultProps>(({
   m = 0,
   p = 0,
   lineHeight = '1em',
   display = 'block',
-}) => ({ m, p, lineHeight, display }))`
+}) => ({ m, p, lineHeight, display }))<TextProps>`
   ${ss.color}
   ${ss.fontWeight}
   ${ss.fontSize}

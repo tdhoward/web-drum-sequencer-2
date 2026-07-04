@@ -1,4 +1,10 @@
-export const createSelectStyles = theme => ({
+import type { StylesConfig } from 'react-select';
+import type { AppTheme } from './theme';
+
+export const createSelectStyles = <
+  Option = unknown,
+  IsMulti extends boolean = false,
+>(theme: AppTheme): StylesConfig<Option, IsMulti> => ({
   container: styles => ({
     ...styles,
     height: '100%',

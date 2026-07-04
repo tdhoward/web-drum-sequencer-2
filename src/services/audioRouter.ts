@@ -1,7 +1,23 @@
 import { detuneSupported, stereoPannerSupported } from './featureChecks';
 import { getAudioContext } from './audioContext';
 import { loadImpulseResponse } from './reverb';
-import impulseResponse from '../assets/impulse-responses/ruby-room.mp3';
+import impulseResponseUrl from '../assets/impulse-responses/ruby-room.mp3';
+
+type AudioChannel = {
+  id: string;
+  muted?: boolean;
+  solo?: boolean;
+  gain?: number;
+  pan?: number;
+  reverb?: number;
+};
+
+type ChannelPanNode = StereoPannerNode | PannerNode;
+
+type ActiveVoice = {
+  source: AudioBufferSourceNode;
+  gainNode: GainNode;
+};
 
 const audioCtx = getAudioContext();
 
@@ -14,8 +30,8 @@ masterOut.connect(analyserNode);
 
 const reverbNode = audioCtx.createConvolver();
 reverbNode.connect(masterOut);
-loadImpulseResponse(impulseResponse).then((impulseResponseArrayBuffer) => {
-  reverbNode.buffer = impulseResponseArrayBuffer;
+loadImpulseResponse(impulseResponseUrl).then((impulseResponseBuffer) => {
+  reverbNode.buffer = impulseResponseBuffer;
 });
 
 /**
@@ -33,26 +49,26 @@ loadImpulseResponse(impulseResponse).then((impulseResponseArrayBuffer) => {
  *        -> Analyser
  */
 
-const channelGainNodes = {};
-const channelPanNodes = {};
-const channelReverbNodes = {};
-const activeVoices = new Set();
+const channelGainNodes: Record<string, GainNode> = {};
+const channelPanNodes: Record<string, ChannelPanNode> = {};
+const channelReverbNodes: Record<string, GainNode> = {};
+const activeVoices = new Set<ActiveVoice>();
 const STOP_FADE_OUT_SECONDS = 0.03;
 
-const calculateGain = (channel, soloEnabled) => {
+const calculateGain = (channel: AudioChannel, soloEnabled: boolean): number => {
   if (channel.muted) {
     return 0;
   }
   if (soloEnabled && !channel.solo) {
     return 0;
   }
-  if (channel.gain === 'undefined') {
+  if (typeof channel.gain === 'undefined') {
     return 1;
   }
   return channel.gain;
 };
 
-const updateGainNode = (channel, soloEnabled) => {
+const updateGainNode = (channel: AudioChannel, soloEnabled: boolean): void => {
   if (typeof channelGainNodes[channel.id] === 'undefined') {
     channelGainNodes[channel.id] = audioCtx.createGain();
     channelGainNodes[channel.id].connect(channelPanNodes[channel.id]);
@@ -64,28 +80,38 @@ const updateGainNode = (channel, soloEnabled) => {
   );
 };
 
-const updatePanNode = (channel) => {
+const ensureStereoPanNode = (channelId: string): StereoPannerNode => {
+  if (typeof channelPanNodes[channelId] === 'undefined') {
+    channelPanNodes[channelId] = audioCtx.createStereoPanner();
+    channelPanNodes[channelId].connect(masterOut);
+  }
+  return channelPanNodes[channelId] as StereoPannerNode;
+};
+
+const ensurePannerNode = (channelId: string): PannerNode => {
+  if (typeof channelPanNodes[channelId] === 'undefined') {
+    channelPanNodes[channelId] = audioCtx.createPanner();
+    channelPanNodes[channelId].panningModel = 'equalpower';
+    channelPanNodes[channelId].connect(masterOut);
+  }
+  return channelPanNodes[channelId] as PannerNode;
+};
+
+const updatePanNode = (channel: AudioChannel): void => {
   if (stereoPannerSupported) {
-    if (typeof channelPanNodes[channel.id] === 'undefined') {
-      channelPanNodes[channel.id] = audioCtx.createStereoPanner();
-      channelPanNodes[channel.id].connect(masterOut);
-    }
-    channelPanNodes[channel.id].pan.setValueAtTime(
+    const panNode = ensureStereoPanNode(channel.id);
+    panNode.pan.setValueAtTime(
       typeof channel.pan === 'undefined' ? 0 : channel.pan,
       audioCtx.currentTime,
     );
   } else {
-    if (typeof channelPanNodes[channel.id] === 'undefined') {
-      channelPanNodes[channel.id] = audioCtx.createPanner();
-      channelPanNodes[channel.id].panningModel = 'equalpower';
-      channelPanNodes[channel.id].connect(masterOut);
-    }
+    const panNode = ensurePannerNode(channel.id);
     const pan = typeof channel.pan === 'undefined' ? 0 : channel.pan;
-    channelPanNodes[channel.id].setPosition(pan, 0, 1 - Math.abs(pan));
+    panNode.setPosition(pan, 0, 1 - Math.abs(pan));
   }
 };
 
-const updateReverbNode = (channel) => {
+const updateReverbNode = (channel: AudioChannel): void => {
   if (typeof channelReverbNodes[channel.id] === 'undefined') {
     channelReverbNodes[channel.id] = audioCtx.createGain();
     channelReverbNodes[channel.id].connect(reverbNode);
@@ -96,7 +122,7 @@ const updateReverbNode = (channel) => {
   );
 };
 
-const checkSoloEnabled = (channels) => {
+const checkSoloEnabled = (channels: AudioChannel[]): boolean => {
   for (let i = 0; i < channels.length; i += 1) {
     if (channels[i].solo) {
       return true;
@@ -105,23 +131,21 @@ const checkSoloEnabled = (channels) => {
   return false;
 };
 
-export const updateChannelNodes = (channels) => {
+export const updateChannelNodes = (channels: AudioChannel[]): void => {
+  const soloEnabled = checkSoloEnabled(channels);
   channels.forEach((channel) => {
     updateReverbNode(channel);
     updatePanNode(channel);
-    updateGainNode(channel, checkSoloEnabled(channels));
+    updateGainNode(channel, soloEnabled);
   });
 };
 
-const ensureChannelNodes = (channelId) => {
+const ensureChannelNodes = (channelId: string): void => {
   if (typeof channelPanNodes[channelId] === 'undefined') {
     if (stereoPannerSupported) {
-      channelPanNodes[channelId] = audioCtx.createStereoPanner();
-      channelPanNodes[channelId].connect(masterOut);
+      ensureStereoPanNode(channelId);
     } else {
-      channelPanNodes[channelId] = audioCtx.createPanner();
-      channelPanNodes[channelId].panningModel = 'equalpower';
-      channelPanNodes[channelId].connect(masterOut);
+      ensurePannerNode(channelId);
     }
   }
 
@@ -139,12 +163,17 @@ const ensureChannelNodes = (channelId) => {
   }
 };
 
-export const playNote = (noteTime, buffer, channelId, notePitch = 0) => {
+export const playNote = (
+  noteTime: number | null,
+  buffer: AudioBuffer | undefined,
+  channelId: string,
+  notePitch = 0,
+): AudioBufferSourceNode => {
   ensureChannelNodes(channelId);
 
   const source = audioCtx.createBufferSource();
   const voiceGainNode = audioCtx.createGain();
-  source.buffer = buffer;
+  source.buffer = buffer ?? null;
   voiceGainNode.gain.setValueAtTime(1, audioCtx.currentTime);
 
   if (detuneSupported) {
@@ -162,12 +191,12 @@ export const playNote = (noteTime, buffer, channelId, notePitch = 0) => {
     activeVoices.delete(voice);
   };
 
-  source.start(noteTime);
+  source.start(noteTime ?? undefined);
   activeVoices.add(voice);
   return source;
 };
 
-export const stopAllNotes = () => {
+export const stopAllNotes = (): void => {
   const stopTime = audioCtx.currentTime + STOP_FADE_OUT_SECONDS;
 
   activeVoices.forEach(({ source, gainNode }) => {

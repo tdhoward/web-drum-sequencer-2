@@ -1,7 +1,8 @@
 import styled from 'styled-components';
 import * as ss from 'styled-system';
+import type { FormProps } from './systemProps';
 
-export const Box = styled.div`
+export const Form = styled.form<FormProps>`
   ${ss.color}
   ${ss.space}
   ${ss.borders}
@@ -21,10 +22,5 @@ export const Box = styled.div`
   ${ss.bottom}
   ${ss.right}
   ${ss.zIndex}
-  ${ss.boxShadow}
-  ${ss.maxWidth}
-  ${ss.minWidth}
-  ${ss.maxHeight}
-  ${ss.minHeight}
   box-sizing: border-box;
 `;

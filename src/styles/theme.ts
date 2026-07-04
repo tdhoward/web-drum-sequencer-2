@@ -1,4 +1,36 @@
-const classicDarkPalette = {
+export type ThemeColorValue = string | number;
+
+export type ThemeColors = Record<string, ThemeColorValue> & {
+  surfaceApp: string;
+  surfaceControl: string;
+  borderDefault: string;
+  textPrimary: string;
+};
+
+export type ThemeKnob = {
+  skin: string;
+  sprites: number;
+};
+
+export type AppTheme = {
+  id: string;
+  name: string;
+  knob: ThemeKnob;
+  fontSizes: number[];
+  space: number[];
+  breakpoints: string[];
+  colors: ThemeColors;
+  fancyButtons: Record<string, Record<string, unknown>>;
+};
+
+type CreateThemeArgs = {
+  id: string;
+  name: string;
+  colors: ThemeColors;
+  knob?: ThemeKnob;
+};
+
+const classicDarkPalette: Record<string, string> = {
   nearWhite: '#F2F2F8',
   lightGray: '#C0C3C7',
   gray: '#909599',
@@ -32,7 +64,7 @@ const createTheme = ({
     skin: 'default',
     sprites: 50,
   },
-}) => ({
+}: CreateThemeArgs): AppTheme => ({
   id,
   name,
   knob,
@@ -75,7 +107,7 @@ const createTheme = ({
   },
 });
 
-const classicDarkColors = {
+const classicDarkColors: ThemeColors = {
   ...classicDarkPalette,
 
   surfaceApp: classicDarkPalette.nearBlack,
@@ -141,7 +173,7 @@ const classicDarkColors = {
   waveformDurationText: classicDarkPalette.nearWhite,
 };
 
-const highContrastDarkPalette = {
+const highContrastDarkPalette: Record<string, string> = {
   ...classicDarkPalette,
   nearWhite: '#FFFFFF',
   lightGray: '#D8DEE9',
@@ -163,7 +195,7 @@ const highContrastDarkPalette = {
   darkBlue: '#1F6FB8',
 };
 
-const highContrastDarkColors = {
+const highContrastDarkColors: ThemeColors = {
   ...highContrastDarkPalette,
 
   surfaceApp: highContrastDarkPalette.nearBlack,
@@ -229,7 +261,7 @@ const highContrastDarkColors = {
   waveformDurationText: highContrastDarkPalette.nearWhite,
 };
 
-const lightStudioPalette = {
+const lightStudioPalette: Record<string, string> = {
   nearWhite: '#17202A',
   lightGray: '#52606D',
   gray: '#6F7D8C',
@@ -255,7 +287,7 @@ const lightStudioPalette = {
   darkBlue: '#174D81',
 };
 
-const lightStudioColors = {
+const lightStudioColors: ThemeColors = {
   ...lightStudioPalette,
 
   surfaceApp: lightStudioPalette.nearBlack,
@@ -351,7 +383,7 @@ export const lightStudioTheme = createTheme({
 
 export const DEFAULT_THEME_ID = classicDarkTheme.id;
 
-export const colorThemes = {
+export const colorThemes: Record<string, AppTheme> = {
   [classicDarkTheme.id]: classicDarkTheme,
   [highContrastDarkTheme.id]: highContrastDarkTheme,
   [lightStudioTheme.id]: lightStudioTheme,

@@ -1,13 +1,18 @@
 import styled from 'styled-components';
 import * as ss from 'styled-system';
+import type { ButtonProps } from './systemProps';
 
-const Button = styled.button.attrs(({
+type ButtonDefaultProps = Pick<ButtonProps, (
+  'border' | 'fontWeight' | 'borderRadius' | 'variant' | 'width'
+)>;
+
+const Button = styled.button.attrs<ButtonDefaultProps>(({
   border = 'none',
   fontWeight = 'bold',
   borderRadius = '0.25rem',
   variant = 'primary',
   width = 5,
-}) => ({ border, fontWeight, borderRadius, variant, width }))`
+}) => ({ border, fontWeight, borderRadius, variant, width }))<ButtonProps>`
   ${ss.color}
   ${ss.width}
   ${ss.height}

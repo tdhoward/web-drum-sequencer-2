@@ -10,3 +10,16 @@ export * from './Form';
 export * from './HoverLink';
 export * from './Label';
 export * from './ControlLabel';
+export type {
+  BoxProps,
+  ButtonProps,
+  FormProps,
+  HeadingProps,
+  HoverButtonProps,
+  HoverLinkProps,
+  ImageProps,
+  LabelProps,
+  LineProps,
+  TextInputProps,
+  TextProps,
+} from './systemProps';

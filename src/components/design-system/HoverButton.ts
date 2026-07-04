@@ -1,9 +1,14 @@
 import styled from 'styled-components';
 import { Button } from './Button';
+import type { AppTheme, ThemeColorValue } from '../../styles/theme';
+import type { HoverButtonProps } from './systemProps';
 
-const getColor = (theme, color) => theme.colors[color] || color;
+const getColor = (
+  theme: AppTheme,
+  color: string | undefined,
+): ThemeColorValue | undefined => (color ? theme.colors[color] || color : undefined);
 
-export const HoverButton = styled(Button)`
+export const HoverButton = styled(Button)<HoverButtonProps>`
   transition: all ${({ transitionSpeed }) => transitionSpeed}
 
   &:hover {

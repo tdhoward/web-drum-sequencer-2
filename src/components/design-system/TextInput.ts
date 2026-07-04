@@ -1,10 +1,13 @@
 import styled from 'styled-components';
 import * as ss from 'styled-system';
+import type { TextInputProps } from './systemProps';
 
-const TextInput = styled.input.attrs(({
+type TextInputDefaultProps = Pick<TextInputProps, 'm' | 'p'>;
+
+const TextInput = styled.input.attrs<TextInputDefaultProps>(({
   m = 0,
   p = 0,
-}) => ({ m, p }))`
+}) => ({ m, p }))<TextInputProps>`
   ${ss.color}
   ${ss.fontWeight}
   ${ss.fontSize}
