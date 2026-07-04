@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components';
-import PropTypes from 'prop-types';
 import { FancyButton } from '../FancyButton.component';
 import { Text } from '../design-system';
 
@@ -13,7 +12,17 @@ const StyledPlayButton = styled(FancyButton)`
   justify-content: center;
 `;
 
-export const PlayButtonComponent = ({ startPlaybackAndResume, stopPlayback, playing }) => (playing
+type PlayButtonComponentProps = {
+  startPlaybackAndResume: () => void;
+  stopPlayback: () => void;
+  playing: boolean;
+};
+
+export const PlayButtonComponent = ({
+  startPlaybackAndResume,
+  stopPlayback,
+  playing,
+}: PlayButtonComponentProps) => (playing
   ? (
     <StyledPlayButton
       onClick={() => stopPlayback()}
@@ -47,9 +56,3 @@ export const PlayButtonComponent = ({ startPlaybackAndResume, stopPlayback, play
       </svg>
     </StyledPlayButton>
   ));
-
-PlayButtonComponent.propTypes = {
-  startPlaybackAndResume: PropTypes.func.isRequired,
-  stopPlayback: PropTypes.func.isRequired,
-  playing: PropTypes.bool.isRequired,
-};

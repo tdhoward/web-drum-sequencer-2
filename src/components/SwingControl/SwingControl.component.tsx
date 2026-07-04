@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components';
-import PropTypes from 'prop-types';
 import { Knob } from '../Knob.component';
 import { Box, Text } from '../design-system';
 
@@ -8,10 +7,15 @@ const LabelText = styled(Text)`
   transform: translateY(-0.3em);
 `;
 
+type SwingControlComponentProps = {
+  onSetSwing: (event: Event) => void;
+  swing: number;
+};
+
 export const SwingControlComponent = ({
   onSetSwing,
   swing,
-}) => (
+}: SwingControlComponentProps) => (
   <Box alignItems="center" ml={2} display="flex" flexDirection="column">
     <LabelText
       color="textMuted"
@@ -27,8 +31,3 @@ export const SwingControlComponent = ({
     <Knob size={35} onChange={onSetSwing} value={swing} min={0} max={1} step="0.1" />
   </Box>
 );
-
-SwingControlComponent.propTypes = {
-  onSetSwing: PropTypes.func.isRequired,
-  swing: PropTypes.number.isRequired,
-};

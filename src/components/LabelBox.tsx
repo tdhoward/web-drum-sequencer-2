@@ -1,9 +1,18 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import styled from 'styled-components';
-import PropTypes from 'prop-types';
-import { Box, Text } from './design-system';
+import { Box, Text, type BoxProps } from './design-system';
 
-const HoverBox = styled(Box)`
+type HoverBoxProps = BoxProps & {
+  hoverEffect: boolean;
+};
+
+type LabelBoxProps = {
+  label: string;
+  children: ReactNode;
+  hoverEffect?: boolean;
+};
+
+const HoverBox = styled(Box)<HoverBoxProps>`
   transition: border-color 0.2s;
 
   &:hover {
@@ -14,7 +23,11 @@ const HoverBox = styled(Box)`
   }
 `;
 
-export const LabelBox = ({ label, children, hoverEffect = false }) => (
+export const LabelBox = ({
+  label,
+  children,
+  hoverEffect = false,
+}: LabelBoxProps) => (
   <HoverBox
     display="flex"
     border="2px solid"
@@ -43,10 +56,3 @@ export const LabelBox = ({ label, children, hoverEffect = false }) => (
     {children}
   </HoverBox>
 );
-
-LabelBox.propTypes = {
-  label: PropTypes.string.isRequired,
-  children: PropTypes.node.isRequired,
-  hoverEffect: PropTypes.bool,
-};
-

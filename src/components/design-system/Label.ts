@@ -12,6 +12,7 @@ const Label = styled.label.attrs<LabelDefaultProps>(({
   ${ss.fontWeight}
   ${ss.fontSize}
   ${ss.space}
+  ${ss.borderRadius}
   ${ss.position}
   ${ss.left}
   ${ss.top}

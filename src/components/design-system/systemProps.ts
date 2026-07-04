@@ -130,6 +130,7 @@ export type LabelProps =
   & FontWeightProps
   & FontSizeProps
   & SpaceProps
+  & BorderRadiusProps
   & PositionProps
   & LeftProps
   & TopProps
@@ -176,4 +177,6 @@ export type TextInputProps =
   & ZIndexProps
   & WidthProps
   & HeightProps
-  & BoxShadowProps;
+  & BoxShadowProps
+  & FlexProps
+  & LineHeightProps;

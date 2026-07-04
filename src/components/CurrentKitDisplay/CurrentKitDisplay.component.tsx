@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import styled from 'styled-components';
 import { Box, Text } from '../design-system';
 
@@ -11,7 +10,13 @@ const CurrentKitFrame = styled(Box)`
   overflow: hidden;
 `;
 
-export const CurrentKitDisplayComponent = ({ kitName }) => (
+type CurrentKitDisplayComponentProps = {
+  kitName: string;
+};
+
+export const CurrentKitDisplayComponent = ({
+  kitName,
+}: CurrentKitDisplayComponentProps) => (
   <Box height="100%" minWidth="11rem" position="relative">
     <Text
       position="absolute"
@@ -36,7 +41,3 @@ export const CurrentKitDisplayComponent = ({ kitName }) => (
     </CurrentKitFrame>
   </Box>
 );
-
-CurrentKitDisplayComponent.propTypes = {
-  kitName: PropTypes.string.isRequired,
-};

@@ -1,8 +1,12 @@
-import React from 'react';
-import PropTypes from 'prop-types';
+import React, { type ReactNode } from 'react';
 import { Box } from './design-system';
 
-export const Modal = ({ children, show }) => (
+type ModalProps = {
+  children: ReactNode;
+  show: boolean;
+};
+
+export const Modal = ({ children, show }: ModalProps) => (
   <Box
     position="fixed"
     left={0}
@@ -18,8 +22,3 @@ export const Modal = ({ children, show }) => (
     {children}
   </Box>
 );
-
-Modal.propTypes = {
-  children: PropTypes.node.isRequired,
-  show: PropTypes.bool.isRequired,
-};

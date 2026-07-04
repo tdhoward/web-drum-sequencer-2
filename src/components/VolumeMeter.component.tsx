@@ -8,14 +8,14 @@ const DECAY = 0.95;
 let prevVal = 0;
 
 export const VolumeMeter = () => {
-  const ref = useRef();
+  const ref = useRef<HTMLDivElement | null>(null);
 
   function updateVolumeMeter() {
     if (ref.current) {
       const currentVolume = getVolume();
 
       const isIncreasing = currentVolume > prevVal;
-      let meteredVolume;
+      let meteredVolume: number;
       if (isIncreasing) {
         meteredVolume = currentVolume;
       } else {

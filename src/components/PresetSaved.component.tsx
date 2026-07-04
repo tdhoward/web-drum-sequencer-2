@@ -1,12 +1,15 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import {
   Box,
   Text,
   HoverButton,
 } from './design-system';
 
-export const PresetSaved = ({ onDismiss }) => (
+type DismissibleMessageProps = {
+  onDismiss: () => void;
+};
+
+export const PresetSaved = ({ onDismiss }: DismissibleMessageProps) => (
   <Box>
     <Text
       fontWeight="400"
@@ -31,7 +34,3 @@ export const PresetSaved = ({ onDismiss }) => (
     </Box>
   </Box>
 );
-
-PresetSaved.propTypes = {
-  onDismiss: PropTypes.func.isRequired,
-};

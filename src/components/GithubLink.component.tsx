@@ -10,7 +10,8 @@ import octocat from '../assets/images/github.svg';
 export const GithubLink = () => (
   <HoverLink
     href="https://www.github.com/stufreen/web-drum-sequencer"
-    description="Source code on Github"
+    aria-label="Source code on Github"
+    title="Source code on Github"
     opacity={0.3}
     hoverOpacity={0.8}
     transitionSpeed="0.1s"

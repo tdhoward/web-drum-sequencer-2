@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components';
-import PropTypes from 'prop-types';
 import {
   Box,
   Label,
@@ -23,7 +22,12 @@ const BPMButton = styled(Button)`
   }
 `;
 
-export const BPMInputComponent = ({ bpm, setBPM }) => (
+type BPMInputComponentProps = {
+  bpm: number;
+  setBPM: (bpm: number) => void;
+};
+
+export const BPMInputComponent = ({ bpm, setBPM }: BPMInputComponentProps) => (
   <ShinyBox
     display="flex"
     border="2px solid"
@@ -105,8 +109,3 @@ export const BPMInputComponent = ({ bpm, setBPM }) => (
     </Box>
   </ShinyBox>
 );
-
-BPMInputComponent.propTypes = {
-  bpm: PropTypes.number.isRequired,
-  setBPM: PropTypes.func.isRequired,
-};

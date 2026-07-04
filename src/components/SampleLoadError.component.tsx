@@ -1,12 +1,15 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import {
   Box,
   Text,
   HoverButton,
 } from './design-system';
 
-export const PresetDeleted = ({ onDismiss }) => (
+type DismissibleMessageProps = {
+  onDismiss: () => void;
+};
+
+export const SampleLoadError = ({ onDismiss }: DismissibleMessageProps) => (
   <Box>
     <Text
       fontWeight="400"
@@ -14,7 +17,7 @@ export const PresetDeleted = ({ onDismiss }) => (
       fontSize={2}
       mb={3}
     >
-      User preset deleted.
+      There was an error loading that sample.
     </Text>
     <Box display="flex" justifyContent="flex-end">
       <HoverButton
@@ -31,7 +34,3 @@ export const PresetDeleted = ({ onDismiss }) => (
     </Box>
   </Box>
 );
-
-PresetDeleted.propTypes = {
-  onDismiss: PropTypes.func.isRequired,
-};

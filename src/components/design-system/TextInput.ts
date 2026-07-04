@@ -17,6 +17,8 @@ const TextInput = styled.input.attrs<TextInputDefaultProps>(({
   ${ss.width}
   ${ss.height}
   ${ss.boxShadow}
+  ${ss.flex}
+  ${ss.lineHeight}
   display: block;
   border: none;
 `;

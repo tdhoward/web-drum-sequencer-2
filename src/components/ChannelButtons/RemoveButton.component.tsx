@@ -1,8 +1,11 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { HoverButton } from '../design-system';
 
-export const RemoveButton = ({ onClick }) => (
+type RemoveButtonProps = {
+  onClick: () => void;
+};
+
+export const RemoveButton = ({ onClick }: RemoveButtonProps) => (
   <HoverButton
     bg="transparent"
     hoverBg="surfacePanelRaised"
@@ -26,7 +29,3 @@ export const RemoveButton = ({ onClick }) => (
     </svg>
   </HoverButton>
 );
-
-RemoveButton.propTypes = {
-  onClick: PropTypes.func.isRequired,
-};
