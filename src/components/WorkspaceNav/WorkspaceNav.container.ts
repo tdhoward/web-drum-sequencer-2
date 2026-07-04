@@ -4,8 +4,9 @@ import {
   selectedWorkspaceSelector,
   setSelectedWorkspace,
 } from '../../common/workspace';
+import type { RootState } from '../../reducer';
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state: RootState) => ({
   selectedWorkspace: selectedWorkspaceSelector(state),
 });
 

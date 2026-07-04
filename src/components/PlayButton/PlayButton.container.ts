@@ -1,13 +1,18 @@
 import { connect } from 'react-redux';
-import { compose } from 'recompose';
 import { PlayButtonComponent } from './PlayButton.component';
 import { playButtonSelectors } from './PlayButton.selectors';
 import { startPlaybackAndResume, stopPlayback } from '../../common';
 import { stopAllNotes } from '../../services/audioRouter';
 import { clearScheduledNotes } from '../../services/audioScheduler';
+import type { AppDispatch } from '../../store';
+import type { RootState } from '../../reducer';
 
-const mapDispatchToProps = dispatch => ({
-  startPlaybackAndResume: () => dispatch(startPlaybackAndResume()),
+const mapStateToProps = (state: RootState) => playButtonSelectors(state);
+
+const mapDispatchToProps = (dispatch: AppDispatch) => ({
+  startPlaybackAndResume: () => {
+    dispatch(startPlaybackAndResume());
+  },
   stopPlayback: () => {
     stopAllNotes();
     clearScheduledNotes();
@@ -15,6 +20,7 @@ const mapDispatchToProps = dispatch => ({
   },
 });
 
-export const PlayButton = compose(
-  connect(playButtonSelectors, mapDispatchToProps),
+export const PlayButton = connect(
+  mapStateToProps,
+  mapDispatchToProps,
 )(PlayButtonComponent);

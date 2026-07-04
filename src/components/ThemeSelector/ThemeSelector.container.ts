@@ -1,8 +1,9 @@
 import { connect } from 'react-redux';
 import { selectedThemeIdSelector, setSelectedThemeId } from '../../common';
 import { ThemeSelectorComponent } from './ThemeSelector.component';
+import type { RootState } from '../../reducer';
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state: RootState) => ({
   selectedThemeId: selectedThemeIdSelector(state),
 });
 

@@ -1,8 +1,9 @@
 import { connect } from 'react-redux';
 import { selectedWorkspaceSelector } from '../../common/workspace';
 import { WorkspacePanelComponent } from './WorkspacePanel.component';
+import type { RootState } from '../../reducer';
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state: RootState) => ({
   selectedWorkspace: selectedWorkspaceSelector(state),
 });
 
