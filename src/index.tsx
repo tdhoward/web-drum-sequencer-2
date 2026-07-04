@@ -19,19 +19,35 @@ const getChannels = () => channelsSelector(
   store.getState() as unknown as Parameters<typeof channelsSelector>[0],
 );
 
-const loadChannelSample = (channel: LegacyChannel): void => {
-  if (!channel.sampleLoaded && channel.sample) {
-    loadSampleStatefully(dispatchLegacyAction, {
-      ...channel,
-      sample: channel.sample,
-    });
+type LoadChannelSampleOptions = {
+  force?: boolean;
+};
+
+type LegacyChannelWithSample = LegacyChannel & {
+  sample: string;
+};
+
+const hasSample = (channel: LegacyChannel): channel is LegacyChannelWithSample => (
+  typeof channel.sample === 'string' && channel.sample.length > 0
+);
+
+const loadChannelSample = (
+  channel: LegacyChannel,
+  { force = false }: LoadChannelSampleOptions = {},
+): void => {
+  if (!hasSample(channel)) {
+    return;
+  }
+
+  if (force || !channel.sampleLoaded) {
+    loadSampleStatefully(dispatchLegacyAction, channel);
   }
 };
 
 window.addEventListener('online', () => {
   const channels = getChannels();
 
-  channels.forEach(loadChannelSample);
+  channels.forEach(channel => loadChannelSample(channel));
 });
 
 const rootElement = document.getElementById('root');
@@ -60,7 +76,8 @@ initializeDB()
   .then(() => {
     const channels = getChannels();
 
-    channels.forEach(loadChannelSample);
+    // Redux can persist sampleLoaded=true, but sampleStore is memory-only after a refresh.
+    channels.forEach(channel => loadChannelSample(channel, { force: true }));
   });
 
 if ('serviceWorker' in navigator) {
