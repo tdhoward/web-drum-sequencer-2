@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import * as animol from 'animol';
 import { FLASH_MESSAGES } from '../../common';
 import {
@@ -10,7 +9,19 @@ import { SampleLoadError } from '../SampleLoadError.component';
 import { PresetSaved } from '../PresetSaved.component';
 import { PresetDeleted } from '../PresetDeleted.component';
 
-const getMessageComponent = (messageKey) => {
+type FlashMessageComponentProps = {
+  messageKey?: string | null;
+  onDismiss: () => void;
+  flashMessageVisible?: boolean;
+};
+
+type FlashMessageContentProps = {
+  onDismiss: () => void;
+};
+
+type FlashMessageContent = React.ComponentType<FlashMessageContentProps>;
+
+const getMessageComponent = (messageKey: string | null | undefined): FlashMessageContent | undefined => {
   switch (messageKey) {
     case FLASH_MESSAGES.SAMPLE_LOAD_ERROR:
       return SampleLoadError;
@@ -23,13 +34,19 @@ const getMessageComponent = (messageKey) => {
   }
 };
 
-export class FlashMessageComponent extends React.Component {
+export class FlashMessageComponent extends React.Component<FlashMessageComponentProps> {
+  dismissTimer: ReturnType<typeof setTimeout> | null = null;
+
+  flashBox: HTMLDivElement | null = null;
+
+  flashMessage: HTMLDivElement | null = null;
+
   componentDidMount() {
     this.animateBox();
     this.updateDismissTimer();
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps: FlashMessageComponentProps) {
     this.animateBox();
     this.updateDismissTimer(prevProps);
   }
@@ -45,7 +62,7 @@ export class FlashMessageComponent extends React.Component {
     }
   }
 
-  updateDismissTimer(prevProps = {}) {
+  updateDismissTimer(prevProps: Partial<FlashMessageComponentProps> = {}) {
     const { flashMessageVisible, messageKey, onDismiss } = this.props;
     const flashMessageChanged = prevProps.flashMessageVisible !== flashMessageVisible
       || prevProps.messageKey !== messageKey
@@ -64,6 +81,10 @@ export class FlashMessageComponent extends React.Component {
 
   animateBox() {
     const { flashMessageVisible, messageKey } = this.props;
+    if (!this.flashBox) {
+      return;
+    }
+
     if (messageKey && flashMessageVisible) {
       this.flashBox.style.display = 'block';
       animol.css(
@@ -82,7 +103,9 @@ export class FlashMessageComponent extends React.Component {
         animol.Easing.easeInCubic,
       );
       animation.promise.then(() => {
-        this.flashBox.style.display = 'none';
+        if (this.flashBox) {
+          this.flashBox.style.display = 'none';
+        }
       });
     }
   }
@@ -137,14 +160,3 @@ export class FlashMessageComponent extends React.Component {
       : null;
   }
 }
-
-FlashMessageComponent.propTypes = {
-  messageKey: PropTypes.string,
-  onDismiss: PropTypes.func.isRequired,
-  flashMessageVisible: PropTypes.bool,
-};
-
-FlashMessageComponent.defaultProps = {
-  messageKey: null,
-  flashMessageVisible: false,
-};

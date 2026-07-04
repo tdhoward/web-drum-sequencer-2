@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components';
-import PropTypes from 'prop-types';
 import { Sortable } from '@shopify/draggable';
 import { detuneSupported } from '../../services/featureChecks';
 import {
@@ -23,8 +22,42 @@ import {
   getPercussionTypeLabel,
 } from '../../common/percussion';
 import construction from '../../assets/images/construction-light.svg';
+import type { LegacyChannel } from '../../common';
 
 const kitChannelGridColumns = 'minmax(8rem, 11rem) 1.2rem 3rem 15rem minmax(10rem, 1fr) repeat(4, 5.125rem) 2rem';
+
+type KitChannelListChannel = LegacyChannel & {
+  gain?: number;
+  muted?: boolean;
+  pan?: number;
+  pitchCoarse?: number;
+  reverb?: number;
+  sampleLoaded?: boolean;
+  solo?: boolean;
+};
+
+type KitChannelListComponentProps = {
+  channels: KitChannelListChannel[];
+  onPressHitButton: (channel: KitChannelListChannel) => void;
+  onPressRemove: (channel: KitChannelListChannel) => void;
+  onUpdateChannelOrder: (oldIndex: number, newIndex: number) => void;
+  onSetGain: (channel: KitChannelListChannel, event: Event) => void;
+  onSetChannelName: (channel: KitChannelListChannel, name: string) => void;
+  onSetPercussionType: (channel: KitChannelListChannel, percussionType: string) => void;
+  onSetPan: (channel: KitChannelListChannel, event: Event) => void;
+  onSetChannelPitchCoarse: (channel: KitChannelListChannel, event: Event) => void;
+  onSetReverb: (channel: KitChannelListChannel, event: Event) => void;
+};
+
+type KitChannelListComponentState = {
+  editingChannelId: string | null;
+  channelNameDraft: string;
+  percussionMenuChannelId: string | null;
+};
+
+type PercussionTypeOptionProps = {
+  $selected: boolean;
+};
 
 const KitChannelListBox = styled.div`
   display: flex;
@@ -166,7 +199,7 @@ const PercussionTypeMenu = styled.div`
   z-index: 20;
 `;
 
-const PercussionTypeOption = styled.button`
+const PercussionTypeOption = styled.button<PercussionTypeOptionProps>`
   align-items: center;
   background: ${({ $selected, theme }) => ($selected ? theme.colors.borderSubtle : 'transparent')};
   border: 0;
@@ -194,7 +227,7 @@ const PercussionTypeOption = styled.button`
   }
 `;
 
-const PercussionTypeOptionAbbreviation = styled.span`
+const PercussionTypeOptionAbbreviation = styled.span<PercussionTypeOptionProps>`
   color: ${({ $selected, theme }) => ($selected ? theme.colors.accentPrimary : theme.colors.textMuted)};
   font-size: 0.68rem;
   font-weight: 600;
@@ -217,9 +250,9 @@ const MoveImage = styled(Image)`
   }
 `;
 
-const getKitChannelId = channel => channel.kitChannelId || channel.id;
+const getKitChannelId = (channel: KitChannelListChannel): string => channel.kitChannelId || channel.id;
 
-const getSampleSelectChannel = channel => ({
+const getSampleSelectChannel = (channel: KitChannelListChannel): KitChannelListChannel => ({
   ...channel,
   id: getKitChannelId(channel),
 });
@@ -241,8 +274,17 @@ export const KitChannelHeader = () => (
   </KitChannelHeaderBar>
 );
 
-export class KitChannelListComponent extends React.Component {
-  constructor(props) {
+export class KitChannelListComponent extends React.Component<
+  KitChannelListComponentProps,
+  KitChannelListComponentState
+> {
+  channelContainer: HTMLDivElement | null = null;
+
+  nameInput: HTMLInputElement | null = null;
+
+  sortable: Sortable | null = null;
+
+  constructor(props: KitChannelListComponentProps) {
     super(props);
     this.state = {
       editingChannelId: null,
@@ -261,6 +303,10 @@ export class KitChannelListComponent extends React.Component {
   }
 
   componentDidMount() {
+    if (!this.channelContainer) {
+      return;
+    }
+
     this.sortable = new Sortable([this.channelContainer], {
       draggable: '.wds-draggable',
       handle: '.wds-channel-handle',
@@ -278,7 +324,10 @@ export class KitChannelListComponent extends React.Component {
     document.addEventListener('keydown', this.handleDocumentKeyDown);
   }
 
-  componentDidUpdate(prevProps, prevState) {
+  componentDidUpdate(
+    _prevProps: KitChannelListComponentProps,
+    prevState: KitChannelListComponentState,
+  ) {
     if (this.state.editingChannelId !== prevState.editingChannelId && this.nameInput) {
       this.nameInput.focus();
       this.nameInput.select();
@@ -294,7 +343,7 @@ export class KitChannelListComponent extends React.Component {
     document.removeEventListener('keydown', this.handleDocumentKeyDown);
   }
 
-  startEditingChannelName(channel) {
+  startEditingChannelName(channel: KitChannelListChannel) {
     this.setState({
       editingChannelId: getKitChannelId(channel),
       channelNameDraft: channel.name || channel.id,
@@ -302,13 +351,13 @@ export class KitChannelListComponent extends React.Component {
     });
   }
 
-  setChannelNameDraft(event) {
+  setChannelNameDraft(event: React.ChangeEvent<HTMLInputElement>) {
     this.setState({
       channelNameDraft: event.target.value,
     });
   }
 
-  commitChannelName(channel) {
+  commitChannelName(channel: KitChannelListChannel) {
     const { onSetChannelName } = this.props;
     const channelId = getKitChannelId(channel);
     const nextName = this.state.channelNameDraft.trim();
@@ -333,7 +382,10 @@ export class KitChannelListComponent extends React.Component {
     });
   }
 
-  handleChannelNameKeyDown(channel, event) {
+  handleChannelNameKeyDown(
+    channel: KitChannelListChannel,
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) {
     if (event.key === 'Enter') {
       this.commitChannelName(channel);
     }
@@ -343,9 +395,10 @@ export class KitChannelListComponent extends React.Component {
     }
   }
 
-  handleDocumentMouseDown(event) {
-    const isPercussionMenuClick = event.target.closest?.('.wds-percussion-type-menu');
-    const isPercussionButtonClick = event.target.closest?.('.wds-percussion-type-button');
+  handleDocumentMouseDown(event: MouseEvent) {
+    const target = event.target instanceof Element ? event.target : null;
+    const isPercussionMenuClick = target?.closest('.wds-percussion-type-menu');
+    const isPercussionButtonClick = target?.closest('.wds-percussion-type-button');
 
     if (!isPercussionMenuClick && !isPercussionButtonClick) {
       this.setState({
@@ -354,7 +407,7 @@ export class KitChannelListComponent extends React.Component {
     }
   }
 
-  handleDocumentKeyDown(event) {
+  handleDocumentKeyDown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       this.setState({
         percussionMenuChannelId: null,
@@ -362,7 +415,7 @@ export class KitChannelListComponent extends React.Component {
     }
   }
 
-  togglePercussionTypeMenu(channel) {
+  togglePercussionTypeMenu(channel: KitChannelListChannel) {
     const channelId = getKitChannelId(channel);
     this.setState(prevState => ({
       percussionMenuChannelId: prevState.percussionMenuChannelId === channelId
@@ -371,7 +424,7 @@ export class KitChannelListComponent extends React.Component {
     }));
   }
 
-  setPercussionType(channel, percussionType) {
+  setPercussionType(channel: KitChannelListChannel, percussionType: string) {
     const { onSetPercussionType } = this.props;
 
     onSetPercussionType(channel, percussionType);
@@ -478,73 +531,73 @@ export class KitChannelListComponent extends React.Component {
                   )}
                 </ChannelNameGroup>
               </Box>
-            <Box alignItems="center" display="flex" height="100%" justifyContent="center">
-              <MuteSolo channel={getKitEditChannel(channel)} />
-            </Box>
-            <Box alignItems="center" display="flex" justifyContent="center">
-              <HitButton
-                channel={channel}
-                onMouseDown={() => onPressHitButton(channel)}
-              />
-            </Box>
-            <Box minWidth="0">
-              <SampleSelect channel={getSampleSelectChannel(channel)} showLabel={false} />
-            </Box>
-            <WaveformCell>
-              <SampleWaveform sampleUrl={channel.sample} />
-            </WaveformCell>
-            {detuneSupported ? (
+              <Box alignItems="center" display="flex" height="100%" justifyContent="center">
+                <MuteSolo channel={getKitEditChannel(channel)} />
+              </Box>
+              <Box alignItems="center" display="flex" justifyContent="center">
+                <HitButton
+                  channel={channel}
+                  onMouseDown={() => onPressHitButton(channel)}
+                />
+              </Box>
+              <Box minWidth="0">
+                <SampleSelect channel={getSampleSelectChannel(channel)} showLabel={false} />
+              </Box>
+              <WaveformCell>
+                <SampleWaveform sampleUrl={channel.sample} />
+              </WaveformCell>
+              {detuneSupported ? (
+                <KnobCell>
+                  <InfoKnob
+                    label="PITCH"
+                    minLabel="-24"
+                    maxLabel="24"
+                    min="-24"
+                    max="24"
+                    value={channel.pitchCoarse || 0}
+                    onChange={event => onSetChannelPitchCoarse(channel, event)}
+                    showLabel={false}
+                  />
+                </KnobCell>
+              ) : (
+                <KnobCell />
+              )}
               <KnobCell>
                 <InfoKnob
-                  label="PITCH"
-                  minLabel="-24"
-                  maxLabel="24"
-                  min="-24"
-                  max="24"
-                  value={channel.pitchCoarse || 0}
-                  onChange={event => onSetChannelPitchCoarse(channel, event)}
+                  label="PAN"
+                  minLabel="L"
+                  maxLabel="R"
+                  min="-1"
+                  max="1"
+                  step="0.1"
+                  value={channel.pan || 0}
+                  onChange={event => onSetPan(channel, event)}
                   showLabel={false}
                 />
               </KnobCell>
-            ) : (
-              <KnobCell />
-            )}
-            <KnobCell>
-              <InfoKnob
-                label="PAN"
-                minLabel="L"
-                maxLabel="R"
-                min="-1"
-                max="1"
-                step="0.1"
-                value={channel.pan || 0}
-                onChange={event => onSetPan(channel, event)}
-                showLabel={false}
-              />
-            </KnobCell>
-            <KnobCell>
-              <InfoKnob
-                label="VOL"
-                minLabel="0"
-                maxLabel="1"
-                value={(channel.gain || 0) * 100}
-                onChange={event => onSetGain(channel, event)}
-                showLabel={false}
-              />
-            </KnobCell>
-            <KnobCell>
-              <InfoKnob
-                label="REVERB"
-                minLabel="0"
-                maxLabel="1"
-                min="0"
-                max="1"
-                step="0.01"
-                value={channel.reverb || 0}
-                onChange={event => onSetReverb(channel, event)}
-                showLabel={false}
-              />
-            </KnobCell>
+              <KnobCell>
+                <InfoKnob
+                  label="VOL"
+                  minLabel="0"
+                  maxLabel="1"
+                  value={(channel.gain || 0) * 100}
+                  onChange={event => onSetGain(channel, event)}
+                  showLabel={false}
+                />
+              </KnobCell>
+              <KnobCell>
+                <InfoKnob
+                  label="REVERB"
+                  minLabel="0"
+                  maxLabel="1"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={channel.reverb || 0}
+                  onChange={event => onSetReverb(channel, event)}
+                  showLabel={false}
+                />
+              </KnobCell>
               <Box alignItems="center" display="flex" justifyContent="center">
                 <RemoveButton onClick={() => onPressRemove(channel)} />
               </Box>
@@ -556,26 +609,3 @@ export class KitChannelListComponent extends React.Component {
     );
   }
 }
-
-KitChannelListComponent.propTypes = {
-  channels: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    kitChannelId: PropTypes.string,
-    name: PropTypes.string,
-    percussionType: PropTypes.string,
-    sample: PropTypes.string.isRequired,
-    pitchCoarse: PropTypes.number,
-    reverb: PropTypes.number,
-    gain: PropTypes.number,
-    pan: PropTypes.number,
-  })).isRequired,
-  onPressHitButton: PropTypes.func.isRequired,
-  onPressRemove: PropTypes.func.isRequired,
-  onUpdateChannelOrder: PropTypes.func.isRequired,
-  onSetGain: PropTypes.func.isRequired,
-  onSetChannelName: PropTypes.func.isRequired,
-  onSetPercussionType: PropTypes.func.isRequired,
-  onSetPan: PropTypes.func.isRequired,
-  onSetChannelPitchCoarse: PropTypes.func.isRequired,
-  onSetReverb: PropTypes.func.isRequired,
-};

@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components';
-import PropTypes from 'prop-types';
 import { Toggles } from '../Toggles';
 import {
   Box,
@@ -10,10 +9,21 @@ import {
 import { HitButton } from '../ChannelButtons';
 import { MuteSolo } from '../MuteSolo';
 import construction from '../../assets/images/construction-light.svg';
+import type { LegacyChannel } from '../../common';
+import type { LegacyNotes } from '../../common/sequencerModel';
+
+type PatternChannelComponentProps = {
+  channel: LegacyChannel;
+  notes: LegacyNotes;
+  pattern: number;
+  onPressHitButton: () => void;
+  onTouchChannel: () => void;
+  selectedChannelId?: string;
+};
 
 const PatternChannelBox = styled(Box)`
   outline: none;
-  
+
   &.draggable-source--is-dragging {
     opacity: 0.2;
   }
@@ -42,8 +52,10 @@ export const PatternChannelComponent = ({
   onPressHitButton,
   onTouchChannel,
   selectedChannelId,
-}) => {
+}: PatternChannelComponentProps) => {
   const patternChannelName = channel.name || channel.kitChannelId || channel.id;
+  const patternNotes = notes[channel.id]?.[pattern] || [];
+
   return (
     <PatternChannelBox
       width="100%"
@@ -54,7 +66,6 @@ export const PatternChannelComponent = ({
       borderRadius={0}
       onMouseDown={onTouchChannel}
       bg={selectedChannelId === channel.id ? 'surfacePanelRaised' : 'transparent'}
-      outline="none"
       className="wds-draggable"
     >
       <Box
@@ -84,23 +95,9 @@ export const PatternChannelComponent = ({
         <HitButton channel={channel} onMouseDown={onPressHitButton} />
       </Box>
       <Toggles
-        notes={notes[channel.id][pattern]}
+        notes={patternNotes}
         channelId={channel.id}
       />
     </PatternChannelBox>
   );
-};
-
-PatternChannelComponent.propTypes = {
-  notes: PropTypes.objectOf(PropTypes.array).isRequired,
-  channel: PropTypes.shape({
-    sample: PropTypes.string,
-    id: PropTypes.string.isRequired,
-    kitChannelId: PropTypes.string,
-    name: PropTypes.string,
-  }).isRequired,
-  pattern: PropTypes.number.isRequired,
-  onPressHitButton: PropTypes.func.isRequired,
-  onTouchChannel: PropTypes.func.isRequired,
-  selectedChannelId: PropTypes.string.isRequired,
 };

@@ -8,13 +8,14 @@ import {
   erasePreset,
 } from '../../common';
 import presets from '../../presets';
+import type { UserPreset } from '../../common';
 import type { AppDispatch } from '../../store';
 import type { RootState } from '../../reducer';
 
 type AppAction = Parameters<AppDispatch>[0];
 type LoadPresetInput = Parameters<typeof loadPreset>[0];
 type PresetSelectOption = {
-  value: LoadPresetInput | string;
+  value: LoadPresetInput | UserPreset | string;
 };
 
 type PresetSelectorDispatchProps = {
@@ -68,7 +69,7 @@ const mergeProps = (
         break;
       default:
         if (typeof value !== 'string') {
-          dispatchProps.loadPreset(value);
+          dispatchProps.loadPreset(value as LoadPresetInput);
         }
         break;
     }

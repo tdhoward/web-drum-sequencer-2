@@ -1,6 +1,5 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import PropTypes from 'prop-types';
 import { ThemeProvider } from 'styled-components';
 import GlobalStyles from '../styles/globalStyles';
 import {
@@ -19,8 +18,16 @@ import {
 } from '.';
 import { selectedWorkspaceSelector, WORKSPACES } from '../common/workspace';
 import { selectedThemeSelector } from '../common/uiPreferences';
+import type { Workspace } from '../common/workspace';
+import type { AppTheme } from '../styles/theme';
+import type { RootState } from '../reducer';
 
-const AppComponent = ({ selectedTheme, selectedWorkspace }) => (
+type AppComponentProps = {
+  selectedTheme: AppTheme;
+  selectedWorkspace: Workspace;
+};
+
+const AppComponent = ({ selectedTheme, selectedWorkspace }: AppComponentProps) => (
   <ThemeProvider theme={selectedTheme}>
     <>
       <GlobalStyles />
@@ -69,13 +76,7 @@ const AppComponent = ({ selectedTheme, selectedWorkspace }) => (
   </ThemeProvider>
 );
 
-
-AppComponent.propTypes = {
-  selectedTheme: PropTypes.object.isRequired,
-  selectedWorkspace: PropTypes.oneOf(Object.values(WORKSPACES)).isRequired,
-};
-
-const mapStateToProps = state => ({
+const mapStateToProps = (state: RootState) => ({
   selectedTheme: selectedThemeSelector(state),
   selectedWorkspace: selectedWorkspaceSelector(state),
 });

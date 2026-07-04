@@ -9,18 +9,38 @@ import { channelsSelector, loadSampleStatefully } from './common';
 import { startAnimations } from './services/animations';
 import { initializePwaInstall } from './services/pwaInstall';
 import { initializeDB } from './services/database';
+import type { LegacyChannel } from './common';
+
+type LegacyDispatch = (action: unknown) => unknown;
+
+const dispatchLegacyAction = store.dispatch as LegacyDispatch;
+
+const getChannels = () => channelsSelector(
+  store.getState() as unknown as Parameters<typeof channelsSelector>[0],
+);
+
+const loadChannelSample = (channel: LegacyChannel): void => {
+  if (!channel.sampleLoaded && channel.sample) {
+    loadSampleStatefully(dispatchLegacyAction, {
+      ...channel,
+      sample: channel.sample,
+    });
+  }
+};
 
 window.addEventListener('online', () => {
-  const channels = channelsSelector(store.getState());
+  const channels = getChannels();
 
-  channels.forEach((channel) => {
-    if (!channel.sampleLoaded) {
-      loadSampleStatefully(store.dispatch, channel);
-    }
-  });
+  channels.forEach(loadChannelSample);
 });
 
-const root = createRoot(document.getElementById('root'));
+const rootElement = document.getElementById('root');
+
+if (!rootElement) {
+  throw new Error('Unable to mount app: #root element was not found.');
+}
+
+const root = createRoot(rootElement);
 
 root.render(
   <Provider store={store}>
@@ -38,11 +58,9 @@ initializePwaInstall(store);
 
 initializeDB()
   .then(() => {
-    const channels = channelsSelector(store.getState());
+    const channels = getChannels();
 
-    channels.forEach((channel) => {
-      loadSampleStatefully(store.dispatch, channel);
-    });
+    channels.forEach(loadChannelSample);
   });
 
 if ('serviceWorker' in navigator) {

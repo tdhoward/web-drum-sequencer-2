@@ -1,21 +1,38 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import Select from 'react-select';
+import type { SingleValue } from 'react-select';
 import { useTheme } from 'styled-components';
 import { createSelectStyles } from '../../styles/selectStyles';
 import { Box, Text } from '../design-system';
+import type { PatternPack } from '../../common/sequencerModel';
+
+type PatternPackOption = {
+  label: string;
+  value: PatternPack;
+};
+
+type PatternPackSelectorComponentProps = {
+  onSelectPatternPack: (option: PatternPackOption) => void;
+  patternPacks: PatternPack[];
+  selectedPatternPackId?: string;
+};
 
 export const PatternPackSelectorComponent = ({
   onSelectPatternPack,
   patternPacks,
   selectedPatternPackId,
-}) => {
+}: PatternPackSelectorComponentProps) => {
   const theme = useTheme();
-  const options = patternPacks.map(patternPack => ({
+  const options: PatternPackOption[] = patternPacks.map(patternPack => ({
     label: patternPack.name,
     value: patternPack,
   }));
   const selectedOption = options.find(option => option.value.id === selectedPatternPackId);
+  const handlePatternPackChange = (option: SingleValue<PatternPackOption>) => {
+    if (option) {
+      onSelectPatternPack(option);
+    }
+  };
 
   return (
     <Box height="3rem" minWidth="14rem" position="relative">
@@ -35,27 +52,14 @@ export const PatternPackSelectorComponent = ({
       >
         PATTERN PACK
       </Text>
-      <Select
+      <Select<PatternPackOption>
         options={options}
-        onChange={onSelectPatternPack}
+        onChange={handlePatternPackChange}
         value={selectedOption}
         aria-label="Select Pattern Pack"
         isSearchable={false}
-        styles={createSelectStyles(theme)}
+        styles={createSelectStyles<PatternPackOption>(theme)}
       />
     </Box>
   );
-};
-
-PatternPackSelectorComponent.propTypes = {
-  onSelectPatternPack: PropTypes.func.isRequired,
-  patternPacks: PropTypes.arrayOf(PropTypes.shape({
-    id: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-  })).isRequired,
-  selectedPatternPackId: PropTypes.string,
-};
-
-PatternPackSelectorComponent.defaultProps = {
-  selectedPatternPackId: undefined,
 };

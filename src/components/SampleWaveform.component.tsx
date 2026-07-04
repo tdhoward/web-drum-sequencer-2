@@ -1,8 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import PropTypes from 'prop-types';
 import styled, { useTheme } from 'styled-components';
 import { classicDarkTheme } from '../styles/theme';
 import { loadSampleBuffer } from '../services/sampleStore';
+
+type WaveformPeak = {
+  min: number;
+  max: number;
+};
+
+type SampleWaveformProps = {
+  sampleUrl?: string;
+};
+
+type CanvasSize = {
+  width: number;
+  height: number;
+};
 
 const WaveformFrame = styled.div`
   background: ${({ theme }) => theme.colors.surfaceControl};
@@ -35,7 +48,7 @@ const DurationLabel = styled.span`
   right: 0.2rem;
 `;
 
-const getMonoSampleValue = (channels, sampleIndex) => {
+const getMonoSampleValue = (channels: Float32Array[], sampleIndex: number): number => {
   if (channels.length === 1) {
     return channels[0][sampleIndex];
   }
@@ -47,11 +60,11 @@ const getMonoSampleValue = (channels, sampleIndex) => {
   return total / channels.length;
 };
 
-export const getWaveformPeaks = (audioBuffer, width) => {
+export const getWaveformPeaks = (audioBuffer: AudioBuffer, width: number): WaveformPeak[] => {
   const pixelCount = Math.max(1, Math.floor(width));
   const samplesPerPixel = audioBuffer.length / pixelCount;
-  const channels = [];
-  const peaks = [];
+  const channels: Float32Array[] = [];
+  const peaks: WaveformPeak[] = [];
 
   for (let channelIndex = 0; channelIndex < audioBuffer.numberOfChannels; channelIndex += 1) {
     channels.push(audioBuffer.getChannelData(channelIndex));
@@ -79,11 +92,11 @@ export const getWaveformPeaks = (audioBuffer, width) => {
 };
 
 export const drawWaveform = (
-  canvas,
-  audioBuffer,
-  color = classicDarkTheme.colors.waveform,
-  guideColor = classicDarkTheme.colors.waveformGuide,
-) => {
+  canvas: HTMLCanvasElement,
+  audioBuffer: AudioBuffer,
+  color = String(classicDarkTheme.colors.waveform),
+  guideColor = String(classicDarkTheme.colors.waveformGuide),
+): void => {
   const rect = canvas.getBoundingClientRect();
   const ratio = window.devicePixelRatio || 1;
   const width = Math.max(1, Math.floor(rect.width));
@@ -147,14 +160,14 @@ export const drawWaveform = (
   context.globalAlpha = 1;
 };
 
-const formatDuration = duration => `${duration.toFixed(2)} s`;
+const formatDuration = (duration: number): string => `${duration.toFixed(2)} s`;
 
-export const SampleWaveform = ({ sampleUrl }) => {
+export const SampleWaveform = ({ sampleUrl }: SampleWaveformProps) => {
   const theme = useTheme();
-  const canvasRef = useRef(null);
-  const frameRef = useRef(null);
-  const [audioBuffer, setAudioBuffer] = useState(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+  const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
 
   useEffect(() => {
     let isCancelled = false;
@@ -225,7 +238,12 @@ export const SampleWaveform = ({ sampleUrl }) => {
     }
 
     if (audioBuffer && canvasSize.width > 0 && canvasSize.height > 0) {
-      drawWaveform(canvas, audioBuffer, theme.colors.waveform, theme.colors.waveformGuide);
+      drawWaveform(
+        canvas,
+        audioBuffer,
+        String(theme.colors.waveform),
+        String(theme.colors.waveformGuide),
+      );
     }
   }, [audioBuffer, canvasSize.width, canvasSize.height, theme]);
 
@@ -239,8 +257,4 @@ export const SampleWaveform = ({ sampleUrl }) => {
       )}
     </WaveformFrame>
   );
-};
-
-SampleWaveform.propTypes = {
-  sampleUrl: PropTypes.string.isRequired,
 };

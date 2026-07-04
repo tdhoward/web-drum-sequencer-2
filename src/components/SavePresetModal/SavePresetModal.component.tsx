@@ -1,5 +1,4 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { ThemeContext } from 'styled-components';
 import {
   TextInput,
@@ -9,14 +8,28 @@ import {
   Form,
 } from '../design-system';
 import { Modal } from '../Modal.component';
+import type { AppTheme } from '../../styles/theme';
 
-export class SavePresetModalComponent extends React.Component {
+type SavePresetModalComponentProps = {
+  onClose: () => void;
+  presetPromptOpen: boolean;
+  onChangeNameField: React.ChangeEventHandler<HTMLInputElement>;
+  onSubmit: React.FormEventHandler<HTMLFormElement>;
+  nameField: string;
+  error?: string | null;
+};
+
+export class SavePresetModalComponent extends React.Component<SavePresetModalComponentProps> {
   static contextType = ThemeContext;
+
+  declare context: AppTheme;
+
+  nameInput: HTMLInputElement | null = null;
 
   componentDidUpdate() {
     const { presetPromptOpen } = this.props;
     if (presetPromptOpen) {
-      this.nameInput.focus();
+      this.nameInput?.focus();
     }
   }
 
@@ -46,7 +59,6 @@ export class SavePresetModalComponent extends React.Component {
               value={nameField}
               onChange={onChangeNameField}
               bg="surfaceInverse"
-              borderRadius={3}
               fontSize={3}
               p={3}
               width="15em"
@@ -79,7 +91,6 @@ export class SavePresetModalComponent extends React.Component {
             fontSize={3}
             alignItems="center"
             alignSelf="center"
-            transitionSpeed="0.2s"
             position="absolute"
             right={0}
             top={0}
@@ -95,16 +106,3 @@ export class SavePresetModalComponent extends React.Component {
     );
   }
 }
-
-SavePresetModalComponent.propTypes = {
-  onClose: PropTypes.func.isRequired,
-  presetPromptOpen: PropTypes.bool.isRequired,
-  onChangeNameField: PropTypes.func.isRequired,
-  onSubmit: PropTypes.func.isRequired,
-  nameField: PropTypes.string.isRequired,
-  error: PropTypes.string,
-};
-
-SavePresetModalComponent.defaultProps = {
-  error: null,
-};

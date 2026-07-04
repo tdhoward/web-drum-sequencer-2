@@ -1,13 +1,17 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { HoverButton } from './design-system';
 import { promptToInstall } from '../services/pwaInstall';
 import { canInstallSelector } from '../common/window/window.selectors';
+import type { RootState } from '../reducer';
+
+type InstallButtonComponentProps = {
+  canInstall: boolean;
+};
 
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
 
-const InstallButtonComponent = ({ canInstall }) => (canInstall && !isStandalone
+const InstallButtonComponent = ({ canInstall }: InstallButtonComponentProps) => (canInstall && !isStandalone
   ? (
     <HoverButton
       onClick={() => {
@@ -26,11 +30,7 @@ const InstallButtonComponent = ({ canInstall }) => (canInstall && !isStandalone
   )
   : null);
 
-InstallButtonComponent.propTypes = {
-  canInstall: PropTypes.bool.isRequired,
-};
-
-const mapStateToProps = state => ({
+const mapStateToProps = (state: RootState) => ({
   canInstall: canInstallSelector(state),
 });
 

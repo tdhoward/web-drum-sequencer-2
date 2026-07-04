@@ -1,12 +1,22 @@
 import React from 'react';
-import PropTypes from 'prop-types';
 import Select from 'react-select';
+import type { SingleValue } from 'react-select';
 import { useTheme } from 'styled-components';
 import { colorThemes } from '../../styles/theme';
 import { createSelectStyles } from '../../styles/selectStyles';
 import { Box, Text } from '../design-system';
 
-const themeOptions = Object.values(colorThemes).map(theme => ({
+type ThemeOption = {
+  label: string;
+  value: string;
+};
+
+type ThemeSelectorComponentProps = {
+  selectedThemeId: string;
+  setSelectedThemeId: (themeId: string) => void;
+};
+
+const themeOptions: ThemeOption[] = Object.values(colorThemes).map(theme => ({
   label: theme.name,
   value: theme.id,
 }));
@@ -14,9 +24,14 @@ const themeOptions = Object.values(colorThemes).map(theme => ({
 export const ThemeSelectorComponent = ({
   selectedThemeId,
   setSelectedThemeId,
-}) => {
+}: ThemeSelectorComponentProps) => {
   const theme = useTheme();
   const selectedOption = themeOptions.find(option => option.value === selectedThemeId);
+  const handleThemeChange = (option: SingleValue<ThemeOption>) => {
+    if (option) {
+      setSelectedThemeId(option.value);
+    }
+  };
 
   return (
     <Box height="2.65rem" minWidth="12rem" position="relative">
@@ -36,19 +51,14 @@ export const ThemeSelectorComponent = ({
       >
         THEME
       </Text>
-      <Select
+      <Select<ThemeOption>
         aria-label="Select Theme"
         isSearchable={false}
-        onChange={option => setSelectedThemeId(option.value)}
+        onChange={handleThemeChange}
         options={themeOptions}
-        styles={createSelectStyles(theme)}
+        styles={createSelectStyles<ThemeOption>(theme)}
         value={selectedOption}
       />
     </Box>
   );
-};
-
-ThemeSelectorComponent.propTypes = {
-  selectedThemeId: PropTypes.string.isRequired,
-  setSelectedThemeId: PropTypes.func.isRequired,
 };

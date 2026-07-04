@@ -3,7 +3,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import styled from 'styled-components';
 import { canInstallSelector } from '../common/window/window.selectors';
@@ -11,6 +10,17 @@ import { selectedThemeIdSelector, setSelectedThemeId } from '../common';
 import { colorThemes } from '../styles/theme';
 import { promptToInstall } from '../services/pwaInstall';
 import { Modal } from './Modal.component';
+import type { RootState } from '../reducer';
+
+type AppMenuComponentProps = {
+  canInstall: boolean;
+  selectedThemeId: string;
+  setSelectedThemeId: (themeId: string) => void;
+};
+
+type ThemeRadioProps = {
+  $selected: boolean;
+};
 
 const themeOptions = Object.values(colorThemes).map(theme => ({
   id: theme.id,
@@ -139,7 +149,7 @@ const ThemeOption = styled(MenuItem)`
   justify-content: flex-start;
 `;
 
-const ThemeRadio = styled.span`
+const ThemeRadio = styled.span<ThemeRadioProps>`
   border: 2px solid ${({ $selected, theme }) => (
     $selected ? theme.colors.accentPrimary : theme.colors.borderDefault
   )};
@@ -236,10 +246,10 @@ const AppMenuComponent = ({
   canInstall,
   selectedThemeId,
   setSelectedThemeId: selectTheme,
-}) => {
+}: AppMenuComponentProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
-  const menuRef = useRef(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const standalone = isStandalone();
   const installAvailable = canInstall && !standalone;
   const installStatus = standalone ? 'Installed' : 'Unavailable';
@@ -249,13 +259,17 @@ const AppMenuComponent = ({
       return undefined;
     }
 
-    const handleDocumentMouseDown = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
+    const handleDocumentMouseDown = (event: MouseEvent) => {
+      if (
+        menuRef.current
+        && event.target instanceof Node
+        && !menuRef.current.contains(event.target)
+      ) {
         setIsMenuOpen(false);
       }
     };
 
-    const handleDocumentKeyDown = (event) => {
+    const handleDocumentKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsMenuOpen(false);
         setIsAboutOpen(false);
@@ -351,7 +365,7 @@ const AppMenuComponent = ({
           <AboutDialog
             aria-modal="true"
             aria-labelledby="about-title"
-            onClick={event => event.stopPropagation()}
+            onClick={(event: React.MouseEvent<HTMLDivElement>) => event.stopPropagation()}
             role="dialog"
           >
             <AboutHeader>
@@ -374,13 +388,7 @@ const AppMenuComponent = ({
   );
 };
 
-AppMenuComponent.propTypes = {
-  canInstall: PropTypes.bool.isRequired,
-  selectedThemeId: PropTypes.string.isRequired,
-  setSelectedThemeId: PropTypes.func.isRequired,
-};
-
-const mapStateToProps = state => ({
+const mapStateToProps = (state: RootState) => ({
   canInstall: canInstallSelector(state),
   selectedThemeId: selectedThemeIdSelector(state),
 });
