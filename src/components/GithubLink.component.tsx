@@ -9,7 +9,7 @@ import octocat from '../assets/images/github.svg';
 
 export const GithubLink = () => (
   <HoverLink
-    href="https://www.github.com/stufreen/web-drum-sequencer"
+    href="https://www.github.com/tdhoward/web-drum-sequencer-2"
     aria-label="Source code on Github"
     title="Source code on Github"
     opacity={0.3}

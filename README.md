@@ -42,10 +42,10 @@ npm run test
 ```
 
 ## Thank You
- * [web-drum-sequencer](https://github.com/stufreen/web-drum-sequencer)
+ * Original [web-drum-sequencer](https://github.com/stufreen/web-drum-sequencer)
  * [React-Select](https://github.com/JedWatson/react-select)
  * [Webaudio-Controls](https://github.com/g200kg/webaudio-controls)
  * Chris Wilson's article [here](https://www.html5rocks.com/en/tutorials/audio/scheduling/)
- * [Voxengo impluse response](https://www.voxengo.com/impulses/)
+ * [Voxengo impulse response](https://www.voxengo.com/impulses/)
  * [Jost* typeface](https://github.com/indestructible-type/Jost)
  * [Draggable](https://shopify.github.io/draggable/)
