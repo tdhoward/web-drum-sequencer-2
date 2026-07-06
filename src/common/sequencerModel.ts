@@ -3,6 +3,9 @@ import { PERCUSSION_TYPES } from './percussion';
 export const DEFAULT_SONG_ID = 'song-1';
 export const DEFAULT_KIT_ID = 'default-kit';
 export const DEFAULT_PATTERN_COUNT = 8;
+export const DEFAULT_NOTE_VELOCITY = 1;
+export const MIN_NOTE_VELOCITY = 0;
+export const MAX_NOTE_VELOCITY = 2;
 
 export type EntityState<TEntity> = {
   ids: string[];
@@ -186,6 +189,16 @@ export const createPatternIds = (patternCount = DEFAULT_PATTERN_COUNT): string[]
 );
 
 export const sampleIdFromUrl = (url?: string): string => `sample:${url}`;
+
+const clamp = (value: number, min: number, max: number): number => (
+  Math.min(max, Math.max(min, value))
+);
+
+export const normalizeNoteVelocity = (velocity: unknown = DEFAULT_NOTE_VELOCITY): number => (
+  typeof velocity === 'number' && Number.isFinite(velocity)
+    ? clamp(velocity, MIN_NOTE_VELOCITY, MAX_NOTE_VELOCITY)
+    : DEFAULT_NOTE_VELOCITY
+);
 
 type CreateSongStateArgs = {
   id?: string;
@@ -383,7 +396,7 @@ export const normalizeNotesState = (
           patternId,
           step: typeof note.step === 'undefined' ? beatToStep(note.beat, pattern) : note.step,
           pitch: note.pitch || 0,
-          velocity: typeof note.velocity === 'undefined' ? 1 : note.velocity,
+          velocity: normalizeNoteVelocity(note.velocity),
         };
       });
     });
@@ -462,6 +475,7 @@ const normalizeExistingNotesStateToLanes = (notesState: Partial<NotesState> = {}
     const normalizedNote = {
       ...note,
       laneId: note.laneId || (note as Note & { channelId?: string }).channelId || '',
+      velocity: normalizeNoteVelocity(note.velocity),
     };
     delete (normalizedNote as Note & { channelId?: string }).channelId;
 

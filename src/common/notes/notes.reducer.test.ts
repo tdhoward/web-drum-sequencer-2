@@ -3,9 +3,14 @@ import {
   notesReducer,
   removeChannelNotes,
   removeNote,
+  setNoteVelocity,
   setNotes,
 } from './notes.reducer';
-import { normalizeNotesState } from '../sequencerModel';
+import {
+  DEFAULT_NOTE_VELOCITY,
+  MAX_NOTE_VELOCITY,
+  normalizeNotesState,
+} from '../sequencerModel';
 
 jest.mock('../../presets');
 jest.mock('../../samples.config');
@@ -59,6 +64,48 @@ describe('removeNote', () => {
     }));
     expect(state.ids).not.toContain('bing');
     expect(state.entities.bing).toBeUndefined();
+  });
+});
+
+describe('setNoteVelocity', () => {
+  test('updates a note velocity multiplier', () => {
+    const state = notesReducer(testNotes, setNoteVelocity({
+      id: 'bing',
+      velocity: 1.25,
+    }));
+
+    expect(state.entities.bing.velocity).toBe(1.25);
+  });
+
+  test('resets a note to the default velocity multiplier', () => {
+    const accentedNotes = notesReducer(testNotes, setNoteVelocity({
+      id: 'bing',
+      velocity: 0.5,
+    }));
+    const resetNotes = notesReducer(accentedNotes, setNoteVelocity({
+      id: 'bing',
+      velocity: DEFAULT_NOTE_VELOCITY,
+    }));
+
+    expect(resetNotes.entities.bing.velocity).toBe(DEFAULT_NOTE_VELOCITY);
+  });
+
+  test('clamps note velocity multipliers to the supported authored range', () => {
+    const state = notesReducer(testNotes, setNoteVelocity({
+      id: 'bing',
+      velocity: 10,
+    }));
+
+    expect(state.entities.bing.velocity).toBe(MAX_NOTE_VELOCITY);
+  });
+
+  test('ignores unknown note ids', () => {
+    const state = notesReducer(testNotes, setNoteVelocity({
+      id: 'unknown-note',
+      velocity: 0.5,
+    }));
+
+    expect(state).toEqual(testNotes);
   });
 });
 

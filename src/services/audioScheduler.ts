@@ -1,4 +1,5 @@
 import { LOOKAHEAD } from './audioEngine.config';
+import { DEFAULT_NOTE_VELOCITY, normalizeNoteVelocity } from '../common/sequencerModel';
 import { getAudioContext } from './audioContext';
 import { playNote } from './audioRouter';
 import { notifyChannelTriggered } from './channelTriggerEvents';
@@ -57,7 +58,6 @@ type ScheduleNotesArgs = {
 // schedule is a lookup table of all the notes currently scheduled to be played
 const schedule: Record<string, unknown> = {};
 const visualTriggerSchedule: Record<string, ReturnType<typeof globalThis.setTimeout>> = {};
-const DEFAULT_NOTE_VELOCITY = 1;
 
 const getSampleBuffer = (noteChannel: NoteChannel): AudioBuffer | undefined => (
   typeof noteChannel.sample === 'undefined'
@@ -131,11 +131,7 @@ export const clearScheduledNotes = (): void => {
 
 export const isBetween = (query: number, a: number, b: number): boolean => query >= a && query < b;
 
-const getNoteVelocity = (note: ChannelNote): number => (
-  typeof note.velocity === 'number' && Number.isFinite(note.velocity)
-    ? note.velocity
-    : DEFAULT_NOTE_VELOCITY
-);
+const getNoteVelocity = (note: ChannelNote): number => normalizeNoteVelocity(note.velocity);
 
 const getHumanizeSeed = (
   note: ChannelNote,
