@@ -3,6 +3,7 @@ import {
   addNote,
   legacyToggleNote,
   removeNote,
+  setNoteVelocity,
 } from './notes.reducer';
 import {
   beatToStep,
@@ -54,6 +55,37 @@ export const toggleNote = (
     step,
     pitch: 0,
     velocity: DEFAULT_NOTE_VELOCITY,
+  }));
+};
+
+export const setNoteVelocityAtBeat = (
+  channelId: string,
+  patternIndex: number,
+  beat: number,
+  velocity: number,
+) => (dispatch: Dispatch, getState: () => ToggleNoteRootState): void => {
+  const state = getState();
+  const laneId = channelId;
+  const patternId = patternIndexToId(patternIndex);
+  const pattern = patternsSelector(state).entities[patternId];
+  const step = beatToStep(beat, pattern);
+  const existingNote = findExistingNote(state, laneId, patternId, step);
+
+  if (existingNote) {
+    dispatch(setNoteVelocity({
+      id: existingNote.id,
+      velocity,
+    }));
+    return;
+  }
+
+  dispatch(addNote({
+    id: uuid(),
+    laneId,
+    patternId,
+    step,
+    pitch: 0,
+    velocity,
   }));
 };
 

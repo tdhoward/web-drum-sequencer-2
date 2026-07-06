@@ -2,23 +2,39 @@ import React from 'react';
 import { Box } from '../design-system';
 import { Toggle } from './Toggle.component';
 import { ToggleGroup } from './ToggleGroup.component';
+import { DEFAULT_NOTE_VELOCITY } from '../../common/sequencerModel';
 
 type ToggleNote = {
   id?: string;
   beat: number;
+  velocity?: number;
 };
 
 type TogglesComponentProps = {
   notes: ToggleNote[];
   channelId: string;
   toggleNote: (channelId: string, pattern: number, beat: number) => void;
+  setNoteVelocityAtBeat: (
+    channelId: string,
+    pattern: number,
+    beat: number,
+    velocity: number,
+  ) => void;
   bpm: number;
   playing: boolean;
   pattern: number;
 };
 
-const isActive = (notes: ToggleNote[], beat: number): boolean => (
-  notes.find(note => note.beat === beat) !== undefined
+type TogglesComponentState = {
+  velocityEditorBeat: number | null;
+};
+
+type OpenVelocityEditorOptions = {
+  createIfMissing: boolean;
+};
+
+const findNote = (notes: ToggleNote[], beat: number): ToggleNote | undefined => (
+  notes.find(note => note.beat === beat)
 );
 
 const sixteenthNotes = Array.from({ length: 16 }, (_, index) => index);
@@ -33,22 +49,124 @@ const splitEvery = <TItem,>(size: number, items: TItem[]): TItem[][] => (
   }, [])
 );
 
-export class TogglesComponent extends React.PureComponent<TogglesComponentProps> {
+export class TogglesComponent extends React.PureComponent<
+  TogglesComponentProps,
+  TogglesComponentState
+> {
+  state: TogglesComponentState = {
+    velocityEditorBeat: null,
+  };
+
+  private rootRef = React.createRef<HTMLDivElement>();
+
+  componentDidMount() {
+    document.addEventListener('pointerdown', this.handleDocumentPointerDown);
+    document.addEventListener('keydown', this.handleDocumentKeyDown);
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener('pointerdown', this.handleDocumentPointerDown);
+    document.removeEventListener('keydown', this.handleDocumentKeyDown);
+  }
+
+  private closeVelocityEditor = (): void => {
+    if (this.state.velocityEditorBeat !== null) {
+      this.setState({ velocityEditorBeat: null });
+    }
+  };
+
+  private handleDocumentPointerDown = (event: PointerEvent): void => {
+    const root = this.rootRef.current;
+
+    if (
+      this.state.velocityEditorBeat === null
+      || !root
+      || !event.target
+      || root.contains(event.target as Node)
+    ) {
+      return;
+    }
+
+    this.closeVelocityEditor();
+  };
+
+  private handleDocumentKeyDown = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape') {
+      this.closeVelocityEditor();
+    }
+  };
+
+  private handleToggleNote = (beat: number): void => {
+    const {
+      channelId,
+      pattern,
+      toggleNote,
+    } = this.props;
+
+    this.closeVelocityEditor();
+    toggleNote(channelId, pattern, beat);
+  };
+
+  private handleOpenVelocityEditor = (
+    beat: number,
+    { createIfMissing }: OpenVelocityEditorOptions,
+  ): void => {
+    const {
+      channelId,
+      notes,
+      pattern,
+      setNoteVelocityAtBeat,
+    } = this.props;
+    const note = findNote(notes, beat);
+
+    if (createIfMissing && !note) {
+      setNoteVelocityAtBeat(channelId, pattern, beat, DEFAULT_NOTE_VELOCITY);
+    }
+
+    this.setState({ velocityEditorBeat: beat });
+  };
+
+  private handleChangeVelocity = (beat: number, velocity: number): void => {
+    const {
+      channelId,
+      pattern,
+      setNoteVelocityAtBeat,
+    } = this.props;
+
+    setNoteVelocityAtBeat(channelId, pattern, beat, velocity);
+  };
+
+  private handleResetVelocity = (beat: number): void => {
+    this.handleChangeVelocity(beat, DEFAULT_NOTE_VELOCITY);
+  };
+
   render() {
     const {
       notes,
-      channelId,
-      toggleNote,
-      pattern,
     } = this.props;
+    const { velocityEditorBeat } = this.state;
     const toggles = sixteenthNotes.map((index) => {
       const beat = 1 + index / 4;
+      const note = findNote(notes, beat);
+      const velocity = note?.velocity ?? DEFAULT_NOTE_VELOCITY;
+      const isActive = Boolean(note);
       return (
         <Toggle
           key={index}
-          isActive={isActive(notes, beat)}
+          isActive={isActive}
+          velocity={velocity}
+          isVelocityEditorOpen={velocityEditorBeat === beat}
           onClick={() => {
-            toggleNote(channelId, pattern, beat);
+            this.handleToggleNote(beat);
+          }}
+          onOpenVelocityEditor={(options) => {
+            this.handleOpenVelocityEditor(beat, options);
+          }}
+          onChangeVelocity={(nextVelocity) => {
+            this.handleChangeVelocity(beat, nextVelocity);
+          }}
+          onResetVelocity={() => {
+            this.handleResetVelocity(beat);
           }}
           beat={beat}
         />
@@ -58,7 +176,7 @@ export class TogglesComponent extends React.PureComponent<TogglesComponentProps>
     const toggleGroups = splitEvery(4, toggles);
 
     return (
-      <Box display="flex" flex="1 1 auto" alignItems="center">
+      <Box ref={this.rootRef} display="flex" flex="1 1 auto" alignItems="center">
         {toggleGroups.map((toggleGroup, i) => (
           <ToggleGroup key={i}>
             {toggleGroup}
