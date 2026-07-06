@@ -1,0 +1,37 @@
+import React from 'react';
+import styled from 'styled-components';
+import { Knob } from './Knob.component';
+import { Box, Text } from './design-system';
+
+const LabelText = styled(Text)`
+  transform: translateY(-0.3em);
+`;
+
+type TempoKnobControlProps = {
+  label: string;
+  onChange: (event: Event) => void;
+  step?: string;
+  value: number;
+};
+
+export const TempoKnobControl = ({
+  label,
+  onChange,
+  step = '0.05',
+  value,
+}: TempoKnobControlProps) => (
+  <Box alignItems="center" ml={2} display="flex" flexDirection="column">
+    <LabelText
+      color="textMuted"
+      fontSize="0.6rem"
+      fontWeight="600"
+      bg="surfaceApp"
+      pl={1}
+      pr={1}
+      letterSpacing="0"
+    >
+      {label}
+    </LabelText>
+    <Knob size={35} onChange={onChange} value={value} min={0} max={1} step={step} />
+  </Box>
+);
