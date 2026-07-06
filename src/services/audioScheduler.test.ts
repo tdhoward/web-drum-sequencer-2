@@ -4,6 +4,7 @@ import {
   scheduleNote,
   clearScheduledNotes,
 } from './audioScheduler';
+import { MAX_NOTE_VELOCITY } from '../common/sequencerModel';
 import { playNote } from './audioRouter';
 
 jest.mock('./featureChecks');
@@ -92,6 +93,30 @@ describe('getScheduledNotes', () => {
 
     expect(humanizedNotes[0].time).toBe(0);
     expect(humanizedNotes[0].velocity).toBe(0.7);
+  });
+
+  test('should clamp authored note velocity before humanize', () => {
+    const scheduledNotes = getScheduledNotes({
+      channel: {
+        id: 'test-channel',
+        sample: '/whatever.wav',
+      },
+      channelNotes: [
+        {
+          beat: 1,
+          id: 'too-loud',
+          velocity: 10,
+        },
+      ],
+      tempo: {
+        bpm: 60,
+        humanize: 0,
+      },
+      startTime: 0,
+      currentBeat: 1,
+    });
+
+    expect(scheduledNotes[0].velocity).toBe(MAX_NOTE_VELOCITY);
   });
 
   test('should apply deterministic humanize timing and velocity', () => {

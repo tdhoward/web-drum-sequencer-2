@@ -2,9 +2,13 @@ import {
   beatToStep,
   createPatternsState,
   DEFAULT_KIT_ID,
+  DEFAULT_NOTE_VELOCITY,
+  MAX_NOTE_VELOCITY,
+  MIN_NOTE_VELOCITY,
   migrateToKitSequencerState,
   migrateToNormalizedSequencerState,
   normalizeChannelsState,
+  normalizeNoteVelocity,
   normalizeNotesState,
   sampleIdFromUrl,
   stepToBeat,
@@ -62,6 +66,17 @@ describe('time-signature grid helpers', () => {
     };
     expect(beatToStep(3.75, sixEightPattern)).toBe(11);
     expect(stepToBeat(11, sixEightPattern)).toBe(3.75);
+  });
+});
+
+describe('note velocity helpers', () => {
+  test('normalizes authored note velocity multipliers', () => {
+    expect(normalizeNoteVelocity(0.5)).toBe(0.5);
+    expect(normalizeNoteVelocity(1.25)).toBe(1.25);
+    expect(normalizeNoteVelocity(-1)).toBe(MIN_NOTE_VELOCITY);
+    expect(normalizeNoteVelocity(3)).toBe(MAX_NOTE_VELOCITY);
+    expect(normalizeNoteVelocity(Number.NaN)).toBe(DEFAULT_NOTE_VELOCITY);
+    expect(normalizeNoteVelocity(undefined)).toBe(DEFAULT_NOTE_VELOCITY);
   });
 });
 
@@ -181,6 +196,36 @@ describe('compatibility selectors', () => {
       id: 'accent',
       beat: 1,
       velocity: 0.7,
+    });
+  });
+
+  test('omit default note velocity from legacy audio notes', () => {
+    const patterns = createPatternsState({
+      patternCount: 1,
+      laneIds: ['kick'],
+    });
+    const state = {
+      song: {
+        id: 'song-1',
+        name: 'Test Song',
+        selectedPatternId: 'pattern-0',
+        selectedKitId: DEFAULT_KIT_ID,
+        patternIds: patterns.ids,
+      },
+      patterns,
+      channels: normalizeChannelsState(legacyChannels),
+      notes: normalizeNotesState({
+        kick: [[{
+          id: 'default-hit',
+          beat: 1,
+          velocity: DEFAULT_NOTE_VELOCITY,
+        }]],
+      }, patterns.ids, patterns),
+    };
+
+    expect(notesSelector(state).kick[0][0]).toEqual({
+      id: 'default-hit',
+      beat: 1,
     });
   });
 

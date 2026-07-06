@@ -68,6 +68,7 @@ Current model baseline:
 * Kit preset loading changes kit channels/samples/name and rebuilds assignments, but no longer replaces notes, pattern lanes, tempo, or swing.
 * The master header includes BPM, Swing, and Humanize controls. `humanize` lives in tempo state as a playback-feel setting rather than authored pattern data.
 * Humanize applies deterministic Gaussian timing offsets and per-note velocity variation during scheduling. The pattern grid remains exact, and `humanize: 0` is an exact bypass.
+* Notes carry an authored `velocity` multiplier for per-note emphasis. `velocity: 1` means 100% of the selected kit channel's level and is the normalized in-memory default; serialized pattern-style data may omit default velocity values. The authored range is currently clamped to `0` through `2`, and the scheduler applies this authored value before humanize velocity variation.
 * The compatibility note path preserves non-default note velocity values so scheduler-time playback transforms can use them.
 
 ## UI direction
@@ -149,6 +150,12 @@ A useful follow-up editing task is:
 
 ```text
 Add Kit workspace controls for editing a channel's percussion type alongside the existing channel name editing. Keep the controls compact and preserve existing playback behavior.
+```
+
+A useful follow-up pattern-editing task is:
+
+```text
+Add a long-press note velocity editor in the Pattern workspace. It should update the selected note's authored velocity multiplier, show 100% as the default/reset state, and leave kit channel gain unchanged.
 ```
 
 ## Current priorities

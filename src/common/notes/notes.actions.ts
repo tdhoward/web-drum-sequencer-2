@@ -6,6 +6,7 @@ import {
 } from './notes.reducer';
 import {
   beatToStep,
+  DEFAULT_NOTE_VELOCITY,
   patternIndexToId,
 } from '../sequencerModel';
 import type { Note, NotesState, PatternsState, SequencerRootState } from '../sequencerModel';
@@ -52,7 +53,7 @@ export const toggleNote = (
     patternId,
     step,
     pitch: 0,
-    velocity: 1,
+    velocity: DEFAULT_NOTE_VELOCITY,
   }));
 };
 

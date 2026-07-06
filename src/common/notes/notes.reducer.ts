@@ -5,6 +5,8 @@ import {
   createPatternIds,
   patternIndexToId,
   beatToStep,
+  DEFAULT_NOTE_VELOCITY,
+  normalizeNoteVelocity,
 } from '../sequencerModel';
 import type { LegacyNotes, Note, NotesState } from '../sequencerModel';
 import { createDefaultNotesState } from '../defaultSequencerState';
@@ -26,6 +28,11 @@ type ToggleNotePayload = {
   id: string;
 };
 
+type SetNoteVelocityPayload = {
+  id: string;
+  velocity: number;
+};
+
 const removeNoteById = (state: Draft<NotesState>, noteId: string): void => {
   state.ids = state.ids.filter(id => id !== noteId);
   delete state.entities[noteId];
@@ -39,6 +46,7 @@ export const notesSlice = createSlice({
       const note = {
         ...action.payload,
         laneId: action.payload.laneId || action.payload.channelId || '',
+        velocity: normalizeNoteVelocity(action.payload.velocity),
       };
       delete note.channelId;
       if (!state.entities[note.id]) {
@@ -48,6 +56,15 @@ export const notesSlice = createSlice({
     },
     removeNote(state, action: PayloadAction<RemoveNotePayload>) {
       removeNoteById(state, action.payload.id);
+    },
+    setNoteVelocity(state, action: PayloadAction<SetNoteVelocityPayload>) {
+      const note = state.entities[action.payload.id];
+
+      if (!note) {
+        return;
+      }
+
+      note.velocity = normalizeNoteVelocity(action.payload.velocity);
     },
     initializeChannelNotes() {
       return undefined;
@@ -85,7 +102,7 @@ export const notesSlice = createSlice({
           patternId,
           step,
           pitch: 0,
-          velocity: 1,
+          velocity: DEFAULT_NOTE_VELOCITY,
         };
       },
       prepare(channelId: string, pattern: number, beat: number, id: string) {
@@ -98,6 +115,7 @@ export const notesSlice = createSlice({
 export const {
   addNote,
   removeNote,
+  setNoteVelocity,
   initializeChannelNotes,
   removeChannelNotes,
   setNotes,

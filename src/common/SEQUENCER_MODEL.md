@@ -56,6 +56,15 @@ note
   velocity
 ```
 
+`velocity` is an authored per-note emphasis multiplier, not a kit-channel
+setting. The default is `1`, meaning 100% of the selected kit channel's level.
+Values below or above `1` can create ghost notes and accents, such as `0.5`
+for 50% or `1.25` for 125%. The supported authored range is currently clamped
+to `0` through `2`.
+
+Pattern data may omit `velocity` when it is `1`. The normalized in-memory note
+state keeps `velocity: 1` so reducers and selectors can use a simple shape.
+
 ## Tempo and playback feel
 
 Tempo and playback feel are stored separately from pattern note data.
@@ -73,6 +82,11 @@ the scheduler applies deterministic seeded Gaussian timing offsets and per-note
 velocity variation for each note occurrence. `humanize: 0` is an exact bypass.
 The current maximum setting uses a 20ms timing standard deviation and a 12%
 velocity standard deviation, with bounded output.
+
+Per-note authored velocity is applied as the input to the humanize velocity
+transform. In effect, playback uses the note's authored multiplier first and
+then applies deterministic humanize variation before the audio router sets the
+per-voice gain.
 
 ## Pattern packs
 
