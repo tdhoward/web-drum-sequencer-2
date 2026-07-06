@@ -3,6 +3,7 @@ import {
   channelsSelector,
   deleteChannel,
   selectedChannelSelector,
+  saveEditedUserSample,
   setChannelGain,
   setChannelName,
   setChannelPercussionType,
@@ -36,6 +37,11 @@ type KitChannelListDispatchProps = {
   setChannelPan: (channelId: string, pan: number) => void;
   setChannelPitchCoarse: (channelId: string, pitchCoarse: number) => void;
   setChannelReverb: (channelId: string, reverb: number) => void;
+  saveEditedUserSample: (
+    channelId: string,
+    audioBuffer: AudioBuffer,
+    sourceName?: string,
+  ) => Promise<void>;
   updateChannelOrder: (oldIndex: number, newIndex: number) => void;
 };
 
@@ -79,6 +85,13 @@ const mapDispatchToProps = (dispatch: AppDispatch): KitChannelListDispatchProps 
   setChannelReverb: (channelId, reverb) => {
     dispatch(setChannelReverb(channelId, reverb));
   },
+  saveEditedUserSample: (channelId, audioBuffer, sourceName) => (
+    dispatch(saveEditedUserSample(
+      channelId,
+      audioBuffer,
+      sourceName,
+    ) as unknown as AppAction) as unknown as Promise<void>
+  ),
   updateChannelOrder: (oldIndex, newIndex) => {
     dispatch(updateChannelOrder(oldIndex, newIndex));
   },
@@ -125,6 +138,13 @@ const mergeProps = (
   onSetReverb: (channel: LegacyChannel, event: Event) => {
     dispatchProps.setChannelReverb(getKitChannelId(channel), getEventNumber(event));
   },
+  onSaveEditedSample: (channel: LegacyChannel, audioBuffer: AudioBuffer) => (
+    dispatchProps.saveEditedUserSample(
+      getKitChannelId(channel),
+      audioBuffer,
+      channel.name || channel.sample || channel.id,
+    )
+  ),
 });
 
 export const KitChannelList = connect(

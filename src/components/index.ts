@@ -26,5 +26,6 @@ export * from './WorkspaceNav';
 export * from './CurrentKitDisplay';
 export * from './WorkspacePanel';
 export * from './KitChannelList';
+export * from './SampleEditorModal';
 export * from './KitWorkspaceControls';
 export * from './ThemeSelector';

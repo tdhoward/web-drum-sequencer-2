@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import styled, { useTheme } from 'styled-components';
+import styled, { css, useTheme } from 'styled-components';
 import { classicDarkTheme } from '../styles/theme';
 import { loadSampleBuffer } from '../services/sampleStore';
 
@@ -10,6 +10,8 @@ type WaveformPeak = {
 
 type SampleWaveformProps = {
   sampleUrl?: string;
+  onClick?: () => void;
+  title?: string;
 };
 
 type CanvasSize = {
@@ -17,7 +19,7 @@ type CanvasSize = {
   height: number;
 };
 
-const WaveformFrame = styled.div`
+const waveformFrameStyles = css`
   background: ${({ theme }) => theme.colors.surfaceControl};
   border: 2px solid ${({ theme }) => theme.colors.borderDefault};
   border-radius: 0.3rem;
@@ -26,6 +28,23 @@ const WaveformFrame = styled.div`
   overflow: hidden;
   position: relative;
   width: 100%;
+`;
+
+const WaveformFrame = styled.div`
+  ${waveformFrameStyles}
+`;
+
+const WaveformButton = styled.button`
+  ${waveformFrameStyles}
+  appearance: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+
+  &:focus-visible {
+    border-color: ${({ theme }) => theme.colors.borderHover};
+    outline: 0;
+  }
 `;
 
 const WaveformCanvas = styled.canvas`
@@ -67,7 +86,9 @@ export const getWaveformPeaks = (audioBuffer: AudioBuffer, width: number): Wavef
   const peaks: WaveformPeak[] = [];
 
   for (let channelIndex = 0; channelIndex < audioBuffer.numberOfChannels; channelIndex += 1) {
-    channels.push(audioBuffer.getChannelData(channelIndex));
+    const channelData = new Float32Array(audioBuffer.length);
+    audioBuffer.copyFromChannel(channelData, channelIndex);
+    channels.push(channelData);
   }
 
   for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += 1) {
@@ -162,10 +183,10 @@ export const drawWaveform = (
 
 const formatDuration = (duration: number): string => `${duration.toFixed(2)} s`;
 
-export const SampleWaveform = ({ sampleUrl }: SampleWaveformProps) => {
+export const SampleWaveform = ({ sampleUrl, onClick, title }: SampleWaveformProps) => {
   const theme = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const frameRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<HTMLElement | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
 
@@ -247,14 +268,34 @@ export const SampleWaveform = ({ sampleUrl }: SampleWaveformProps) => {
     }
   }, [audioBuffer, canvasSize.width, canvasSize.height, theme]);
 
-  return (
-    <WaveformFrame ref={frameRef}>
+  const waveformContent = (
+    <>
       <WaveformCanvas ref={canvasRef} aria-label="Sample waveform" />
       {audioBuffer && (
         <DurationLabel>
           {formatDuration(audioBuffer.duration)}
         </DurationLabel>
       )}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <WaveformButton
+        ref={(element) => { frameRef.current = element; }}
+        aria-label="Edit sample waveform"
+        onClick={onClick}
+        title={title}
+        type="button"
+      >
+        {waveformContent}
+      </WaveformButton>
+    );
+  }
+
+  return (
+    <WaveformFrame ref={(element) => { frameRef.current = element; }} title={title}>
+      {waveformContent}
     </WaveformFrame>
   );
 };

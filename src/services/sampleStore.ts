@@ -1,7 +1,10 @@
 import { fetchFile, decodeFile, decodeAudio } from './fileUtils';
 import { saveToDB, getFromDB } from './database';
+import { audioBufferToWavArrayBuffer, cloneAudioBuffer } from './sampleEditing';
 
 export const sampleStore: Record<string, AudioBuffer> = {};
+
+let editedSampleCounter = 0;
 
 export const getSampleBuffer = (url: string): AudioBuffer | undefined => sampleStore[url];
 
@@ -38,6 +41,38 @@ export const saveToSampleStore = (file: File): Promise<string> => {
     })
     .then((drumBuffer) => {
       sampleStore[id] = drumBuffer;
+      return id;
+    });
+};
+
+const normalizeEditedSampleName = (sourceName = 'sample'): string => {
+  const nameWithoutExtension = sourceName.replace(/\.[a-z0-9]+$/i, '');
+  const safeName = nameWithoutExtension
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return safeName || 'sample';
+};
+
+const getEditedSampleId = (sourceName?: string): string => {
+  const baseName = normalizeEditedSampleName(sourceName);
+  editedSampleCounter += 1;
+  return `${baseName}-edited-${Date.now()}-${editedSampleCounter}.wav`;
+};
+
+export const saveEditedSampleBuffer = (
+  audioBuffer: AudioBuffer,
+  sourceName?: string,
+): Promise<string> => {
+  const id = getEditedSampleId(sourceName);
+  const wavSourceBuffer = cloneAudioBuffer(audioBuffer);
+  const storedBuffer = cloneAudioBuffer(audioBuffer);
+  const wavArrayBuffer = audioBufferToWavArrayBuffer(wavSourceBuffer);
+
+  return saveToDB(wavArrayBuffer, id)
+    .then(() => {
+      sampleStore[id] = storedBuffer;
       return id;
     });
 };

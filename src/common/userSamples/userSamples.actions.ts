@@ -1,4 +1,4 @@
-import { saveToSampleStore } from '../../services/sampleStore';
+import { saveEditedSampleBuffer, saveToSampleStore } from '../../services/sampleStore';
 import { loadAndSetChannelSample } from '../channels';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import { userSamplesSlice } from './userSamples.reducer';
@@ -23,3 +23,19 @@ export const saveUserSample = (channel: string, files: FileList | File[]) => (
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
     });
 };
+
+export const saveEditedUserSample = (
+  channel: string,
+  audioBuffer: AudioBuffer,
+  sourceName?: string,
+) => (
+  dispatch: Dispatch,
+): Promise<void> => saveEditedSampleBuffer(audioBuffer, sourceName)
+  .then((sampleURL: string) => {
+    dispatch(addUserSample(sampleURL));
+    dispatch(loadAndSetChannelSample(channel, sampleURL));
+  })
+  .catch((error) => {
+    dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
+    return Promise.reject(error);
+  });

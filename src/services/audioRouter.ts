@@ -197,6 +197,16 @@ export const playNote = (
   return source;
 };
 
+export const getAudioRouterDiagnostics = (channelId: string): Record<string, unknown> => ({
+  activeVoices: activeVoices.size,
+  channelId,
+  channelGain: channelGainNodes[channelId]?.gain.value ?? null,
+  channelReverbGain: channelReverbNodes[channelId]?.gain.value ?? null,
+  channelPan: stereoPannerSupported
+    ? (channelPanNodes[channelId] as StereoPannerNode | undefined)?.pan.value ?? null
+    : null,
+});
+
 export const stopAllNotes = (): void => {
   const stopTime = audioCtx.currentTime + STOP_FADE_OUT_SECONDS;
 
