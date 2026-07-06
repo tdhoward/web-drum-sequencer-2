@@ -1,5 +1,5 @@
 import { fetchFile, decodeFile, decodeAudio } from './fileUtils';
-import { saveToDB, getFromDB } from './database';
+import { saveToDB, getFromDB, deleteFromDB } from './database';
 import { audioBufferToWavArrayBuffer, cloneAudioBuffer } from './sampleEditing';
 
 export const sampleStore: Record<string, AudioBuffer> = {};
@@ -76,3 +76,11 @@ export const saveEditedSampleBuffer = (
       return id;
     });
 };
+
+export const deleteSampleBuffer = (sampleId: string): Promise<string> => (
+  deleteFromDB(sampleId)
+    .then((deletedSampleId) => {
+      delete sampleStore[deletedSampleId];
+      return deletedSampleId;
+    })
+);

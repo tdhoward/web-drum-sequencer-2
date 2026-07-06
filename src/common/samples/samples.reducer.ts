@@ -12,10 +12,20 @@ type AddSampleFromUrlPayload = {
   sourceType: string;
 };
 
+type RenameSampleFromUrlPayload = {
+  sampleURL: string;
+  name: string;
+};
+
+type RemoveSampleFromUrlPayload = {
+  sampleURL: string;
+};
+
 const upsertSampleFromUrl = (
   state: Draft<SamplesState>,
   sampleURL?: string,
   sourceType = 'factory',
+  name = sampleURL,
 ): void => {
   const sampleId = sampleIdFromUrl(sampleURL);
   if (!state.ids.includes(sampleId)) {
@@ -23,7 +33,7 @@ const upsertSampleFromUrl = (
   }
   state.entities[sampleId] = {
     id: sampleId,
-    name: sampleURL,
+    name,
     url: sampleURL,
     sourceType,
   };
@@ -43,6 +53,28 @@ export const samplesSlice = createSlice({
       },
       prepare(sampleURL: string, sourceType = 'user') {
         return { payload: { sampleURL, sourceType } };
+      },
+    },
+    renameSampleFromUrl: {
+      reducer(state, action: PayloadAction<RenameSampleFromUrlPayload>) {
+        const sampleId = sampleIdFromUrl(action.payload.sampleURL);
+        const sample = state.entities[sampleId];
+        if (sample) {
+          sample.name = action.payload.name;
+        }
+      },
+      prepare(sampleURL: string, name: string) {
+        return { payload: { sampleURL, name } };
+      },
+    },
+    removeSampleFromUrl: {
+      reducer(state, action: PayloadAction<RemoveSampleFromUrlPayload>) {
+        const sampleId = sampleIdFromUrl(action.payload.sampleURL);
+        state.ids = state.ids.filter(id => id !== sampleId);
+        delete state.entities[sampleId];
+      },
+      prepare(sampleURL: string) {
+        return { payload: { sampleURL } };
       },
     },
   },
@@ -65,6 +97,8 @@ export const samplesSlice = createSlice({
 
 export const {
   addSampleFromUrl,
+  renameSampleFromUrl,
+  removeSampleFromUrl,
 } = samplesSlice.actions;
 
 export const samplesReducer = samplesSlice.reducer;

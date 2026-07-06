@@ -49,3 +49,14 @@ export const getFromDB = (myKey: string): Promise<ArrayBuffer> => new Promise((r
     reject();
   };
 });
+
+export const deleteFromDB = (myKey: string): Promise<string> => new Promise((resolve, reject) => {
+  const trans = db.transaction([USER_SAMPLES], 'readwrite');
+  trans.objectStore(USER_SAMPLES).delete(myKey);
+  trans.onerror = (event) => {
+    reject(event);
+  };
+  trans.oncomplete = () => {
+    resolve(myKey);
+  };
+});

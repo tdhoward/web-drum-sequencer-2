@@ -165,6 +165,13 @@ sample
   url
   sourceType
   fileName
+
+userSample
+  id
+  name
+  createdAt
+  sourceName
+  sourceType
 ```
 
 `percussionType` is a controlled, machine-readable role used for kit
@@ -177,6 +184,22 @@ translation. The first vocabulary is intentionally small: `bass_drum`,
 User-created channels can start as `generic_percussion` and be corrected later.
 Factory kits should provide explicit `name` and `percussionType` values so
 patterns can be remapped to another kit without rewriting note data.
+
+`sample` is the normalized entity used by kit channels. `userSample` is the
+persisted user-facing library metadata used by the sample selector and sample
+manager. The audio payload for uploaded and edited samples is stored in
+IndexedDB and mirrored in the in-memory sample store under `userSample.id`.
+Older persisted user-sample lists may contain bare string ids; reducers should
+continue to normalize those entries when they are renamed or otherwise edited.
+
+Sample editing is non-destructive. Trimming or normalizing a factory sample
+creates a new `userSample` and a corresponding `sample` entity rather than
+mutating the source sample. The current editor supports waveform selection,
+auto-select, trim, normalize, original/edited preview, and save-as naming.
+Trim applies a tiny fade only at the end boundary to avoid blunting drum
+attacks. User samples can be renamed, previewed, and deleted through the Kit
+workspace sample manager, but deletion is disabled while the sample is assigned
+to a channel.
 
 ## Kit channel mapping
 

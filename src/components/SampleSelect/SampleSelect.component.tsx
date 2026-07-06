@@ -5,7 +5,11 @@ import { useTheme } from 'styled-components';
 import { Box, ControlLabel } from '../design-system';
 import sampleOptions from '../../samples.config';
 import { createSelectStyles } from '../../styles/selectStyles';
-import type { UserSample } from '../../common';
+import {
+  getUserSampleDisplayName,
+  getUserSampleId,
+  type UserSample,
+} from '../../common';
 
 const CHOOSE_FILE_VALUE = 'CHOOSE_FILE';
 
@@ -36,11 +40,9 @@ const factoryOptions: SampleSelectOption[] = sampleOptions.map(sampleOption => (
 }));
 
 const userSampleToOption = (userSample: UserSample): SampleSelectOption => {
-  const filename = typeof userSample === 'string' ? userSample : userSample.id;
-
   return {
-    value: filename,
-    label: filename,
+    value: getUserSampleId(userSample),
+    label: getUserSampleDisplayName(userSample),
   };
 };
 

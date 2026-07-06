@@ -51,6 +51,7 @@ type KitChannelListComponentProps = {
   onSaveEditedSample: (
     channel: KitChannelListChannel,
     audioBuffer: AudioBuffer,
+    sampleName: string,
   ) => Promise<void> | void;
 };
 
@@ -638,9 +639,9 @@ export class KitChannelListComponent extends React.Component<
         <SampleEditorModal
           channel={sampleEditorChannel}
           onClose={this.closeSampleEditor}
-          onSaveEditedSample={audioBuffer => (
+          onSaveEditedSample={(audioBuffer, sampleName) => (
             sampleEditorChannel
-              ? onSaveEditedSample(sampleEditorChannel, audioBuffer)
+              ? onSaveEditedSample(sampleEditorChannel, audioBuffer, sampleName)
               : undefined
           )}
         />

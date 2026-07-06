@@ -5,10 +5,9 @@ import React, {
   useState,
 } from 'react';
 import styled, { useTheme } from 'styled-components';
-import { getAudioRouterDiagnostics, playNote, stopAllNotes } from '../../services/audioRouter';
+import { playNote, stopAllNotes } from '../../services/audioRouter';
 import { pitchToCents } from '../../services/audioScheduler';
 import { notifyChannelTriggered } from '../../services/channelTriggerEvents';
-import { summarizeAudioBuffer } from '../../services/sampleDiagnostics';
 import { loadSampleBuffer } from '../../services/sampleStore';
 import {
   DEFAULT_TRIM_FADE_SECONDS,
@@ -32,7 +31,7 @@ type SampleEditorChannel = {
 type SampleEditorModalProps = {
   channel: SampleEditorChannel | null;
   onClose: () => void;
-  onSaveEditedSample: (audioBuffer: AudioBuffer) => Promise<void> | void;
+  onSaveEditedSample: (audioBuffer: AudioBuffer, sampleName: string) => Promise<void> | void;
 };
 
 type CanvasSize = {
@@ -52,20 +51,20 @@ type ToggleButtonProps = {
 };
 
 const MIN_SELECTION_SAMPLES = 8;
-const POINTER_MOVE_DIAGNOSTIC_INTERVAL_MS = 250;
-const SAMPLE_EDITOR_DIAG_PREFIX = '[SampleEditorDiag]';
 
 const Dialog = styled.div`
   background: ${({ theme }) => theme.colors.surfacePanelRaised};
   border: 2px solid ${({ theme }) => theme.colors.borderDefault};
   border-radius: 0.4rem;
+  box-sizing: border-box;
   box-shadow: 0 1.2rem 2.4rem rgba(0, 0, 0, 0.44);
   color: ${({ theme }) => theme.colors.textPrimary};
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
   max-height: calc(100vh - 2rem);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 1rem;
   width: min(56rem, calc(100vw - 2rem));
 `;
@@ -112,6 +111,7 @@ const WaveformFrame = styled.div`
   background: ${({ theme }) => theme.colors.surfaceControl};
   border: 2px solid ${({ theme }) => theme.colors.borderDefault};
   border-radius: 0.3rem;
+  box-sizing: border-box;
   height: min(15rem, 42vh);
   min-height: 10rem;
   overflow: hidden;
@@ -150,6 +150,44 @@ const ActionRow = styled.div`
   flex-wrap: wrap;
   gap: 0.5rem;
   justify-content: space-between;
+`;
+
+const NameRow = styled.label`
+  align-items: center;
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  max-width: 32rem;
+  width: 100%;
+`;
+
+const NameLabel = styled.span`
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+`;
+
+const NameInput = styled.input`
+  background: ${({ theme }) => theme.colors.surfaceControl};
+  border: 2px solid ${({ theme }) => theme.colors.borderDefault};
+  border-radius: 0.25rem;
+  box-sizing: border-box;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font: inherit;
+  font-size: 0.82rem;
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  width: 100%;
+
+  &:focus {
+    border-color: ${({ theme }) => theme.colors.borderHover};
+    outline: 0;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+  }
 `;
 
 const ButtonGroup = styled.div`
@@ -218,6 +256,11 @@ const formatSeconds = (sampleIndex: number, sampleRate: number): string => (
   `${(sampleIndex / sampleRate).toFixed(3)} s`
 );
 
+const getDefaultEditedSampleName = (sourceName = 'Sample'): string => {
+  const safeSourceName = sourceName.trim() || 'Sample';
+  return `${safeSourceName} Edit`;
+};
+
 const isFullSelection = (audioBuffer: AudioBuffer | null, selection: SelectionState): boolean => (
   !audioBuffer || (selection.startSample <= 0 && selection.endSample >= audioBuffer.length)
 );
@@ -285,10 +328,6 @@ export const SampleEditorModal = ({
   const frameRef = useRef<HTMLDivElement | null>(null);
   const activeHandleRef = useRef<SelectionHandle | null>(null);
   const originalAudioBufferRef = useRef<AudioBuffer | null>(null);
-  const diagnosticSequenceRef = useRef(0);
-  const drawDiagnosticCountRef = useRef(0);
-  const lastDrawDiagnosticRef = useRef(0);
-  const lastPointerMoveDiagnosticRef = useRef(0);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
   const [selection, setSelection] = useState<SelectionState>({
@@ -297,6 +336,7 @@ export const SampleEditorModal = ({
     trimEnabled: false,
     normalizeEnabled: false,
   });
+  const [sampleName, setSampleName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -311,35 +351,9 @@ export const SampleEditorModal = ({
     extra: Record<string, unknown> = {},
     buffers: Record<string, AudioBuffer | null | undefined> = {},
   ) => {
-    diagnosticSequenceRef.current += 1;
-    const payload = {
-      sequence: diagnosticSequenceRef.current,
-      event: eventName,
-      channel: channel ? {
-        id: channel.id,
-        kitChannelId: channel.kitChannelId,
-        name: channel.name,
-        sample: channel.sample,
-        pitchCoarse: channel.pitchCoarse,
-        pitchFine: channel.pitchFine,
-      } : null,
-      selection,
-      canvasSize,
-      sourceBufferId: getSourceAudioBuffer()
-        ? summarizeAudioBuffer('source-id', getSourceAudioBuffer()).id
-        : 'none',
-      buffers: Object.entries({
-        originalRef: originalAudioBufferRef.current,
-        displayState: audioBuffer,
-        source: getSourceAudioBuffer(),
-        ...buffers,
-      }).map(([label, buffer]) => summarizeAudioBuffer(label, buffer)),
-      extra,
-    };
-
-    console.log(
-      `${SAMPLE_EDITOR_DIAG_PREFIX} ${eventName} #${payload.sequence}\n${JSON.stringify(payload, null, 2)}`,
-    );
+    void eventName;
+    void extra;
+    void buffers;
   };
 
   useEffect(() => {
@@ -348,6 +362,7 @@ export const SampleEditorModal = ({
     setAudioBuffer(null);
     setError(null);
     setIsSaving(false);
+    setSampleName(getDefaultEditedSampleName(channelName));
 
     if (!sampleUrl) {
       setError('Sample unavailable');
@@ -387,7 +402,7 @@ export const SampleEditorModal = ({
     return () => {
       isCancelled = true;
     };
-  }, [sampleUrl]);
+  }, [sampleUrl, channelName]);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -436,18 +451,6 @@ export const SampleEditorModal = ({
 
     if (sourceAudioBuffer && canvasSize.width > 0 && canvasSize.height > 0) {
       const drawBuffer = cloneAudioBuffer(sourceAudioBuffer);
-      const now = Date.now();
-      const shouldLogDraw = drawDiagnosticCountRef.current < 3
-        || now - lastDrawDiagnosticRef.current >= POINTER_MOVE_DIAGNOSTIC_INTERVAL_MS;
-
-      if (shouldLogDraw) {
-        drawDiagnosticCountRef.current += 1;
-        lastDrawDiagnosticRef.current = now;
-        logDiagnostics('draw:before', {}, {
-          sourceAudioBuffer,
-          drawBuffer,
-        });
-      }
       drawWaveform(
         canvas,
         drawBuffer,
@@ -460,12 +463,6 @@ export const SampleEditorModal = ({
         selection,
         String(theme.colors.accentPrimary),
       );
-      if (shouldLogDraw) {
-        logDiagnostics('draw:after', {}, {
-          sourceAudioBuffer,
-          drawBuffer,
-        });
-      }
     }
   }, [
     audioBuffer,
@@ -486,23 +483,35 @@ export const SampleEditorModal = ({
     }
 
     setSelection(previousSelection => {
+      let nextSelection: SelectionState;
+
       if (handle === 'start') {
-        return {
+        nextSelection = {
           ...previousSelection,
           startSample: Math.min(
             Math.max(0, sampleIndex),
             previousSelection.endSample - MIN_SELECTION_SAMPLES,
           ),
         };
+      } else {
+        nextSelection = {
+          ...previousSelection,
+          endSample: Math.max(
+            Math.min(sourceAudioBuffer.length, sampleIndex),
+            previousSelection.startSample + MIN_SELECTION_SAMPLES,
+          ),
+        };
       }
 
-      return {
-        ...previousSelection,
-        endSample: Math.max(
-          Math.min(sourceAudioBuffer.length, sampleIndex),
-          previousSelection.startSample + MIN_SELECTION_SAMPLES,
-        ),
-      };
+      const selectionChanged = nextSelection.startSample !== previousSelection.startSample
+        || nextSelection.endSample !== previousSelection.endSample;
+
+      return selectionChanged
+        ? {
+          ...nextSelection,
+          trimEnabled: true,
+        }
+        : previousSelection;
     });
   }, [audioBuffer]);
 
@@ -524,15 +533,6 @@ export const SampleEditorModal = ({
   const handlePointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (!audioBuffer || !activeHandleRef.current) {
       return;
-    }
-
-    const now = Date.now();
-    if (now - lastPointerMoveDiagnosticRef.current >= POINTER_MOVE_DIAGNOSTIC_INTERVAL_MS) {
-      lastPointerMoveDiagnosticRef.current = now;
-      logDiagnostics('pointer:move', {
-        handle: activeHandleRef.current,
-        sampleIndex: getSampleFromPointer(event, audioBuffer),
-      });
     }
 
     setSelectionHandle(activeHandleRef.current, getSampleFromPointer(event, audioBuffer));
@@ -593,37 +593,13 @@ export const SampleEditorModal = ({
     return editedBuffer;
   };
 
-  const previewBuffer = (previewLabel: string, buffer: AudioBuffer | null) => {
+  const previewBuffer = (buffer: AudioBuffer | null) => {
     if (!buffer || !channel) {
-      logDiagnostics(`preview:${previewLabel}:skipped`, {
-        hasBuffer: Boolean(buffer),
-        hasChannel: Boolean(channel),
-      }, {
-        previewBuffer: buffer,
-      });
       return;
     }
 
-    logDiagnostics(`preview:${previewLabel}:before-stop`, {
-      audioRouter: getAudioRouterDiagnostics(channel.id),
-      pitch: pitchToCents(channel),
-    }, {
-      previewBuffer: buffer,
-    });
     stopAllNotes();
-    logDiagnostics(`preview:${previewLabel}:after-stop`, {
-      audioRouter: getAudioRouterDiagnostics(channel.id),
-      pitch: pitchToCents(channel),
-    }, {
-      previewBuffer: buffer,
-    });
     playNote(null, buffer, channel.id, pitchToCents(channel));
-    logDiagnostics(`preview:${previewLabel}:after-play`, {
-      audioRouter: getAudioRouterDiagnostics(channel.id),
-      pitch: pitchToCents(channel),
-    }, {
-      previewBuffer: buffer,
-    });
     notifyChannelTriggered(channel.id);
   };
 
@@ -640,11 +616,11 @@ export const SampleEditorModal = ({
       originalBuffer,
       previewOriginalBuffer,
     });
-    previewBuffer('original', previewOriginalBuffer);
+    previewBuffer(previewOriginalBuffer);
   };
 
   const handlePreviewEdited = () => {
-    previewBuffer('edited', renderCurrentEditedBuffer());
+    previewBuffer(renderCurrentEditedBuffer());
   };
 
   const handleAutoSelect = () => {
@@ -664,10 +640,16 @@ export const SampleEditorModal = ({
     }, {
       originalBuffer,
     });
-    setSelection(previousSelection => ({
-      ...previousSelection,
-      ...detectedRange,
-    }));
+    setSelection((previousSelection) => {
+      const selectionChanged = detectedRange.startSample !== previousSelection.startSample
+        || detectedRange.endSample !== previousSelection.endSample;
+
+      return {
+        ...previousSelection,
+        ...detectedRange,
+        trimEnabled: selectionChanged ? true : previousSelection.trimEnabled,
+      };
+    });
   };
 
   const handleReset = () => {
@@ -693,15 +675,22 @@ export const SampleEditorModal = ({
 
   const handleSave = () => {
     const editedBuffer = renderCurrentEditedBuffer();
+    const nextSampleName = sampleName.trim();
 
-    if (!channel || !editedBuffer || isSaving) {
+    if (!channel || !editedBuffer || isSaving || !nextSampleName) {
       logDiagnostics('save:skipped', {
         hasChannel: Boolean(channel),
         hasEditedBuffer: Boolean(editedBuffer),
+        hasSampleName: Boolean(nextSampleName),
         isSaving,
       }, {
         editedBuffer,
       });
+
+      if (!nextSampleName) {
+        setError('Name required');
+      }
+
       return;
     }
 
@@ -712,7 +701,7 @@ export const SampleEditorModal = ({
     });
     setIsSaving(true);
     setError(null);
-    Promise.resolve(onSaveEditedSample(editedBuffer))
+    Promise.resolve(onSaveEditedSample(editedBuffer, nextSampleName))
       .then(() => {
         logDiagnostics('save:success', {}, {
           editedBuffer,
@@ -731,13 +720,7 @@ export const SampleEditorModal = ({
   };
 
   const handleClose = () => {
-    logDiagnostics('close:before-stop', {
-      audioRouter: channel ? getAudioRouterDiagnostics(channel.id) : null,
-    });
     stopAllNotes();
-    logDiagnostics('close:after-stop', {
-      audioRouter: channel ? getAudioRouterDiagnostics(channel.id) : null,
-    });
     onClose();
   };
 
@@ -813,6 +796,20 @@ export const SampleEditorModal = ({
             Reset
           </ControlButton>
         </ControlBar>
+        <NameRow>
+          <NameLabel>Save As</NameLabel>
+          <NameInput
+            aria-label="Edited sample name"
+            disabled={!audioBuffer || isSaving}
+            onChange={(event) => {
+              setSampleName(event.target.value);
+              if (error === 'Name required') {
+                setError(null);
+              }
+            }}
+            value={sampleName}
+          />
+        </NameRow>
         <ActionRow>
           <ButtonGroup>
             <ControlButton
@@ -836,7 +833,7 @@ export const SampleEditorModal = ({
             </ControlButton>
             <PrimaryButton
               $active
-              disabled={!audioBuffer || !hasEdits || isSaving}
+              disabled={!audioBuffer || !hasEdits || isSaving || !sampleName.trim()}
               onClick={handleSave}
               type="button"
             >
