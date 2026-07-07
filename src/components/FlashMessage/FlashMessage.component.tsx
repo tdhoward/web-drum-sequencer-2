@@ -130,6 +130,7 @@ export class FlashMessageComponent extends React.Component<FlashMessageComponent
           m={3}
           boxShadow="0 0.5rem 3rem rgba(0,0,0,0.9)"
           maxWidth="30rem"
+          zIndex={40}
           ref={(comp) => { this.flashBox = comp; }}
           opacity="0"
         >
