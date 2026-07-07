@@ -18,6 +18,9 @@ The app should be organized around three main workspaces:
    * Edit kit channels.
    * Each channel should be configurable independently.
    * Channel settings should include sample selection plus musical/mix properties such as gain, pan, reverb, and pitch where supported by the existing audio code.
+   * Channel samples can be edited from the Kit workspace waveform. The current editor supports manual selection, auto-select, trim, normalize, original/edited preview, and save-as naming.
+   * Sample edits are non-destructive: saving an edit creates a new user sample instead of overwriting a bundled factory sample or an existing user sample.
+   * User samples can be managed from the Kit workspace. The current sample manager supports rename, preview, and deletion for unused user samples.
 
 2. Pattern workspace
 
@@ -71,6 +74,10 @@ Current model baseline:
 * Notes carry an authored `velocity` multiplier for per-note emphasis. `velocity: 1` means 100% of the selected kit channel's level and is the normalized in-memory default; serialized pattern-style data may omit default velocity values. The authored range is currently clamped to `0` through `2`, and the scheduler applies this authored value before humanize velocity variation.
 * The compatibility note path preserves non-default note velocity values so scheduler-time playback transforms can use them.
 * The Pattern grid exposes note velocity editing through a compact vertical popover. Touch and pen users long-press an active note; mouse users right-click a note, including an empty step to create a note and edit it; keyboard users can use Shift+Enter on a focused step. The popover edits note velocity only and leaves kit channel gain unchanged.
+* The Kit channel list exposes channel sample editing by clicking the row waveform. The sample editor uses immutable audio-buffer helpers for trim/normalize/WAV encoding, applies only a tiny trim-end fade to avoid dulling drum attacks, and creates named user samples on save.
+* The sample selector can record device audio as a user sample. Recorded samples are saved through the same WAV/IndexedDB path as edited samples and can be assigned to the current kit channel immediately.
+* `userSamples` now stores user-facing sample metadata records, while older persisted string entries are still normalized when edited. The audio data itself is stored in IndexedDB and mirrored in the in-memory sample store by sample id.
+* The Kit workspace sample manager lists user samples, shows whether each sample is assigned to a channel, lets the user rename samples, previews samples through a dedicated preview channel, and only deletes samples that are not currently in use.
 
 ## UI direction
 
@@ -92,6 +99,12 @@ The Pattern workspace should include:
 * The existing numbered pattern buttons for selecting one pattern slot inside the loaded pack.
 * Pattern editing controls only; kit sample/channel editing should stay in the Kit workspace.
 
+The Kit workspace should include:
+
+* Kit preset selection.
+* Compact channel editing rows for channel name, percussion type, sample selection, waveform/sample editing, pitch, pan, volume, reverb, mute/solo, and delete.
+* A sample manager for user-created and imported samples. Broad sample-library work should stay here rather than inside Pattern or Song.
+
 Current UI/component naming baseline:
 
 * Workspace-level control bars should use `WorkspaceControls` names, such as `PatternWorkspaceControls` and `KitWorkspaceControls`.
@@ -99,6 +112,7 @@ Current UI/component naming baseline:
 * Kit channel editing rows should use `KitChannelList`. Avoid generic names like `ChannelControls` for workspace-specific surfaces.
 * Shared channel pieces should stay outside workspace-specific folders, such as `ChannelButtons` and `ChannelHeaderLabel`.
 * User-facing channel column labels should stay generic (`Channels` and `Channel`) unless a specific workflow needs extra clarity.
+* Sample editing surfaces should keep `SampleEditorModal` and `SampleManagerModal` names so one-shot waveform editing and broader sample-library cleanup remain separate workflows.
 
 When kit switching is exposed in the UI, prefer a review/apply flow:
 
@@ -144,24 +158,25 @@ Impulse response assets may exist in the project. We may eventually want to use 
 A useful follow-up analysis task is:
 
 ```text
-Inspect the Kit channel list and propose the smallest UI change for editing percussion type.
+Inspect the edited-sample save flow and propose replace-existing behavior for user samples without risking factory sample mutation.
 ```
 
 A useful follow-up editing task is:
 
 ```text
-Add Kit workspace controls for editing a channel's percussion type alongside the existing channel name editing. Keep the controls compact and preserve existing playback behavior.
+Add a replace-existing option when editing an existing user sample. Keep factory samples save-copy only.
 ```
 
 ## Current priorities
 
 Near-term priorities:
 
-1. Add UI controls for percussion type in the Kit workspace.
-2. Build a first kit-switching flow that calls the resolver and applies high-confidence mappings.
-3. Add a review dialog for low-confidence or unresolved mappings.
-4. Build out kit management UI: create, select, rename, delete, duplicate.
-5. Keep Pattern and Song workspaces focused on their own responsibilities.
+1. Build a first kit-switching flow that calls the resolver and applies high-confidence mappings.
+2. Add a review dialog for low-confidence or unresolved kit-channel mappings.
+3. Build out kit management UI: create, select, rename, delete, duplicate.
+4. Consider replace-existing behavior for edited user samples, while keeping factory samples save-copy only.
+5. Consider adjustable trim fade length/de-click options if manual trimming needs more control.
+6. Keep Pattern and Song workspaces focused on their own responsibilities.
 
 ## Non-goals for now
 

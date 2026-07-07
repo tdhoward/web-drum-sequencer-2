@@ -1,6 +1,6 @@
 import { connect } from 'react-redux';
 import { SampleSelectComponent } from './SampleSelect.component';
-import { saveUserSample, loadAndSetChannelSample } from '../../common';
+import { saveRecordedUserSample, saveUserSample, loadAndSetChannelSample } from '../../common';
 import { sampleSelectSelectors } from './SampleSelect.selectors';
 import type { AppDispatch } from '../../store';
 import type { RootState } from '../../reducer';
@@ -9,6 +9,7 @@ type AppAction = Parameters<AppDispatch>[0];
 
 type SampleSelectChannel = {
   id: string;
+  name?: string;
   sample?: string;
   sampleLoaded?: boolean;
 };
@@ -20,6 +21,11 @@ type SampleSelectOwnProps = {
 
 type SampleSelectDispatchProps = {
   loadAndSetChannelSample: (channelId: string, sampleUrl: string) => void;
+  saveRecordedUserSample: (
+    channelId: string,
+    audioBuffer: AudioBuffer,
+    sampleName: string,
+  ) => Promise<void>;
   saveUserSample: (channelId: string, files: FileList | File[]) => void;
 };
 
@@ -51,6 +57,13 @@ const mapDispatchToProps = (dispatch: AppDispatch): SampleSelectDispatchProps =>
   saveUserSample: (channelId, files) => {
     dispatch(saveUserSample(channelId, files) as unknown as AppAction);
   },
+  saveRecordedUserSample: (channelId, audioBuffer, sampleName) => (
+    dispatch(saveRecordedUserSample(
+      channelId,
+      audioBuffer,
+      sampleName,
+    ) as unknown as AppAction) as unknown as Promise<void>
+  ),
 });
 
 const mergeProps = (
@@ -70,6 +83,9 @@ const mergeProps = (
       dispatchProps.saveUserSample(ownProps.channel.id, files);
     }
   },
+  onSaveRecordedSample: (audioBuffer: AudioBuffer, sampleName: string) => (
+    dispatchProps.saveRecordedUserSample(ownProps.channel.id, audioBuffer, sampleName)
+  ),
 });
 
 export const SampleSelect = connect(

@@ -1,7 +1,11 @@
 import { fetchFile, decodeFile, decodeAudio } from './fileUtils';
-import { saveToDB, getFromDB } from './database';
+import { saveToDB, getFromDB, deleteFromDB } from './database';
+import { audioBufferToWavArrayBuffer, cloneAudioBuffer } from './sampleEditing';
 
 export const sampleStore: Record<string, AudioBuffer> = {};
+
+let editedSampleCounter = 0;
+let recordedSampleCounter = 0;
 
 export const getSampleBuffer = (url: string): AudioBuffer | undefined => sampleStore[url];
 
@@ -41,3 +45,65 @@ export const saveToSampleStore = (file: File): Promise<string> => {
       return id;
     });
 };
+
+const normalizeEditedSampleName = (sourceName = 'sample'): string => {
+  const nameWithoutExtension = sourceName.replace(/\.[a-z0-9]+$/i, '');
+  const safeName = nameWithoutExtension
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return safeName || 'sample';
+};
+
+const getEditedSampleId = (sourceName?: string): string => {
+  const baseName = normalizeEditedSampleName(sourceName);
+  editedSampleCounter += 1;
+  return `${baseName}-edited-${Date.now()}-${editedSampleCounter}.wav`;
+};
+
+const getRecordedSampleId = (sourceName?: string): string => {
+  const baseName = normalizeEditedSampleName(sourceName || 'recording');
+  recordedSampleCounter += 1;
+  return `${baseName}-recorded-${Date.now()}-${recordedSampleCounter}.wav`;
+};
+
+const saveAudioBufferAsWav = (
+  id: string,
+  audioBuffer: AudioBuffer,
+): Promise<string> => {
+  const wavSourceBuffer = cloneAudioBuffer(audioBuffer);
+  const storedBuffer = cloneAudioBuffer(audioBuffer);
+  const wavArrayBuffer = audioBufferToWavArrayBuffer(wavSourceBuffer);
+
+  return saveToDB(wavArrayBuffer, id)
+    .then(() => {
+      sampleStore[id] = storedBuffer;
+      return id;
+    });
+};
+
+export const saveEditedSampleBuffer = (
+  audioBuffer: AudioBuffer,
+  sourceName?: string,
+): Promise<string> => {
+  const id = getEditedSampleId(sourceName);
+
+  return saveAudioBufferAsWav(id, audioBuffer);
+};
+
+export const saveRecordedSampleBuffer = (
+  audioBuffer: AudioBuffer,
+  sourceName?: string,
+): Promise<string> => saveAudioBufferAsWav(
+  getRecordedSampleId(sourceName),
+  audioBuffer,
+);
+
+export const deleteSampleBuffer = (sampleId: string): Promise<string> => (
+  deleteFromDB(sampleId)
+    .then((deletedSampleId) => {
+      delete sampleStore[deletedSampleId];
+      return deletedSampleId;
+    })
+);

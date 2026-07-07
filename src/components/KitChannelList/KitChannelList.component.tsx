@@ -14,6 +14,7 @@ import { ChannelHeaderLabel } from '../ChannelHeaderLabel.component';
 import { MuteSolo } from '../MuteSolo';
 import { SampleWaveform } from '../SampleWaveform.component';
 import { SampleSelect } from '../SampleSelect';
+import { SampleEditorModal } from '../SampleEditorModal';
 import { AddChannelButton } from '../AddChannelButton';
 import { RemoveButton } from '../ChannelButtons';
 import {
@@ -47,12 +48,18 @@ type KitChannelListComponentProps = {
   onSetPan: (channel: KitChannelListChannel, event: Event) => void;
   onSetChannelPitchCoarse: (channel: KitChannelListChannel, event: Event) => void;
   onSetReverb: (channel: KitChannelListChannel, event: Event) => void;
+  onSaveEditedSample: (
+    channel: KitChannelListChannel,
+    audioBuffer: AudioBuffer,
+    sampleName: string,
+  ) => Promise<void> | void;
 };
 
 type KitChannelListComponentState = {
   editingChannelId: string | null;
   channelNameDraft: string;
   percussionMenuChannelId: string | null;
+  sampleEditorChannel: KitChannelListChannel | null;
 };
 
 type PercussionTypeOptionProps = {
@@ -290,6 +297,7 @@ export class KitChannelListComponent extends React.Component<
       editingChannelId: null,
       channelNameDraft: '',
       percussionMenuChannelId: null,
+      sampleEditorChannel: null,
     };
     this.startEditingChannelName = this.startEditingChannelName.bind(this);
     this.setChannelNameDraft = this.setChannelNameDraft.bind(this);
@@ -298,6 +306,8 @@ export class KitChannelListComponent extends React.Component<
     this.handleChannelNameKeyDown = this.handleChannelNameKeyDown.bind(this);
     this.togglePercussionTypeMenu = this.togglePercussionTypeMenu.bind(this);
     this.setPercussionType = this.setPercussionType.bind(this);
+    this.openSampleEditor = this.openSampleEditor.bind(this);
+    this.closeSampleEditor = this.closeSampleEditor.bind(this);
     this.handleDocumentMouseDown = this.handleDocumentMouseDown.bind(this);
     this.handleDocumentKeyDown = this.handleDocumentKeyDown.bind(this);
   }
@@ -433,11 +443,25 @@ export class KitChannelListComponent extends React.Component<
     });
   }
 
+  openSampleEditor(channel: KitChannelListChannel) {
+    this.setState({
+      sampleEditorChannel: channel,
+      percussionMenuChannelId: null,
+    });
+  }
+
+  closeSampleEditor() {
+    this.setState({
+      sampleEditorChannel: null,
+    });
+  }
+
   render() {
     const {
       channels,
       onPressHitButton,
       onPressRemove,
+      onSaveEditedSample,
       onSetGain,
       onSetPan,
       onSetChannelPitchCoarse,
@@ -447,165 +471,181 @@ export class KitChannelListComponent extends React.Component<
       editingChannelId,
       channelNameDraft,
       percussionMenuChannelId,
+      sampleEditorChannel,
     } = this.state;
 
     return (
-      <KitChannelListBox ref={(el) => { this.channelContainer = el; }}>
-        {channels.map((channel) => {
-          const channelId = getKitChannelId(channel);
-          const isEditingName = editingChannelId === channelId;
-          const isPercussionMenuOpen = percussionMenuChannelId === channelId;
-          const percussionTypeLabel = getPercussionTypeLabel(channel.percussionType);
-          const percussionTypeAbbreviation = getPercussionTypeAbbreviation(channel.percussionType);
+      <>
+        <KitChannelListBox ref={(el) => { this.channelContainer = el; }}>
+          {channels.map((channel) => {
+            const channelId = getKitChannelId(channel);
+            const isEditingName = editingChannelId === channelId;
+            const isPercussionMenuOpen = percussionMenuChannelId === channelId;
+            const percussionTypeLabel = getPercussionTypeLabel(channel.percussionType);
+            const percussionTypeAbbreviation = getPercussionTypeAbbreviation(channel.percussionType);
 
-          return (
-            <KitChannelRow key={channelId} className="wds-draggable">
-              <Box alignItems="center" display="flex" minWidth="0">
-                <MoveImage
-                  src={construction}
-                  height="2.5rem"
-                  mr={3}
-                  userSelect="none"
-                  aria-hidden="true"
-                  className="wds-channel-handle"
-                />
-                <ChannelNameGroup>
-                  {isEditingName ? (
-                    <ChannelNameInput
-                      ref={(input) => { this.nameInput = input; }}
-                      aria-label="Channel name"
-                      fontSize={2}
-                      value={channelNameDraft}
-                      onBlur={() => this.commitChannelName(channel)}
-                      onChange={this.setChannelNameDraft}
-                      onKeyDown={event => this.handleChannelNameKeyDown(channel, event)}
-                    />
-                  ) : (
-                    <ChannelNameButton
+            return (
+              <KitChannelRow key={channelId} className="wds-draggable">
+                <Box alignItems="center" display="flex" minWidth="0">
+                  <MoveImage
+                    src={construction}
+                    height="2.5rem"
+                    mr={3}
+                    userSelect="none"
+                    aria-hidden="true"
+                    className="wds-channel-handle"
+                  />
+                  <ChannelNameGroup>
+                    {isEditingName ? (
+                      <ChannelNameInput
+                        ref={(input) => { this.nameInput = input; }}
+                        aria-label="Channel name"
+                        fontSize={2}
+                        value={channelNameDraft}
+                        onBlur={() => this.commitChannelName(channel)}
+                        onChange={this.setChannelNameDraft}
+                        onKeyDown={event => this.handleChannelNameKeyDown(channel, event)}
+                      />
+                    ) : (
+                      <ChannelNameButton
+                        type="button"
+                        onDoubleClick={() => this.startEditingChannelName(channel)}
+                        title="Double-click to rename"
+                      >
+                        <Text as="span" color="nearWhite" fontSize={2} lineHeight="1.2em">
+                          {channel.name || channel.id}
+                        </Text>
+                      </ChannelNameButton>
+                    )}
+                    <PercussionTypeButton
+                      className="wds-percussion-type-button"
+                      aria-expanded={isPercussionMenuOpen}
+                      aria-haspopup="menu"
+                      aria-label={`Percussion type: ${percussionTypeLabel}`}
+                      onClick={() => this.togglePercussionTypeMenu(channel)}
+                      title={`Percussion type: ${percussionTypeLabel}`}
                       type="button"
-                      onDoubleClick={() => this.startEditingChannelName(channel)}
-                      title="Double-click to rename"
                     >
-                      <Text as="span" color="nearWhite" fontSize={2} lineHeight="1.2em">
-                        {channel.name || channel.id}
-                      </Text>
-                    </ChannelNameButton>
-                  )}
-                  <PercussionTypeButton
-                    className="wds-percussion-type-button"
-                    aria-expanded={isPercussionMenuOpen}
-                    aria-haspopup="menu"
-                    aria-label={`Percussion type: ${percussionTypeLabel}`}
-                    onClick={() => this.togglePercussionTypeMenu(channel)}
-                    title={`Percussion type: ${percussionTypeLabel}`}
-                    type="button"
-                  >
-                    {percussionTypeAbbreviation}
-                  </PercussionTypeButton>
-                  {isPercussionMenuOpen && (
-                    <PercussionTypeMenu
-                      className="wds-percussion-type-menu"
-                      aria-label="Select percussion type"
-                      role="menu"
-                    >
-                      {PERCUSSION_TYPE_OPTIONS.map(option => {
-                        const isSelected = option.type === channel.percussionType;
+                      {percussionTypeAbbreviation}
+                    </PercussionTypeButton>
+                    {isPercussionMenuOpen && (
+                      <PercussionTypeMenu
+                        className="wds-percussion-type-menu"
+                        aria-label="Select percussion type"
+                        role="menu"
+                      >
+                        {PERCUSSION_TYPE_OPTIONS.map(option => {
+                          const isSelected = option.type === channel.percussionType;
 
-                        return (
-                          <PercussionTypeOption
-                            key={option.type}
-                            $selected={isSelected}
-                            aria-checked={isSelected}
-                            onClick={() => this.setPercussionType(channel, option.type)}
-                            role="menuitemradio"
-                            type="button"
-                          >
-                            <PercussionTypeOptionAbbreviation $selected={isSelected}>
-                              {option.abbreviation}
-                            </PercussionTypeOptionAbbreviation>
-                            <PercussionTypeOptionLabel>{option.label}</PercussionTypeOptionLabel>
-                          </PercussionTypeOption>
-                        );
-                      })}
-                    </PercussionTypeMenu>
-                  )}
-                </ChannelNameGroup>
-              </Box>
-              <Box alignItems="center" display="flex" height="100%" justifyContent="center">
-                <MuteSolo channel={getKitEditChannel(channel)} />
-              </Box>
-              <Box alignItems="center" display="flex" justifyContent="center">
-                <HitButton
-                  channel={channel}
-                  onMouseDown={() => onPressHitButton(channel)}
-                />
-              </Box>
-              <Box minWidth="0">
-                <SampleSelect channel={getSampleSelectChannel(channel)} showLabel={false} />
-              </Box>
-              <WaveformCell>
-                <SampleWaveform sampleUrl={channel.sample} />
-              </WaveformCell>
-              {detuneSupported ? (
+                          return (
+                            <PercussionTypeOption
+                              key={option.type}
+                              $selected={isSelected}
+                              aria-checked={isSelected}
+                              onClick={() => this.setPercussionType(channel, option.type)}
+                              role="menuitemradio"
+                              type="button"
+                            >
+                              <PercussionTypeOptionAbbreviation $selected={isSelected}>
+                                {option.abbreviation}
+                              </PercussionTypeOptionAbbreviation>
+                              <PercussionTypeOptionLabel>{option.label}</PercussionTypeOptionLabel>
+                            </PercussionTypeOption>
+                          );
+                        })}
+                      </PercussionTypeMenu>
+                    )}
+                  </ChannelNameGroup>
+                </Box>
+                <Box alignItems="center" display="flex" height="100%" justifyContent="center">
+                  <MuteSolo channel={getKitEditChannel(channel)} />
+                </Box>
+                <Box alignItems="center" display="flex" justifyContent="center">
+                  <HitButton
+                    channel={channel}
+                    onMouseDown={() => onPressHitButton(channel)}
+                  />
+                </Box>
+                <Box minWidth="0">
+                  <SampleSelect channel={getSampleSelectChannel(channel)} showLabel={false} />
+                </Box>
+                <WaveformCell>
+                  <SampleWaveform
+                    onClick={() => this.openSampleEditor(channel)}
+                    sampleUrl={channel.sample}
+                    title="Edit sample"
+                  />
+                </WaveformCell>
+                {detuneSupported ? (
+                  <KnobCell>
+                    <InfoKnob
+                      label="PITCH"
+                      minLabel="-24"
+                      maxLabel="24"
+                      min="-24"
+                      max="24"
+                      value={channel.pitchCoarse || 0}
+                      onChange={event => onSetChannelPitchCoarse(channel, event)}
+                      showLabel={false}
+                    />
+                  </KnobCell>
+                ) : (
+                  <KnobCell />
+                )}
                 <KnobCell>
                   <InfoKnob
-                    label="PITCH"
-                    minLabel="-24"
-                    maxLabel="24"
-                    min="-24"
-                    max="24"
-                    value={channel.pitchCoarse || 0}
-                    onChange={event => onSetChannelPitchCoarse(channel, event)}
+                    label="PAN"
+                    minLabel="L"
+                    maxLabel="R"
+                    min="-1"
+                    max="1"
+                    step="0.1"
+                    value={channel.pan || 0}
+                    onChange={event => onSetPan(channel, event)}
                     showLabel={false}
                   />
                 </KnobCell>
-              ) : (
-                <KnobCell />
-              )}
-              <KnobCell>
-                <InfoKnob
-                  label="PAN"
-                  minLabel="L"
-                  maxLabel="R"
-                  min="-1"
-                  max="1"
-                  step="0.1"
-                  value={channel.pan || 0}
-                  onChange={event => onSetPan(channel, event)}
-                  showLabel={false}
-                />
-              </KnobCell>
-              <KnobCell>
-                <InfoKnob
-                  label="VOL"
-                  minLabel="0"
-                  maxLabel="1"
-                  value={(channel.gain || 0) * 100}
-                  onChange={event => onSetGain(channel, event)}
-                  showLabel={false}
-                />
-              </KnobCell>
-              <KnobCell>
-                <InfoKnob
-                  label="REVERB"
-                  minLabel="0"
-                  maxLabel="1"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={channel.reverb || 0}
-                  onChange={event => onSetReverb(channel, event)}
-                  showLabel={false}
-                />
-              </KnobCell>
-              <Box alignItems="center" display="flex" justifyContent="center">
-                <RemoveButton onClick={() => onPressRemove(channel)} />
-              </Box>
-            </KitChannelRow>
-          );
-        })}
-        <AddChannelButton />
-      </KitChannelListBox>
+                <KnobCell>
+                  <InfoKnob
+                    label="VOL"
+                    minLabel="0"
+                    maxLabel="1"
+                    value={(channel.gain || 0) * 100}
+                    onChange={event => onSetGain(channel, event)}
+                    showLabel={false}
+                  />
+                </KnobCell>
+                <KnobCell>
+                  <InfoKnob
+                    label="REVERB"
+                    minLabel="0"
+                    maxLabel="1"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={channel.reverb || 0}
+                    onChange={event => onSetReverb(channel, event)}
+                    showLabel={false}
+                  />
+                </KnobCell>
+                <Box alignItems="center" display="flex" justifyContent="center">
+                  <RemoveButton onClick={() => onPressRemove(channel)} />
+                </Box>
+              </KitChannelRow>
+            );
+          })}
+          <AddChannelButton />
+        </KitChannelListBox>
+        <SampleEditorModal
+          channel={sampleEditorChannel}
+          onClose={this.closeSampleEditor}
+          onSaveEditedSample={(audioBuffer, sampleName) => (
+            sampleEditorChannel
+              ? onSaveEditedSample(sampleEditorChannel, audioBuffer, sampleName)
+              : undefined
+          )}
+        />
+      </>
     );
   }
 }

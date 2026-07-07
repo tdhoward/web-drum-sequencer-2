@@ -5,9 +5,15 @@ import { useTheme } from 'styled-components';
 import { Box, ControlLabel } from '../design-system';
 import sampleOptions from '../../samples.config';
 import { createSelectStyles } from '../../styles/selectStyles';
-import type { UserSample } from '../../common';
+import {
+  getUserSampleDisplayName,
+  getUserSampleId,
+  type UserSample,
+} from '../../common';
+import { SampleRecorderModal } from '../SampleRecorderModal';
 
 const CHOOSE_FILE_VALUE = 'CHOOSE_FILE';
+const RECORD_SAMPLE_VALUE = 'RECORD_SAMPLE';
 
 type SampleSelectOption = {
   value: string;
@@ -16,6 +22,7 @@ type SampleSelectOption = {
 
 type SampleSelectChannel = {
   id: string;
+  name?: string;
   sample?: string;
   sampleLoaded?: boolean;
 };
@@ -23,6 +30,7 @@ type SampleSelectChannel = {
 type SampleSelectComponentProps = {
   onSelectSample: (sample: SampleSelectOption) => void;
   onSampleFileChosen: React.ChangeEventHandler<HTMLInputElement>;
+  onSaveRecordedSample: (audioBuffer: AudioBuffer, sampleName: string) => Promise<void> | void;
   channel: SampleSelectChannel;
   userSamples: UserSample[];
   showLabel?: boolean;
@@ -36,11 +44,9 @@ const factoryOptions: SampleSelectOption[] = sampleOptions.map(sampleOption => (
 }));
 
 const userSampleToOption = (userSample: UserSample): SampleSelectOption => {
-  const filename = typeof userSample === 'string' ? userSample : userSample.id;
-
   return {
-    value: filename,
-    label: filename,
+    value: getUserSampleId(userSample),
+    label: getUserSampleDisplayName(userSample),
   };
 };
 
@@ -53,6 +59,10 @@ const getSampleSelectOptions = (
       {
         value: CHOOSE_FILE_VALUE,
         label: 'Choose file...',
+      },
+      {
+        value: RECORD_SAMPLE_VALUE,
+        label: 'Record sample...',
       },
       ...userOptions,
     ],
@@ -82,11 +92,13 @@ const getSampleSelectOptions = (
 export const SampleSelectComponent = ({
   onSelectSample,
   onSampleFileChosen,
+  onSaveRecordedSample,
   channel,
   userSamples,
   showLabel = true,
 }: SampleSelectComponentProps) => {
   const theme = useTheme();
+  const [isRecorderOpen, setIsRecorderOpen] = React.useState(false);
   const userOptions = userSamples.map(userSampleToOption);
   const allOptions = userOptions.concat(factoryOptions);
   const currentOption = allOptions.find(option => channel.sample === option.value);
@@ -130,6 +142,8 @@ export const SampleSelectComponent = ({
 
           if (choice.value === CHOOSE_FILE_VALUE) {
             openFileInput.current?.click();
+          } else if (choice.value === RECORD_SAMPLE_VALUE) {
+            setIsRecorderOpen(true);
           } else {
             onSelectSample(choice);
           }
@@ -144,6 +158,12 @@ export const SampleSelectComponent = ({
         style={{ display: 'none' }}
         onChange={onSampleFileChosen}
         accept="audio/*"
+      />
+      <SampleRecorderModal
+        channelName={channel.name || channel.id}
+        onClose={() => setIsRecorderOpen(false)}
+        onSaveRecordedSample={onSaveRecordedSample}
+        show={isRecorderOpen}
       />
     </Box>
   );

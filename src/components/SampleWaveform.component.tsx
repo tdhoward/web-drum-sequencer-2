@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import styled, { useTheme } from 'styled-components';
+import styled, { css, useTheme } from 'styled-components';
 import { classicDarkTheme } from '../styles/theme';
 import { loadSampleBuffer } from '../services/sampleStore';
 
@@ -8,8 +8,15 @@ type WaveformPeak = {
   max: number;
 };
 
+type WaveformTracePoint = {
+  value: number;
+  x: number;
+};
+
 type SampleWaveformProps = {
   sampleUrl?: string;
+  onClick?: () => void;
+  title?: string;
 };
 
 type CanvasSize = {
@@ -17,7 +24,10 @@ type CanvasSize = {
   height: number;
 };
 
-const WaveformFrame = styled.div`
+const MAX_OSCILLOSCOPE_SAMPLE_COUNT = 12000;
+const MAX_OSCILLOSCOPE_SAMPLES_PER_PIXEL = 4;
+
+const waveformFrameStyles = css`
   background: ${({ theme }) => theme.colors.surfaceControl};
   border: 2px solid ${({ theme }) => theme.colors.borderDefault};
   border-radius: 0.3rem;
@@ -26,6 +36,23 @@ const WaveformFrame = styled.div`
   overflow: hidden;
   position: relative;
   width: 100%;
+`;
+
+const WaveformFrame = styled.div`
+  ${waveformFrameStyles}
+`;
+
+const WaveformButton = styled.button`
+  ${waveformFrameStyles}
+  appearance: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+
+  &:focus-visible {
+    border-color: ${({ theme }) => theme.colors.borderHover};
+    outline: 0;
+  }
 `;
 
 const WaveformCanvas = styled.canvas`
@@ -60,15 +87,23 @@ const getMonoSampleValue = (channels: Float32Array[], sampleIndex: number): numb
   return total / channels.length;
 };
 
+const getAudioChannels = (audioBuffer: AudioBuffer): Float32Array[] => {
+  const channels: Float32Array[] = [];
+
+  for (let channelIndex = 0; channelIndex < audioBuffer.numberOfChannels; channelIndex += 1) {
+    const channelData = new Float32Array(audioBuffer.length);
+    audioBuffer.copyFromChannel(channelData, channelIndex);
+    channels.push(channelData);
+  }
+
+  return channels;
+};
+
 export const getWaveformPeaks = (audioBuffer: AudioBuffer, width: number): WaveformPeak[] => {
   const pixelCount = Math.max(1, Math.floor(width));
   const samplesPerPixel = audioBuffer.length / pixelCount;
-  const channels: Float32Array[] = [];
+  const channels = getAudioChannels(audioBuffer);
   const peaks: WaveformPeak[] = [];
-
-  for (let channelIndex = 0; channelIndex < audioBuffer.numberOfChannels; channelIndex += 1) {
-    channels.push(audioBuffer.getChannelData(channelIndex));
-  }
 
   for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += 1) {
     const start = Math.floor(pixelIndex * samplesPerPixel);
@@ -85,10 +120,83 @@ export const getWaveformPeaks = (audioBuffer: AudioBuffer, width: number): Wavef
       max = Math.max(max, value);
     }
 
+    if (end - start === 1) {
+      min = Math.min(min, 0);
+      max = Math.max(max, 0);
+    }
+
     peaks.push({ min, max });
   }
 
   return peaks;
+};
+
+export const getWaveformTracePoints = (
+  audioBuffer: AudioBuffer,
+  width: number,
+): WaveformTracePoint[] => {
+  const canvasWidth = Math.max(1, Math.floor(width));
+  const channels = getAudioChannels(audioBuffer);
+
+  if (audioBuffer.length === 1) {
+    return [{
+      value: getMonoSampleValue(channels, 0),
+      x: canvasWidth / 2,
+    }];
+  }
+
+  const maxX = Math.max(1, canvasWidth - 1);
+  const points: WaveformTracePoint[] = [];
+
+  for (let sampleIndex = 0; sampleIndex < audioBuffer.length; sampleIndex += 1) {
+    points.push({
+      value: getMonoSampleValue(channels, sampleIndex),
+      x: (sampleIndex / (audioBuffer.length - 1)) * maxX,
+    });
+  }
+
+  return points;
+};
+
+const shouldDrawOscilloscopeTrace = (audioBuffer: AudioBuffer, canvasWidth: number): boolean => (
+  audioBuffer.length <= MAX_OSCILLOSCOPE_SAMPLE_COUNT
+    && audioBuffer.length <= canvasWidth * MAX_OSCILLOSCOPE_SAMPLES_PER_PIXEL
+);
+
+const drawOscilloscopeTrace = (
+  context: CanvasRenderingContext2D,
+  audioBuffer: AudioBuffer,
+  canvasWidth: number,
+  centerY: number,
+  amplitude: number,
+  color: string,
+  ratio: number,
+): void => {
+  const points = getWaveformTracePoints(audioBuffer, canvasWidth);
+
+  context.beginPath();
+  context.strokeStyle = color;
+  context.lineWidth = Math.max(1, ratio);
+  context.globalAlpha = 0.95;
+
+  if (points.length === 1) {
+    const [{ value, x }] = points;
+    context.moveTo(x, centerY);
+    context.lineTo(x, centerY - (value * amplitude));
+  } else {
+    points.forEach(({ value, x }, pointIndex) => {
+      const y = centerY - (value * amplitude);
+
+      if (pointIndex === 0) {
+        context.moveTo(x, y);
+      } else {
+        context.lineTo(x, y);
+      }
+    });
+  }
+
+  context.stroke();
+  context.globalAlpha = 1;
 };
 
 export const drawWaveform = (
@@ -117,9 +225,23 @@ export const drawWaveform = (
   context.clearRect(0, 0, canvasWidth, canvasHeight);
   context.fillStyle = guideColor;
   context.fillRect(0, Math.floor(canvasHeight / 2), canvasWidth, 1);
-  const peaks = getWaveformPeaks(audioBuffer, canvasWidth);
   const centerY = canvasHeight / 2;
   const amplitude = canvasHeight * 0.42;
+
+  if (shouldDrawOscilloscopeTrace(audioBuffer, canvasWidth)) {
+    drawOscilloscopeTrace(
+      context,
+      audioBuffer,
+      canvasWidth,
+      centerY,
+      amplitude,
+      color,
+      ratio,
+    );
+    return;
+  }
+
+  const peaks = getWaveformPeaks(audioBuffer, canvasWidth);
 
   context.beginPath();
   peaks.forEach(({ max }, pixelIndex) => {
@@ -162,10 +284,10 @@ export const drawWaveform = (
 
 const formatDuration = (duration: number): string => `${duration.toFixed(2)} s`;
 
-export const SampleWaveform = ({ sampleUrl }: SampleWaveformProps) => {
+export const SampleWaveform = ({ sampleUrl, onClick, title }: SampleWaveformProps) => {
   const theme = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const frameRef = useRef<HTMLDivElement | null>(null);
+  const frameRef = useRef<HTMLElement | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
 
@@ -247,14 +369,34 @@ export const SampleWaveform = ({ sampleUrl }: SampleWaveformProps) => {
     }
   }, [audioBuffer, canvasSize.width, canvasSize.height, theme]);
 
-  return (
-    <WaveformFrame ref={frameRef}>
+  const waveformContent = (
+    <>
       <WaveformCanvas ref={canvasRef} aria-label="Sample waveform" />
       {audioBuffer && (
         <DurationLabel>
           {formatDuration(audioBuffer.duration)}
         </DurationLabel>
       )}
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <WaveformButton
+        ref={(element) => { frameRef.current = element; }}
+        aria-label="Edit sample waveform"
+        onClick={onClick}
+        title={title}
+        type="button"
+      >
+        {waveformContent}
+      </WaveformButton>
+    );
+  }
+
+  return (
+    <WaveformFrame ref={(element) => { frameRef.current = element; }} title={title}>
+      {waveformContent}
     </WaveformFrame>
   );
 };
