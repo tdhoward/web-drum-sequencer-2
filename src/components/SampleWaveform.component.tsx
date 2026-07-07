@@ -8,6 +8,11 @@ type WaveformPeak = {
   max: number;
 };
 
+type WaveformTracePoint = {
+  value: number;
+  x: number;
+};
+
 type SampleWaveformProps = {
   sampleUrl?: string;
   onClick?: () => void;
@@ -18,6 +23,9 @@ type CanvasSize = {
   width: number;
   height: number;
 };
+
+const MAX_OSCILLOSCOPE_SAMPLE_COUNT = 12000;
+const MAX_OSCILLOSCOPE_SAMPLES_PER_PIXEL = 4;
 
 const waveformFrameStyles = css`
   background: ${({ theme }) => theme.colors.surfaceControl};
@@ -79,17 +87,23 @@ const getMonoSampleValue = (channels: Float32Array[], sampleIndex: number): numb
   return total / channels.length;
 };
 
-export const getWaveformPeaks = (audioBuffer: AudioBuffer, width: number): WaveformPeak[] => {
-  const pixelCount = Math.max(1, Math.floor(width));
-  const samplesPerPixel = audioBuffer.length / pixelCount;
+const getAudioChannels = (audioBuffer: AudioBuffer): Float32Array[] => {
   const channels: Float32Array[] = [];
-  const peaks: WaveformPeak[] = [];
 
   for (let channelIndex = 0; channelIndex < audioBuffer.numberOfChannels; channelIndex += 1) {
     const channelData = new Float32Array(audioBuffer.length);
     audioBuffer.copyFromChannel(channelData, channelIndex);
     channels.push(channelData);
   }
+
+  return channels;
+};
+
+export const getWaveformPeaks = (audioBuffer: AudioBuffer, width: number): WaveformPeak[] => {
+  const pixelCount = Math.max(1, Math.floor(width));
+  const samplesPerPixel = audioBuffer.length / pixelCount;
+  const channels = getAudioChannels(audioBuffer);
+  const peaks: WaveformPeak[] = [];
 
   for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += 1) {
     const start = Math.floor(pixelIndex * samplesPerPixel);
@@ -106,10 +120,83 @@ export const getWaveformPeaks = (audioBuffer: AudioBuffer, width: number): Wavef
       max = Math.max(max, value);
     }
 
+    if (end - start === 1) {
+      min = Math.min(min, 0);
+      max = Math.max(max, 0);
+    }
+
     peaks.push({ min, max });
   }
 
   return peaks;
+};
+
+export const getWaveformTracePoints = (
+  audioBuffer: AudioBuffer,
+  width: number,
+): WaveformTracePoint[] => {
+  const canvasWidth = Math.max(1, Math.floor(width));
+  const channels = getAudioChannels(audioBuffer);
+
+  if (audioBuffer.length === 1) {
+    return [{
+      value: getMonoSampleValue(channels, 0),
+      x: canvasWidth / 2,
+    }];
+  }
+
+  const maxX = Math.max(1, canvasWidth - 1);
+  const points: WaveformTracePoint[] = [];
+
+  for (let sampleIndex = 0; sampleIndex < audioBuffer.length; sampleIndex += 1) {
+    points.push({
+      value: getMonoSampleValue(channels, sampleIndex),
+      x: (sampleIndex / (audioBuffer.length - 1)) * maxX,
+    });
+  }
+
+  return points;
+};
+
+const shouldDrawOscilloscopeTrace = (audioBuffer: AudioBuffer, canvasWidth: number): boolean => (
+  audioBuffer.length <= MAX_OSCILLOSCOPE_SAMPLE_COUNT
+    && audioBuffer.length <= canvasWidth * MAX_OSCILLOSCOPE_SAMPLES_PER_PIXEL
+);
+
+const drawOscilloscopeTrace = (
+  context: CanvasRenderingContext2D,
+  audioBuffer: AudioBuffer,
+  canvasWidth: number,
+  centerY: number,
+  amplitude: number,
+  color: string,
+  ratio: number,
+): void => {
+  const points = getWaveformTracePoints(audioBuffer, canvasWidth);
+
+  context.beginPath();
+  context.strokeStyle = color;
+  context.lineWidth = Math.max(1, ratio);
+  context.globalAlpha = 0.95;
+
+  if (points.length === 1) {
+    const [{ value, x }] = points;
+    context.moveTo(x, centerY);
+    context.lineTo(x, centerY - (value * amplitude));
+  } else {
+    points.forEach(({ value, x }, pointIndex) => {
+      const y = centerY - (value * amplitude);
+
+      if (pointIndex === 0) {
+        context.moveTo(x, y);
+      } else {
+        context.lineTo(x, y);
+      }
+    });
+  }
+
+  context.stroke();
+  context.globalAlpha = 1;
 };
 
 export const drawWaveform = (
@@ -138,9 +225,23 @@ export const drawWaveform = (
   context.clearRect(0, 0, canvasWidth, canvasHeight);
   context.fillStyle = guideColor;
   context.fillRect(0, Math.floor(canvasHeight / 2), canvasWidth, 1);
-  const peaks = getWaveformPeaks(audioBuffer, canvasWidth);
   const centerY = canvasHeight / 2;
   const amplitude = canvasHeight * 0.42;
+
+  if (shouldDrawOscilloscopeTrace(audioBuffer, canvasWidth)) {
+    drawOscilloscopeTrace(
+      context,
+      audioBuffer,
+      canvasWidth,
+      centerY,
+      amplitude,
+      color,
+      ratio,
+    );
+    return;
+  }
+
+  const peaks = getWaveformPeaks(audioBuffer, canvasWidth);
 
   context.beginPath();
   peaks.forEach(({ max }, pixelIndex) => {
