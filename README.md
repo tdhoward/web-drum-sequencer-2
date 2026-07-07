@@ -9,6 +9,7 @@ The original web app can be found here:  https://wds-1.com
  * Kit, Pattern, and Song workspaces
  * Swap drum samples
  * Choose drum samples from file
+ * Record drum samples from the user's device
  * Edit kit samples with a waveform modal
  * Auto-select, trim, normalize, preview, and save edited samples
  * Rename, preview, and delete unused user samples

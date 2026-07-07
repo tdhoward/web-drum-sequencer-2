@@ -5,7 +5,7 @@ export type UserSampleRecord = {
   name: string;
   createdAt?: number;
   sourceName?: string;
-  sourceType?: 'uploaded' | 'edited';
+  sourceType?: 'uploaded' | 'edited' | 'recorded';
   [key: string]: unknown;
 };
 
@@ -46,7 +46,7 @@ type AddUserSamplePayload = {
   name?: string;
   createdAt?: number;
   sourceName?: string;
-  sourceType?: 'uploaded' | 'edited';
+  sourceType?: 'uploaded' | 'edited' | 'recorded';
 };
 
 type RenameUserSamplePayload = {

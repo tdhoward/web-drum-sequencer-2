@@ -1,4 +1,9 @@
-import { deleteSampleBuffer, saveEditedSampleBuffer, saveToSampleStore } from '../../services/sampleStore';
+import {
+  deleteSampleBuffer,
+  saveEditedSampleBuffer,
+  saveRecordedSampleBuffer,
+  saveToSampleStore,
+} from '../../services/sampleStore';
 import { loadAndSetChannelSample } from '../channels';
 import { removeSampleFromUrl, renameSampleFromUrl } from '../samples';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
@@ -49,6 +54,30 @@ export const saveEditedUserSample = (
         name: displayName,
         sourceName,
         sourceType: 'edited',
+      }));
+      dispatch(loadAndSetChannelSample(channel, sampleURL));
+    })
+    .catch((error) => {
+      dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
+      return Promise.reject(error);
+    });
+};
+
+export const saveRecordedUserSample = (
+  channel: string,
+  audioBuffer: AudioBuffer,
+  sampleName?: string,
+) => (
+  dispatch: Dispatch,
+): Promise<void> => {
+  const displayName = sampleName?.trim() || 'Recorded Sample';
+
+  return saveRecordedSampleBuffer(audioBuffer, displayName)
+    .then((sampleURL: string) => {
+      dispatch(addUserSample({
+        id: sampleURL,
+        name: displayName,
+        sourceType: 'recorded',
       }));
       dispatch(loadAndSetChannelSample(channel, sampleURL));
     })

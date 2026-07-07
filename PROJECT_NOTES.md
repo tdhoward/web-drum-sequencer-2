@@ -75,6 +75,7 @@ Current model baseline:
 * The compatibility note path preserves non-default note velocity values so scheduler-time playback transforms can use them.
 * The Pattern grid exposes note velocity editing through a compact vertical popover. Touch and pen users long-press an active note; mouse users right-click a note, including an empty step to create a note and edit it; keyboard users can use Shift+Enter on a focused step. The popover edits note velocity only and leaves kit channel gain unchanged.
 * The Kit channel list exposes channel sample editing by clicking the row waveform. The sample editor uses immutable audio-buffer helpers for trim/normalize/WAV encoding, applies only a tiny trim-end fade to avoid dulling drum attacks, and creates named user samples on save.
+* The sample selector can record device audio as a user sample. Recorded samples are saved through the same WAV/IndexedDB path as edited samples and can be assigned to the current kit channel immediately.
 * `userSamples` now stores user-facing sample metadata records, while older persisted string entries are still normalized when edited. The audio data itself is stored in IndexedDB and mirrored in the in-memory sample store by sample id.
 * The Kit workspace sample manager lists user samples, shows whether each sample is assigned to a channel, lets the user rename samples, previews samples through a dedicated preview channel, and only deletes samples that are not currently in use.
 

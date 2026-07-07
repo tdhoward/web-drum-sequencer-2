@@ -187,7 +187,7 @@ patterns can be remapped to another kit without rewriting note data.
 
 `sample` is the normalized entity used by kit channels. `userSample` is the
 persisted user-facing library metadata used by the sample selector and sample
-manager. The audio payload for uploaded and edited samples is stored in
+manager. The audio payload for uploaded, edited, and recorded samples is stored in
 IndexedDB and mirrored in the in-memory sample store under `userSample.id`.
 Older persisted user-sample lists may contain bare string ids; reducers should
 continue to normalize those entries when they are renamed or otherwise edited.
@@ -200,6 +200,10 @@ Trim applies a tiny fade only at the end boundary to avoid blunting drum
 attacks. User samples can be renamed, previewed, and deleted through the Kit
 workspace sample manager, but deletion is disabled while the sample is assigned
 to a channel.
+
+Recorded device-audio samples are user samples. The recording dialog stores the
+final sample as WAV data in IndexedDB and assigns it to the selected kit channel
+through the same channel-sample flow used by uploads and edited samples.
 
 ## Kit channel mapping
 

@@ -22,6 +22,19 @@ describe('user samples reducer', () => {
     expect(state).toHaveLength(1);
     expect(getUserSampleId(state[0])).toEqual('kick-edit.wav');
     expect(getUserSampleDisplayName(state[0])).toEqual('Kick Edit');
+    expect(normalizeUserSample(state[0]).sourceType).toEqual('edited');
+  });
+
+  test('adds recorded user sample metadata records', () => {
+    const state = userSamplesReducer(undefined, addUserSample({
+      id: 'snare-recorded.wav',
+      name: 'Snare Recording',
+      sourceType: 'recorded',
+    }));
+
+    expect(state).toHaveLength(1);
+    expect(getUserSampleDisplayName(state[0])).toEqual('Snare Recording');
+    expect(normalizeUserSample(state[0]).sourceType).toEqual('recorded');
   });
 
   test('upserts duplicate user sample ids', () => {
