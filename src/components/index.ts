@@ -30,4 +30,6 @@ export * from './SampleManagerModal';
 export * from './SampleEditorModal';
 export * from './SampleRecorderModal';
 export * from './KitWorkspaceControls';
+export * from './SongWorkspaceControls';
+export * from './WorkspaceControls';
 export * from './ThemeSelector';

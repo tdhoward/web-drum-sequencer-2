@@ -2,12 +2,8 @@ import React from 'react';
 import styled from 'styled-components';
 import { Box, Text } from '../design-system';
 
-const CurrentKitFrame = styled(Box)`
-  background: ${({ theme }) => theme.colors.surfaceControl};
-  border: 2px solid ${({ theme }) => theme.colors.borderDefault};
-  border-radius: 0.5em;
+const CurrentKitText = styled(Box)`
   min-height: 2.7rem;
-  overflow: hidden;
 `;
 
 type CurrentKitDisplayComponentProps = {
@@ -17,27 +13,24 @@ type CurrentKitDisplayComponentProps = {
 export const CurrentKitDisplayComponent = ({
   kitName,
 }: CurrentKitDisplayComponentProps) => (
-  <Box height="100%" minWidth="11rem" position="relative">
+  <CurrentKitText
+    display="flex"
+    flexDirection="column"
+    justifyContent="center"
+    minWidth="8rem"
+    px={1}
+  >
     <Text
-      position="absolute"
-      left="0.5rem"
-      top="-0.6em"
       color="textMuted"
       fontSize="0.6rem"
       fontWeight="600"
-      bg="surfaceApp"
-      pl={1}
-      pr={1}
       letterSpacing="0.1em"
-      zIndex={1}
-      borderRadius="3px"
+      lineHeight="1.1em"
     >
       CURRENT KIT
     </Text>
-    <CurrentKitFrame display="flex" alignItems="center" px={3}>
-      <Text color="textPrimary" fontSize={2} lineHeight="1.2em">
-        {kitName}
-      </Text>
-    </CurrentKitFrame>
-  </Box>
+    <Text color="textPrimary" fontSize={2} fontWeight="600" lineHeight="1.2em" mt={1}>
+      {kitName}
+    </Text>
+  </CurrentKitText>
 );
