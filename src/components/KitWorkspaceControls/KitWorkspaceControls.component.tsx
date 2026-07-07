@@ -7,13 +7,14 @@ import { WorkspaceControls } from '../WorkspaceControls';
 const LocalControls = styled.div`
   align-items: flex-end;
   display: grid;
-  flex: 1 1 100%;
+  flex: 0 1 auto;
   gap: 0.75rem;
-  grid-template-columns: minmax(12rem, 1fr) auto;
+  grid-template-columns: 18rem auto;
 
   @media (max-width: 640px) {
     align-items: stretch;
     grid-template-columns: 1fr;
+    width: 100%;
   }
 `;
 

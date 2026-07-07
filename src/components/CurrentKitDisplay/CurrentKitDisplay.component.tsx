@@ -4,6 +4,7 @@ import { Box, Text } from '../design-system';
 
 const CurrentKitText = styled(Box)`
   min-height: 2.7rem;
+  text-align: center;
 `;
 
 type CurrentKitDisplayComponentProps = {
@@ -14,6 +15,7 @@ export const CurrentKitDisplayComponent = ({
   kitName,
 }: CurrentKitDisplayComponentProps) => (
   <CurrentKitText
+    alignItems="center"
     display="flex"
     flexDirection="column"
     justifyContent="center"
