@@ -20,7 +20,7 @@ const WorkspaceControlsLayout = styled.div<WorkspaceControlsLayoutProps>`
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 3.4rem;
   padding: 0.3rem 0.4rem;
   width: 100%;
@@ -37,7 +37,7 @@ const WorkspaceControlsLayout = styled.div<WorkspaceControlsLayoutProps>`
   )};
     flex-wrap: wrap;
     gap: 0.65rem;
-    justify-content: center;
+    justify-content: flex-start;
     min-height: 3rem;
   }
 

@@ -1,3 +1,4 @@
+import React from 'react';
 import { connect } from 'react-redux';
 import patternPacks from '../../patternPacks';
 import {
@@ -6,13 +7,22 @@ import {
   loadPatternPack,
   setPatternPackPrompt,
 } from '../../common';
-import { PatternPackSelectorComponent } from './PatternPackSelector.component';
 import { patternPackSelectorSelectors } from './PatternPackSelector.selectors';
+import {
+  PresetSelectorComponent,
+  type PresetSelectorCommand,
+  type PresetSelectorOption,
+} from '../PresetSelector/PresetSelector.component';
+import { SavePatternPackModal } from '../SavePatternPackModal';
 import type { PatternPack } from '../../common/sequencerModel';
 import type { AppDispatch } from '../../store';
 import type { RootState } from '../../reducer';
 
 type AppAction = Parameters<AppDispatch>[0];
+type PatternPackCommand =
+  'SAVE_PATTERN_PACK_AS' | 'SAVE_PATTERN_PACK' | 'DELETE_PATTERN_PACK';
+const PatternPackSelectorComponent =
+  PresetSelectorComponent<PatternPack, PatternPackCommand>;
 
 type PatternPackSelectorDispatchProps = {
   doSavePatternPack: (patternPackId: string) => void;
@@ -21,9 +31,7 @@ type PatternPackSelectorDispatchProps = {
   setPatternPackPrompt: (isOpen: boolean) => void;
 };
 
-type PatternPackSelectOption = {
-  value: PatternPack | string;
-};
+type PatternPackSelectOption = PresetSelectorOption<PatternPack, PatternPackCommand>;
 
 const mapStateToProps = (state: RootState) => patternPackSelectorSelectors(state);
 
@@ -49,8 +57,15 @@ const mergeProps = (
   dispatchProps: PatternPackSelectorDispatchProps,
 ) => ({
   ...stateProps,
-  patternPacks,
-  onSelectPatternPack: ({ value }: PatternPackSelectOption) => {
+  ariaLabel: 'Select Pattern Pack',
+  currentPreset: stateProps.currentPatternPack,
+  getPresetId: (patternPack: PatternPack) => patternPack.id,
+  label: 'PATTERN PACK',
+  memoryOptions: createMemoryOptions(stateProps),
+  modal: React.createElement(SavePatternPackModal),
+  presets: patternPacks,
+  userPresets: stateProps.userPatternPacks,
+  onSelectPreset: ({ value }: PatternPackSelectOption) => {
     const currentPatternPackId = stateProps.currentPatternPack?.id;
 
     switch (value) {
@@ -75,6 +90,34 @@ const mergeProps = (
     }
   },
 });
+
+const createMemoryOptions = (
+  stateProps: PatternPackSelectorStateProps,
+): PresetSelectorCommand<PatternPackCommand>[] => {
+  const selectedPatternPack = stateProps.currentPatternPack || patternPacks[0];
+  const selectedPatternPackName = selectedPatternPack?.name || 'Unknown';
+  const selectedPatternPackId = selectedPatternPack?.id;
+  const defaultPatternPackSelected = patternPacks.some(
+    patternPack => patternPack.id === selectedPatternPackId,
+  );
+
+  return [
+    {
+      label: 'Save Pattern Pack As...',
+      value: 'SAVE_PATTERN_PACK_AS',
+    },
+    {
+      label: `Save "${selectedPatternPackName}"`,
+      value: 'SAVE_PATTERN_PACK',
+      disabled: !stateProps.isEdited || defaultPatternPackSelected,
+    },
+    {
+      label: `Delete "${selectedPatternPackName}"`,
+      value: 'DELETE_PATTERN_PACK',
+      disabled: defaultPatternPackSelected,
+    },
+  ];
+};
 
 export const PatternPackSelector = connect(
   mapStateToProps,
