@@ -106,6 +106,7 @@ patternPack
   name
   bpm
   swing
+  patternNames[]
   lanes[]
     laneId
     name

@@ -18,6 +18,11 @@ export const selectedPatternSelector = createSelector(
   (patterns, selectedPatternId): Pattern | undefined => patterns.entities[selectedPatternId],
 );
 
+export const selectedPatternNameSelector = createSelector(
+  selectedPatternSelector,
+  pattern => pattern?.name || '',
+);
+
 export const selectedPatternLengthSelector = createSelector(
   selectedPatternSelector,
   pattern => getPatternLengthInQuarterBeats(pattern),

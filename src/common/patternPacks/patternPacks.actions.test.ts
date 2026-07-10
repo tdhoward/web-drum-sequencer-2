@@ -112,6 +112,7 @@ describe('loadPatternPack', () => {
       name: 'Hip Hop Swing',
       bpm: 98,
       swing: 0.4,
+      patternNames: ['Intro'],
       lanes: [
         {
           id: 'hiphop-bd-2',
@@ -174,6 +175,7 @@ describe('loadPatternPack', () => {
       'tempo/setBPM',
       'tempo/setSwing',
       'patterns/replacePatternLanes',
+      'patterns/replacePatternNames',
       'notes/setNotes',
       'kitChannelAssignments/replaceKitChannelAssignments',
       'song/setPattern',
@@ -181,7 +183,8 @@ describe('loadPatternPack', () => {
       'patternPacks/setSelectedPatternPack',
     ]);
     expect(actions[2].payload).toEqual(['hiphop-bd-2']);
-    const assignmentPayload = actions[4].payload as { assignments: unknown[] };
+    expect(actions[3].payload).toEqual(['Intro']);
+    const assignmentPayload = actions[5].payload as { assignments: unknown[] };
     expect(assignmentPayload.assignments).toEqual([
       expect.objectContaining({
         id: 'tr808-bd-short',
@@ -215,6 +218,7 @@ describe('doSavePatternPackAs', () => {
       name: 'My Patterns',
       bpm: 112,
       swing: 0.25,
+      patternNames: ['Pattern 1', 'Pattern 2'],
       lanes: [
         expect.objectContaining({
           id: 'kick',
