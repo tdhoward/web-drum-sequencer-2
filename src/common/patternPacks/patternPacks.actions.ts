@@ -1,7 +1,7 @@
 import { resolveKitChannelMapping } from '../percussion';
 import patternPacks from '../../patternPacks';
 import { setSwing, setBPM } from '../tempo';
-import { replacePatternLanes } from '../patterns';
+import { replacePatternLanes, replacePatternNames } from '../patterns';
 import { setNotes } from '../notes';
 import { channelsStateSelector } from '../channels';
 import {
@@ -10,7 +10,12 @@ import {
 } from '../kitChannelAssignments';
 import { setSelectedChannel } from '../master';
 import { setPattern } from '../song';
-import type { KitChannel, PatternPack, SequencerRootState } from '../sequencerModel';
+import {
+  DEFAULT_PATTERN_COUNT,
+  type KitChannel,
+  type PatternPack,
+  type SequencerRootState,
+} from '../sequencerModel';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import {
   deletePatternPack,
@@ -60,6 +65,18 @@ const createPatternPackId = (name: string, existingPatternPacks: PatternPack[]):
   return id;
 };
 
+const getPatternPackPatternCount = (patternPack: PatternPack): number => Math.max(
+  DEFAULT_PATTERN_COUNT,
+  ...Object.values(patternPack.notes).map(channelPatterns => channelPatterns.length),
+);
+
+const getPatternPackPatternNames = (patternPack: PatternPack): string[] => (
+  patternPack.patternNames || Array.from(
+    { length: getPatternPackPatternCount(patternPack) },
+    (_, index) => `Pattern ${index + 1}`,
+  )
+);
+
 export const loadPatternPack = (patternPack: PatternPack) => (
   dispatch: Dispatch,
   getState: () => SequencerRootState,
@@ -75,6 +92,7 @@ export const loadPatternPack = (patternPack: PatternPack) => (
   dispatch(setBPM(patternPack.bpm));
   dispatch(setSwing(patternPack.swing));
   dispatch(replacePatternLanes(patternPack.lanes.map(lane => lane.laneId || lane.id)));
+  dispatch(replacePatternNames(getPatternPackPatternNames(patternPack)));
   dispatch(setNotes(patternPack.notes));
   dispatch(replaceKitChannelAssignments({
     assignments: mappingToAssignments(mappingResult.mappings, targetKitChannels),

@@ -17,6 +17,7 @@ import type { PatternPacksState } from './patternPacks.reducer';
 type CurrentPatternPackState = {
   bpm: number;
   swing: number;
+  patternNames: string[];
   lanes: PatternPackLane[];
   notes: LegacyNotes;
 };
@@ -125,6 +126,12 @@ const createPatternPackLanes = (
   });
 };
 
+const createPatternNames = (patterns: PatternsState): string[] => (
+  patterns.ids.map((patternId, index) => (
+    patterns.entities[patternId]?.name || `Pattern ${index + 1}`
+  ))
+);
+
 export const currentPatternPackStateSelector = createSelector(
   bpmSelector,
   swingSelector,
@@ -145,6 +152,7 @@ export const currentPatternPackStateSelector = createSelector(
     return {
       bpm,
       swing,
+      patternNames: createPatternNames(patterns),
       lanes: createPatternPackLanes(laneIds, selectedPatternPack, channels),
       notes: notesStateToLegacyNotes({
         notesState,

@@ -1,9 +1,10 @@
 import presets from '../presets';
-import type {
-  FactoryPreset,
-  FactoryPresetChannel,
-  PatternPack,
-  PatternPackLane,
+import {
+  DEFAULT_PATTERN_COUNT,
+  type FactoryPreset,
+  type FactoryPresetChannel,
+  type PatternPack,
+  type PatternPackLane,
 } from '../common/sequencerModel';
 
 const patternPackIdsByName: Record<string, string> = {
@@ -39,11 +40,21 @@ const channelToLane = (channel: FactoryPresetChannel): PatternPackLane => ({
   tags: channel.tags,
 });
 
+const getPresetPatternCount = (preset: FactoryPreset): number => Math.max(
+  DEFAULT_PATTERN_COUNT,
+  ...Object.values(preset.notes).map(channelPatterns => channelPatterns.length),
+);
+
+const createGenericPatternNames = (patternCount: number): string[] => (
+  Array.from({ length: patternCount }, (_, index) => `Pattern ${index + 1}`)
+);
+
 const presetToPatternPack = (preset: FactoryPreset): PatternPack => ({
   id: patternPackIdsByName[preset.name] || slugify(preset.name),
   name: patternPackNamesByName[preset.name] || preset.name,
   bpm: preset.bpm,
   swing: preset.swing,
+  patternNames: createGenericPatternNames(getPresetPatternCount(preset)),
   lanes: preset.channels.map(channelToLane),
   notes: preset.notes,
 });

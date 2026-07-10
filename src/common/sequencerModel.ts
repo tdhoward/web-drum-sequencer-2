@@ -123,6 +123,7 @@ export type PatternPack = {
   name: string;
   bpm: number;
   swing: number;
+  patternNames?: string[];
   lanes: PatternPackLane[];
   notes: LegacyNotes;
 };

@@ -1,6 +1,6 @@
 import React from 'react';
 import { connect } from 'react-redux';
-import { ThemeProvider } from 'styled-components';
+import styled, { ThemeProvider } from 'styled-components';
 import GlobalStyles from '../styles/globalStyles';
 import {
   Box,
@@ -9,7 +9,9 @@ import {
   PatternWorkspaceControls,
   KitChannelHeader,
   KitWorkspaceControls,
+  SongWorkspaceControls,
   MasterControls,
+  WorkspaceNav,
   Branding,
   GithubLink,
   FlashMessage,
@@ -25,6 +27,60 @@ import type { RootState } from '../reducer';
 type AppComponentProps = {
   selectedTheme: AppTheme;
   selectedWorkspace: Workspace;
+};
+
+const WorkspaceHeaderControls = styled.div`
+  align-items: center;
+  column-gap: 1rem;
+  display: grid;
+  grid-template-areas: "transport workspace nav";
+  grid-template-columns: auto minmax(18rem, 1fr) auto;
+  row-gap: 0.75rem;
+
+  .workspace-header-transport {
+    grid-area: transport;
+    justify-self: start;
+  }
+
+  .workspace-header-workspace {
+    grid-area: workspace;
+    min-width: 0;
+  }
+
+  .workspace-header-nav {
+    grid-area: nav;
+    justify-self: end;
+  }
+
+  @media (max-width: 1024px) {
+    grid-template-areas:
+      "nav"
+      "transport"
+      "workspace";
+    grid-template-columns: 1fr;
+
+    .workspace-header-nav,
+    .workspace-header-transport,
+    .workspace-header-workspace {
+      justify-self: center;
+    }
+
+    .workspace-header-workspace {
+      width: 100%;
+    }
+  }
+`;
+
+const renderWorkspaceControls = (selectedWorkspace: Workspace) => {
+  if (selectedWorkspace === WORKSPACES.PATTERN) {
+    return <PatternWorkspaceControls />;
+  }
+
+  if (selectedWorkspace === WORKSPACES.KIT) {
+    return <KitWorkspaceControls />;
+  }
+
+  return <SongWorkspaceControls />;
 };
 
 const AppComponent = ({ selectedTheme, selectedWorkspace }: AppComponentProps) => (
@@ -47,20 +103,24 @@ const AppComponent = ({ selectedTheme, selectedWorkspace }: AppComponentProps) =
         </header>
         <main>
           <Box position="sticky" bg="surfaceApp" top="0" zIndex="10" pt={2}>
-            <MasterControls />
+            <WorkspaceHeaderControls>
+              <div className="workspace-header-transport">
+                <MasterControls />
+              </div>
+              <div className="workspace-header-workspace">
+                {renderWorkspaceControls(selectedWorkspace)}
+              </div>
+              <div className="workspace-header-nav">
+                <WorkspaceNav />
+              </div>
+            </WorkspaceHeaderControls>
             {selectedWorkspace === WORKSPACES.PATTERN && (
-              <>
-                <PatternWorkspaceControls />
-                <PatternChannelHeader />
-              </>
+              <PatternChannelHeader />
             )}
             {selectedWorkspace === WORKSPACES.KIT && (
-              <>
-                <KitWorkspaceControls />
-                <Box mt={3}>
-                  <KitChannelHeader />
-                </Box>
-              </>
+              <Box mt={3}>
+                <KitChannelHeader />
+              </Box>
             )}
           </Box>
           {selectedWorkspace === WORKSPACES.PATTERN ? <PatternChannelList /> : <WorkspacePanel />}

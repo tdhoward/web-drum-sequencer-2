@@ -50,6 +50,18 @@ export const patternsSlice = createSlice({
         state.entities[patternId].laneIds = action.payload;
       });
     },
+    replacePatternNames(state, action: PayloadAction<string[]>) {
+      state.ids.forEach((patternId, index) => {
+        state.entities[patternId].name = action.payload[index] || `Pattern ${index + 1}`;
+      });
+    },
+    setPatternName(state, action: PayloadAction<{ patternId: string; name: string }>) {
+      const pattern = state.entities[action.payload.patternId];
+
+      if (pattern) {
+        pattern.name = action.payload.name;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -73,6 +85,8 @@ export const patternsSlice = createSlice({
 
 export const {
   replacePatternLanes,
+  replacePatternNames,
+  setPatternName,
 } = patternsSlice.actions;
 
 export const replacePatternChannels = replacePatternLanes;

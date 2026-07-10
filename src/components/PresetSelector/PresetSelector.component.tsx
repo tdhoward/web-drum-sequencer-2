@@ -1,91 +1,127 @@
 import React from 'react';
 import Select from 'react-select';
-import type { GroupBase } from 'react-select';
+import type { GroupBase, SingleValue } from 'react-select';
 import { useTheme } from 'styled-components';
 import { createSelectStyles } from '../../styles/selectStyles';
 import { Box, Text } from '../design-system';
-import { SavePresetModal } from '../SavePresetModal';
-import type { UserPreset } from '../../common';
-import type { FactoryPreset } from '../../common/sequencerModel';
 
-type PresetCommand = 'SAVE_PRESET_AS' | 'SAVE_PRESET' | 'DELETE_PRESET';
+type PresetSelectorPreset = {
+  name: string;
+};
 
-type PresetSelectValue = FactoryPreset | UserPreset | PresetCommand;
-
-type PresetSelectOption = {
+export type PresetSelectorOption<
+  TPreset extends PresetSelectorPreset,
+  TCommand extends string = string,
+> = {
   label: string;
-  value: PresetSelectValue;
+  value: TPreset | TCommand;
   disabled?: boolean;
 };
 
-type PresetSelectorComponentProps = {
-  onSelectPreset: (option: PresetSelectOption) => void;
-  presets: FactoryPreset[];
-  currentPreset?: FactoryPreset | UserPreset;
-  isEdited: boolean;
-  userPresets?: UserPreset[];
-  label?: string;
+export type PresetSelectorCommand<TCommand extends string = string> = {
+  label: string;
+  value: TCommand;
+  disabled?: boolean;
 };
 
-export const PresetSelectorComponent = ({
+type PresetSelectorComponentProps<
+  TPreset extends PresetSelectorPreset,
+  TCommand extends string = string,
+> = {
+  ariaLabel?: string;
+  currentPreset?: TPreset;
+  defaultGroupLabel?: string;
+  getPresetId?: (preset: TPreset) => string;
+  getPresetName?: (preset: TPreset) => string;
+  height?: string;
+  isEdited?: boolean;
+  label?: string;
+  memoryOptions?: PresetSelectorCommand<TCommand>[];
+  minWidth?: string;
+  modal?: React.ReactNode;
+  onSelectPreset: (option: PresetSelectorOption<TPreset, TCommand>) => void;
+  presets: TPreset[];
+  showUserGroup?: boolean;
+  userGroupLabel?: string;
+  userPresets?: TPreset[];
+  width?: string;
+};
+
+const PRESET_SELECTOR_WIDTH = '14.5em';
+
+const defaultGetPresetId = <TPreset extends PresetSelectorPreset>(preset: TPreset): string => (
+  preset.name
+);
+
+const defaultGetPresetName = <TPreset extends PresetSelectorPreset>(preset: TPreset): string => (
+  preset.name
+);
+
+export function PresetSelectorComponent<
+  TPreset extends PresetSelectorPreset,
+  TCommand extends string = string,
+>({
+  ariaLabel = 'Select Preset',
+  currentPreset,
+  defaultGroupLabel = 'Default',
+  getPresetId = defaultGetPresetId,
+  getPresetName = defaultGetPresetName,
+  height = '3rem',
+  isEdited = false,
+  label = 'PRESETS',
+  memoryOptions = [],
+  minWidth,
+  modal,
   onSelectPreset,
   presets,
-  currentPreset,
-  isEdited,
+  showUserGroup = true,
+  userGroupLabel = 'User',
   userPresets,
-  label = 'PRESETS',
-}: PresetSelectorComponentProps) => {
+  width = PRESET_SELECTOR_WIDTH,
+}: PresetSelectorComponentProps<TPreset, TCommand>) {
   const theme = useTheme();
-  const selectedPreset = currentPreset || presets[0] || { name: 'Unknown' };
   const resolvedUserPresets = userPresets || [];
-  const defaultPresetOptions: PresetSelectOption[] = presets.map(preset => ({
-    label: preset.name,
+  const selectedPreset = currentPreset || presets[0];
+  const selectedPresetId = selectedPreset ? getPresetId(selectedPreset) : undefined;
+  const defaultPresetOptions: PresetSelectorOption<TPreset, TCommand>[] = presets.map(preset => ({
+    label: getPresetName(preset),
     value: preset,
   }));
 
-  const userPresetOptions: PresetSelectOption[] = resolvedUserPresets.map(preset => ({
-    label: preset.name,
+  const userPresetOptions: PresetSelectorOption<TPreset, TCommand>[] = resolvedUserPresets.map(preset => ({
+    label: getPresetName(preset),
     value: preset,
   }));
 
-  const defaultPresetSelected = defaultPresetOptions.find(
-    option => option.label === selectedPreset.name,
-  ) !== undefined;
-
-  const groupedOptions: GroupBase<PresetSelectOption>[] = [
+  const groupedOptions: GroupBase<PresetSelectorOption<TPreset, TCommand>>[] = [
     {
-      label: 'Default',
+      label: defaultGroupLabel,
       options: defaultPresetOptions,
-    },
-    {
-      label: 'User',
-      options: userPresetOptions,
-    },
-    {
-      label: 'Memory',
-      options: [
-        {
-          label: 'Save Kit As...',
-          value: 'SAVE_PRESET_AS',
-        },
-        {
-          label: `Save "${selectedPreset.name}"`,
-          value: 'SAVE_PRESET',
-          disabled: !isEdited || defaultPresetSelected,
-        },
-        {
-          label: `Delete "${selectedPreset.name}"`,
-          value: 'DELETE_PRESET',
-          disabled: defaultPresetSelected,
-        },
-      ],
     },
   ];
 
-  let selectedOption: PresetSelectOption | undefined = [
+  if (showUserGroup || userPresetOptions.length > 0) {
+    groupedOptions.push({
+      label: userGroupLabel,
+      options: userPresetOptions,
+    });
+  }
+
+  if (memoryOptions.length > 0) {
+    groupedOptions.push({
+      label: 'Memory',
+      options: memoryOptions,
+    });
+  }
+
+  let selectedOption: PresetSelectorOption<TPreset, TCommand> | undefined = [
     ...defaultPresetOptions,
     ...userPresetOptions,
-  ].find(option => option.label === selectedPreset.name);
+  ].find(option => (
+    typeof option.value !== 'string'
+      && selectedPresetId !== undefined
+      && getPresetId(option.value) === selectedPresetId
+  ));
 
   if (isEdited && selectedOption) {
     selectedOption = {
@@ -94,8 +130,22 @@ export const PresetSelectorComponent = ({
     };
   }
 
+  const handlePresetChange = (
+    option: SingleValue<PresetSelectorOption<TPreset, TCommand>>,
+  ) => {
+    if (option) {
+      onSelectPreset(option);
+    }
+  };
+
   return (
-    <Box height="100%" position="relative">
+    <Box
+      height={height}
+      maxWidth="100%"
+      minWidth={minWidth}
+      position="relative"
+      width={width}
+    >
       <Text
         position="absolute"
         left="0.5rem"
@@ -112,28 +162,20 @@ export const PresetSelectorComponent = ({
       >
         {label}
       </Text>
-      <Select<PresetSelectOption, false, GroupBase<PresetSelectOption>>
+      <Select<
+        PresetSelectorOption<TPreset, TCommand>,
+        false,
+        GroupBase<PresetSelectorOption<TPreset, TCommand>>
+      >
         options={groupedOptions}
-        onChange={(option) => {
-          if (option) {
-            onSelectPreset(option);
-          }
-        }}
+        onChange={handlePresetChange}
         value={selectedOption}
-        aria-label="Select Preset"
-        isOptionDisabled={({ value, disabled }) => {
-          if (value === 'SAVE_PRESET') {
-            return Boolean(disabled);
-          }
-          if (value === 'DELETE_PRESET') {
-            return Boolean(disabled);
-          }
-          return false;
-        }}
+        aria-label={ariaLabel}
+        isOptionDisabled={({ disabled }) => Boolean(disabled)}
         isSearchable={false}
-        styles={createSelectStyles<PresetSelectOption>(theme)}
+        styles={createSelectStyles<PresetSelectorOption<TPreset, TCommand>>(theme)}
       />
-      <SavePresetModal />
+      {modal}
     </Box>
   );
-};
+}
