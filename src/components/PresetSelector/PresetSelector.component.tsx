@@ -44,7 +44,10 @@ type PresetSelectorComponentProps<
   showUserGroup?: boolean;
   userGroupLabel?: string;
   userPresets?: TPreset[];
+  width?: string;
 };
+
+const PRESET_SELECTOR_WIDTH = '14.5em';
 
 const defaultGetPresetId = <TPreset extends PresetSelectorPreset>(preset: TPreset): string => (
   preset.name
@@ -74,6 +77,7 @@ export function PresetSelectorComponent<
   showUserGroup = true,
   userGroupLabel = 'User',
   userPresets,
+  width = PRESET_SELECTOR_WIDTH,
 }: PresetSelectorComponentProps<TPreset, TCommand>) {
   const theme = useTheme();
   const resolvedUserPresets = userPresets || [];
@@ -135,7 +139,13 @@ export function PresetSelectorComponent<
   };
 
   return (
-    <Box height={height} minWidth={minWidth} position="relative">
+    <Box
+      height={height}
+      maxWidth="100%"
+      minWidth={minWidth}
+      position="relative"
+      width={width}
+    >
       <Text
         position="absolute"
         left="0.5rem"

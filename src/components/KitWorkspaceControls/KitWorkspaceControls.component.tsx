@@ -4,20 +4,6 @@ import { PresetSelector } from '../PresetSelector';
 import { SampleManagerModal } from '../SampleManagerModal';
 import { WorkspaceControls } from '../WorkspaceControls';
 
-const LocalControls = styled.div`
-  align-items: flex-end;
-  display: grid;
-  flex: 0 1 auto;
-  gap: 0.75rem;
-  grid-template-columns: 18rem auto;
-
-  @media (max-width: 640px) {
-    align-items: stretch;
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-`;
-
 const ManageSamplesButton = styled.button`
   background: ${({ theme }) => theme.colors.surfaceControl};
   border: 2px solid ${({ theme }) => theme.colors.borderDefault};
@@ -40,16 +26,14 @@ export const KitWorkspaceControls = () => {
 
   return (
     <>
-      <WorkspaceControls label="KIT CONTROLS">
-        <LocalControls>
-          <PresetSelector label="KIT PRESET" />
-          <ManageSamplesButton
-            onClick={() => setIsSampleManagerOpen(true)}
-            type="button"
-          >
-            Manage Samples
-          </ManageSamplesButton>
-        </LocalControls>
+      <WorkspaceControls>
+        <PresetSelector label="KIT PRESET" />
+        <ManageSamplesButton
+          onClick={() => setIsSampleManagerOpen(true)}
+          type="button"
+        >
+          Manage Samples
+        </ManageSamplesButton>
       </WorkspaceControls>
       <SampleManagerModal
         onClose={() => setIsSampleManagerOpen(false)}

@@ -65,7 +65,6 @@ const mergeProps = (
   ...stateProps,
   presets,
   ariaLabel: 'Select Kit Preset',
-  height: '100%',
   memoryOptions: createMemoryOptions(stateProps),
   modal: React.createElement(SavePresetModal),
   onSelectPreset: ({ value }: PresetSelectOption) => {

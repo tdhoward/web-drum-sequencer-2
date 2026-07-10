@@ -12,7 +12,6 @@ type WorkspaceControlsProps = {
   children: ReactNode;
   description?: ReactNode;
   controlsWidth?: string;
-  label?: string;
 };
 
 const WorkspaceControlsLayout = styled.div<WorkspaceControlsLayoutProps>`
