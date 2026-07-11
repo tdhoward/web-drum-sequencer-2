@@ -30,6 +30,11 @@ const createPatternsState = (laneIds: string[]): PatternsState => ({
       id: 'pattern-1',
       name: 'Pattern 2',
       ...DEFAULT_PATTERN_SETTINGS,
+      timeSignature: {
+        beatsPerBar: 6,
+        beatUnit: 8,
+      },
+      stepsPerBeat: 2,
       laneIds,
     },
   },
@@ -113,6 +118,16 @@ describe('loadPatternPack', () => {
       bpm: 98,
       swing: 0.4,
       patternNames: ['Intro'],
+      patternSettings: [
+        {
+          timeSignature: {
+            beatsPerBar: 6,
+            beatUnit: 8,
+          },
+          bars: 1,
+          stepsPerBeat: 2,
+        },
+      ],
       lanes: [
         {
           id: 'hiphop-bd-2',
@@ -176,6 +191,7 @@ describe('loadPatternPack', () => {
       'tempo/setSwing',
       'patterns/replacePatternLanes',
       'patterns/replacePatternNames',
+      'patterns/replacePatternSettings',
       'notes/setNotes',
       'kitChannelAssignments/replaceKitChannelAssignments',
       'song/setPattern',
@@ -184,7 +200,18 @@ describe('loadPatternPack', () => {
     ]);
     expect(actions[2].payload).toEqual(['hiphop-bd-2']);
     expect(actions[3].payload).toEqual(['Intro']);
-    const assignmentPayload = actions[5].payload as { assignments: unknown[] };
+    expect(actions[4].payload).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        timeSignature: {
+          beatsPerBar: 6,
+          beatUnit: 8,
+        },
+        stepsPerBeat: 2,
+      }),
+    ]));
+    const notesPayload = actions[5].payload as { patterns: PatternsState };
+    expect(notesPayload.patterns.entities['pattern-0'].stepsPerBeat).toBe(2);
+    const assignmentPayload = actions[6].payload as { assignments: unknown[] };
     expect(assignmentPayload.assignments).toEqual([
       expect.objectContaining({
         id: 'tr808-bd-short',
@@ -219,6 +246,17 @@ describe('doSavePatternPackAs', () => {
       bpm: 112,
       swing: 0.25,
       patternNames: ['Pattern 1', 'Pattern 2'],
+      patternSettings: expect.arrayContaining([
+        DEFAULT_PATTERN_SETTINGS,
+        {
+          timeSignature: {
+            beatsPerBar: 6,
+            beatUnit: 8,
+          },
+          bars: 1,
+          stepsPerBeat: 2,
+        },
+      ]),
       lanes: [
         expect.objectContaining({
           id: 'kick',

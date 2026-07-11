@@ -7,6 +7,7 @@ import {
   setNotes,
 } from './notes.reducer';
 import {
+  createPatternsState,
   DEFAULT_NOTE_VELOCITY,
   MAX_NOTE_VELOCITY,
   normalizeNotesState,
@@ -140,5 +141,35 @@ describe('setNotes', () => {
     );
     expect(state.ids.length).toBe(0);
     expect(state.entities.bing).toBeUndefined();
+  });
+
+  test('normalizes notes with supplied pattern timing settings', () => {
+    const patterns = createPatternsState({
+      patternCount: 1,
+      laneIds: ['kick'],
+    });
+    patterns.entities['pattern-0'] = {
+      ...patterns.entities['pattern-0'],
+      timeSignature: {
+        beatsPerBar: 6,
+        beatUnit: 8,
+      },
+      stepsPerBeat: 2,
+    };
+
+    const state = notesReducer(
+      testNotes,
+      setNotes({
+        notes: {
+          kick: [[{
+            id: 'six-eight-hit',
+            beat: 3.75,
+          }]],
+        },
+        patterns,
+      }),
+    );
+
+    expect(state.entities['six-eight-hit'].step).toBe(11);
   });
 });

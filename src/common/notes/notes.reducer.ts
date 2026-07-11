@@ -8,7 +8,7 @@ import {
   DEFAULT_NOTE_VELOCITY,
   normalizeNoteVelocity,
 } from '../sequencerModel';
-import type { LegacyNotes, Note, NotesState } from '../sequencerModel';
+import type { LegacyNotes, Note, NotesState, PatternsState } from '../sequencerModel';
 import { createDefaultNotesState } from '../defaultSequencerState';
 
 export const notesInitialState = createDefaultNotesState();
@@ -32,6 +32,22 @@ type SetNoteVelocityPayload = {
   id: string;
   velocity: number;
 };
+
+type SetNotesPayload = LegacyNotes | {
+  notes: LegacyNotes;
+  patterns: PatternsState;
+};
+
+const isSetNotesPayloadWithPatterns = (
+  payload: SetNotesPayload,
+): payload is { notes: LegacyNotes; patterns: PatternsState } => (
+  Boolean(
+    payload
+      && typeof payload === 'object'
+      && 'notes' in payload
+      && 'patterns' in payload,
+  )
+);
 
 const removeNoteById = (state: Draft<NotesState>, noteId: string): void => {
   state.ids = state.ids.filter(id => id !== noteId);
@@ -75,7 +91,15 @@ export const notesSlice = createSlice({
         .filter(note => note.laneId === action.payload)
         .forEach(note => removeNoteById(state, note.id));
     },
-    setNotes(state, action: PayloadAction<LegacyNotes>) {
+    setNotes(state, action: PayloadAction<SetNotesPayload>) {
+      if (isSetNotesPayloadWithPatterns(action.payload)) {
+        return normalizeNotesState(
+          action.payload.notes,
+          action.payload.patterns.ids,
+          action.payload.patterns,
+        );
+      }
+
       return normalizeNotesState(action.payload);
     },
     toggleNote: {

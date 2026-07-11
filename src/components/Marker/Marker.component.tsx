@@ -38,11 +38,17 @@ export class MarkerComponent extends React.PureComponent<MarkerComponentProps> {
   }
 
   updateMarker() {
-    const { playing, startTime, bpm } = this.props;
+    const {
+      playing,
+      startTime,
+      bpm,
+      patternLengthInBeats,
+    } = this.props;
     if (playing && this.marker) {
-      const currentBeat = getCurrentBeat(bpm, startTime ?? 0);
-      const progress = (currentBeat - 1) / 4 * 100;
-      this.marker.style.width = `${progress}%`;
+      const currentBeat = getCurrentBeat(bpm, startTime ?? 0, undefined, patternLengthInBeats);
+      const progress = ((currentBeat - 1) / patternLengthInBeats) * 100;
+      const clampedProgress = Math.min(100, Math.max(0, progress));
+      this.marker.style.width = `${clampedProgress}%`;
     }
     this.animationFrame = window.requestAnimationFrame(this.updateMarker);
   }
@@ -65,6 +71,7 @@ export class MarkerComponent extends React.PureComponent<MarkerComponentProps> {
 type MarkerComponentProps = {
   startTime?: number | null;
   bpm: number;
+  patternLengthInBeats: number;
   playing: boolean;
   children: ReactNode;
 };

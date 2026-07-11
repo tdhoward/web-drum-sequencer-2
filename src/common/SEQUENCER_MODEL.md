@@ -92,9 +92,10 @@ per-voice gain.
 
 Factory pattern content is selected separately from kits. A pattern pack is a
 named bank of related pattern slots, currently matching the app's eight-pattern
-workflow. Loading a pattern pack updates pattern lanes, notes, tempo/swing, and
-kit-channel assignments for the selected kit. It must not replace the selected
-kit, mutate kit channel/sample data, or overwrite the user's Humanize setting.
+workflow. Loading a pattern pack updates pattern lanes, pattern timing, notes,
+tempo/swing, and kit-channel assignments for the selected kit. It must not
+replace the selected kit, mutate kit channel/sample data, or overwrite the
+user's Humanize setting.
 
 Kit preset loading is the inverse operation: it replaces kit channels/samples
 and rebuilds lane assignments for the currently loaded pattern content, but it
@@ -107,6 +108,12 @@ patternPack
   bpm
   swing
   patternNames[]
+  patternSettings[]
+    timeSignature
+      beatsPerBar
+      beatUnit
+    bars
+    stepsPerBeat
   lanes[]
     laneId
     name
