@@ -12,6 +12,8 @@ export const patternPackPromptOpenSelector = (state: WindowRootState): boolean =
   state.window.patternPackPromptOpen
 );
 
+export const songPromptOpenSelector = (state: WindowRootState): boolean => state.window.songPromptOpen;
+
 export const flashMessageKeySelector = (state: WindowRootState): string | null => (
   state.window.flashMessageKey
 );

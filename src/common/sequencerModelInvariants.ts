@@ -92,6 +92,12 @@ export const validateSequencerModelState = (state: SequencerModelStateInput = {}
     }
   });
 
+  (song.arrangementPatternIds || []).forEach((patternId) => {
+    if (!hasEntity(patterns, patternId)) {
+      addError(errors, `song.arrangementPatternIds contains missing patternId: ${patternId}`);
+    }
+  });
+
   (kits?.ids || []).forEach((kitId) => {
     const kit = kits?.entities[kitId];
     (kit?.channelIds || []).forEach((channelId) => {

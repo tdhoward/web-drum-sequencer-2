@@ -3,6 +3,7 @@ import {
   getScheduledNotes,
   scheduleNote,
   clearScheduledNotes,
+  scheduleNotes,
 } from './audioScheduler';
 import { MAX_NOTE_VELOCITY } from '../common/sequencerModel';
 import { playNote } from './audioRouter';
@@ -228,5 +229,24 @@ describe('clearScheduledNotes', () => {
     scheduleNote('note-velocity', 1, channel, 0.72);
 
     expect(mockedPlayNote).toHaveBeenCalledWith(1, undefined, 'kick', 0, 0.72);
+  });
+});
+
+describe('song occurrence scheduling', () => {
+  test('can schedule the same pattern note in adjacent occurrences', () => {
+    const args = {
+      notes: { kick: [[{ id: 'note-1', beat: 1 }]] },
+      channels: [{ id: 'kick', sample: 'kick.wav' }],
+      tempo: { bpm: 120, humanize: 0 },
+      pattern: 0,
+      patternLengthInBeats: 4,
+      currentBeat: 1,
+      wrap: false,
+    };
+
+    scheduleNotes({ ...args, startTime: 1, occurrenceKey: 'song-0' });
+    scheduleNotes({ ...args, startTime: 3, occurrenceKey: 'song-1' });
+
+    expect(mockedPlayNote).toHaveBeenCalledTimes(2);
   });
 });

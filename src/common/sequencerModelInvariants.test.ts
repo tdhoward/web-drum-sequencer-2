@@ -26,6 +26,15 @@ describe('sequencer model invariants', () => {
     expect(isSequencerModelStateValid(state)).toBe(false);
   });
 
+  test('detects an arrangement entry that references a missing pattern', () => {
+    const state = clone(createDefaultSequencerState());
+    state.song.arrangementPatternIds = ['missing-pattern'];
+
+    expect(validateSequencerModelState(state)).toContain(
+      'song.arrangementPatternIds contains missing patternId: missing-pattern',
+    );
+  });
+
   test('detects a pattern lane without a selected-kit channel', () => {
     const state = clone(createDefaultSequencerState());
     const patternId = state.song.patternIds[0];

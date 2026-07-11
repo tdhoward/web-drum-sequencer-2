@@ -43,6 +43,7 @@ type GetScheduledNotesArgs = {
   tempo: Tempo;
   currentBeat: number;
   patternLengthInBeats?: number;
+  wrap?: boolean;
 };
 
 type ScheduleNotesArgs = {
@@ -53,6 +54,8 @@ type ScheduleNotesArgs = {
   tempo: Tempo;
   currentBeat: number;
   patternLengthInBeats?: number;
+  occurrenceKey?: string;
+  wrap?: boolean;
 };
 
 // schedule is a lookup table of all the notes currently scheduled to be played
@@ -182,6 +185,7 @@ export const getScheduledNotes = ({
   tempo,
   currentBeat,
   patternLengthInBeats = 4,
+  wrap = true,
 }: GetScheduledNotesArgs): ScheduledNote[] => channelNotes.map(
   (note) => {
     const lookaheadBeats = LOOKAHEAD * (tempo.bpm / 60);
@@ -199,7 +203,7 @@ export const getScheduledNotes = ({
       return getHumanizedScheduledNote(note, channel, noteTime, tempo, startTime);
     }
     // If nearing the end of the bar, schedule notes at the start of the bar too
-    if (isBetween(
+    if (wrap && isBetween(
       note.beat,
       currentBeat - patternLengthInBeats,
       currentBeat + lookaheadBeats - patternLengthInBeats,
@@ -229,6 +233,8 @@ export const scheduleNotes = ({
   tempo,
   currentBeat,
   patternLengthInBeats = 4,
+  occurrenceKey,
+  wrap = true,
 }: ScheduleNotesArgs): void => {
   // Determine which notes need to be scheduled
   const notesToSchedule = channels.reduce<ScheduledNote[]>(
@@ -241,12 +247,17 @@ export const scheduleNotes = ({
         tempo,
         currentBeat,
         patternLengthInBeats,
+        wrap,
       }),
     ], [],
   );
 
+  const occurrenceNotes = occurrenceKey
+    ? notesToSchedule.map(note => ({ ...note, id: `${occurrenceKey}:${note.id}` }))
+    : notesToSchedule;
+
   // Schedule the notes
-  notesToSchedule.forEach((note) => {
+  occurrenceNotes.forEach((note) => {
     if (note.time !== null) {
       scheduleNote(note.id, note.time, note.channel, note.velocity);
     } else {

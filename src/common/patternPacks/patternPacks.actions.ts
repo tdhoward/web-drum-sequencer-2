@@ -9,7 +9,7 @@ import {
   replaceKitChannelAssignments,
 } from '../kitChannelAssignments';
 import { setSelectedChannel } from '../master';
-import { setPattern } from '../song';
+import { setPattern, setSongPatternPackId } from '../song';
 import {
   DEFAULT_PATTERN_COUNT,
   createPatternsState,
@@ -32,6 +32,7 @@ import {
   currentPatternPackStateSelector,
   userPatternPacksSelector,
 } from './patternPacks.selectors';
+import { stopPlayback } from '../playbackSession';
 
 type Dispatch = (action: unknown) => void;
 
@@ -114,6 +115,7 @@ export const loadPatternPack = (patternPack: PatternPack) => (
   dispatch: Dispatch,
   getState: () => SequencerRootState,
 ) => {
+  dispatch(stopPlayback());
   const state = getState();
   const targetKitChannels = getSelectedKitChannels(state);
   const laneIds = patternPack.lanes.map(lane => lane.laneId || lane.id);
@@ -140,6 +142,7 @@ export const loadPatternPack = (patternPack: PatternPack) => (
   dispatch(setPattern(0));
   dispatch(setSelectedChannel(mappingResult.mappings[0]?.laneId || patternPack.lanes[0]?.laneId));
   dispatch(setSelectedPatternPack(patternPack.id));
+  dispatch(setSongPatternPackId(patternPack.id));
 
   return mappingResult;
 };

@@ -31,11 +31,22 @@ export const migrations = {
   5: (state: LegacySequencerState = {}) => (
     migrateToKitSequencerState(state, presets[1])
   ),
+  6: (state: LegacySequencerState = {}) => ({
+    ...state,
+    song: state.song
+      ? {
+        ...state.song,
+        arrangementPatternIds: state.song.arrangementPatternIds || [],
+        patternPackId: state.song.patternPackId
+          || (state.patternPacks as { selectedPatternPackId?: string } | undefined)?.selectedPatternPackId,
+      }
+      : state.song,
+  }),
 };
 
 const persistConfig = {
   key: 'root',
-  version: 5,
+  version: 6,
   storage,
   blacklist: ['playbackSession', 'window', 'workspace'],
   migrate: createMigrate(migrations as unknown as MigrationManifest, { debug: import.meta.env.DEV }),

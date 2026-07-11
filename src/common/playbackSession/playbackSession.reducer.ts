@@ -6,7 +6,16 @@ export type PlaybackSessionState = {
   playing: boolean;
   startTime: number | null;
   currentBeat: number;
+  mode: PlaybackMode;
+  arrangementIndex: number;
 };
+
+export const PLAYBACK_MODES = {
+  PATTERN: 'pattern',
+  SONG: 'song',
+} as const;
+
+export type PlaybackMode = typeof PLAYBACK_MODES[keyof typeof PLAYBACK_MODES];
 
 type StartPlaybackPayload = {
   startTime: number;
@@ -16,6 +25,8 @@ export const playbackSessionInitialState: PlaybackSessionState = {
   playing: false,
   startTime: null,
   currentBeat: 1,
+  mode: PLAYBACK_MODES.PATTERN,
+  arrangementIndex: 0,
 };
 
 export const playbackSessionSlice = createSlice({
@@ -39,6 +50,7 @@ export const playbackSessionSlice = createSlice({
       reducer(state) {
         state.playing = false;
         state.startTime = null;
+        state.arrangementIndex = 0;
       },
       prepare() {
         return { payload: undefined };
@@ -46,6 +58,13 @@ export const playbackSessionSlice = createSlice({
     },
     setStartTime(state, action: PayloadAction<number>) {
       state.startTime = action.payload;
+    },
+    setPlaybackMode(state, action: PayloadAction<PlaybackMode>) {
+      state.mode = action.payload;
+      state.arrangementIndex = 0;
+    },
+    setArrangementIndex(state, action: PayloadAction<number>) {
+      state.arrangementIndex = action.payload;
     },
   },
 });

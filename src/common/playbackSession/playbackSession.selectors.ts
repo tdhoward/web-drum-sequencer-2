@@ -11,3 +11,9 @@ export const playingSelector = (state: PlaybackSessionRootState): boolean => (
 export const startTimeSelector = (state: PlaybackSessionRootState): number | null => (
   state.playbackSession.startTime
 );
+
+export const playbackModeSelector = (state: PlaybackSessionRootState) => state.playbackSession.mode;
+
+export const arrangementIndexSelector = (state: PlaybackSessionRootState): number => (
+  state.playbackSession.arrangementIndex
+);

@@ -1,11 +1,13 @@
 import {
   playbackSessionInitialState,
   playbackSessionReducer,
+  PLAYBACK_MODES,
 } from './playbackSession.reducer';
 import {
   startPlayback,
   stopPlayback,
   setStartTime,
+  setPlaybackMode,
 } from './playbackSession.actions';
 import { LOOKAHEAD } from '../../services/audioEngine.config';
 
@@ -47,5 +49,17 @@ describe('setStartTime', () => {
   test('should set startTime', () => {
     const state = playbackSessionReducer(playbackSessionInitialState, setStartTime(2.1234));
     expect(state.startTime).toBe(2.1234);
+  });
+});
+
+describe('setPlaybackMode', () => {
+  test('switches between pattern and song playback', () => {
+    const state = playbackSessionReducer(
+      playbackSessionInitialState,
+      setPlaybackMode(PLAYBACK_MODES.SONG),
+    );
+
+    expect(state.mode).toBe(PLAYBACK_MODES.SONG);
+    expect(state.arrangementIndex).toBe(0);
   });
 });

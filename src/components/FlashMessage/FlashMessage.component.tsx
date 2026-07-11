@@ -10,6 +10,8 @@ import { PresetSaved } from '../PresetSaved.component';
 import { PresetDeleted } from '../PresetDeleted.component';
 import { PatternPackSaved } from '../PatternPackSaved.component';
 import { PatternPackDeleted } from '../PatternPackDeleted.component';
+import { SongSaved } from '../SongSaved.component';
+import { SongDeleted } from '../SongDeleted.component';
 
 type FlashMessageComponentProps = {
   messageKey?: string | null;
@@ -35,6 +37,10 @@ const getMessageComponent = (messageKey: string | null | undefined): FlashMessag
       return PatternPackSaved;
     case FLASH_MESSAGES.PATTERN_PACK_DELETED:
       return PatternPackDeleted;
+    case FLASH_MESSAGES.SONG_SAVED:
+      return SongSaved;
+    case FLASH_MESSAGES.SONG_DELETED:
+      return SongDeleted;
     default:
       return undefined;
   }

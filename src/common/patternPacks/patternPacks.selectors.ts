@@ -14,6 +14,7 @@ import type {
   PatternsState,
 } from '../sequencerModel';
 import type { PatternPacksState } from './patternPacks.reducer';
+import { deepEqual, omitFields } from '../presetMemory';
 
 type CurrentPatternPackState = {
   bpm: number;
@@ -168,4 +169,15 @@ export const currentPatternPackStateSelector = createSelector(
       }),
     };
   },
+);
+
+const patternPackMetadataFields = new Set(['id', 'name']);
+
+export const isCurrentPatternPackEditedSelector = createSelector(
+  selectedPatternPackSelector,
+  currentPatternPackStateSelector,
+  (patternPack, currentState): boolean => !deepEqual(
+    omitFields(patternPack, patternPackMetadataFields),
+    currentState,
+  ),
 );

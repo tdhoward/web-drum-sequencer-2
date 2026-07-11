@@ -1,24 +1,12 @@
-import { createSelector, createStructuredSelector } from 'reselect';
+import { createStructuredSelector } from 'reselect';
 import {
-  currentPatternPackStateSelector,
+  isCurrentPatternPackEditedSelector,
   selectedPatternPackSelector,
   userPatternPacksSelector,
 } from '../../common';
-import { deepEqual, omitFields } from '../../common/presetMemory';
-
-const patternPackMetadataFields = new Set(['id', 'name']);
-
-const isEditedSelector = createSelector(
-  selectedPatternPackSelector,
-  currentPatternPackStateSelector,
-  (patternPack, currentState): boolean => !deepEqual(
-    omitFields(patternPack, patternPackMetadataFields),
-    currentState,
-  ),
-);
 
 export const patternPackSelectorSelectors = createStructuredSelector({
   currentPatternPack: selectedPatternPackSelector,
-  isEdited: isEditedSelector,
+  isEdited: isCurrentPatternPackEditedSelector,
   userPatternPacks: userPatternPacksSelector,
 });

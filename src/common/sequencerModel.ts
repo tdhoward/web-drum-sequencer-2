@@ -38,6 +38,15 @@ export type SongState = {
   selectedKitId: string;
   selectedPatternId: string;
   patternIds: string[];
+  patternPackId?: string;
+  arrangementPatternIds?: string[];
+};
+
+export type SavedSong = {
+  id: string;
+  name: string;
+  patternPackId: string;
+  arrangementPatternIds: string[];
 };
 
 export type Kit = {
@@ -250,6 +259,7 @@ export const createSongState = ({
   selectedKitId,
   selectedPatternId: patternIndexToId(selectedPatternIndex),
   patternIds: createPatternIds(patternCount),
+  arrangementPatternIds: [],
 });
 
 const channelToLaneId = (channel: { id: string; laneId?: string }): string => (
@@ -547,7 +557,13 @@ export const migrateToNormalizedSequencerState = (
     DEFAULT_PATTERN_COUNT,
     ...Object.values(legacyNotes || {}).map(channelNotes => channelNotes.length),
   );
-  const song = state.song || createSongState({ selectedPatternIndex, patternCount });
+  const existingSong = state.song;
+  const song = existingSong
+    ? {
+      ...existingSong,
+      arrangementPatternIds: existingSong.arrangementPatternIds || [],
+    }
+    : createSongState({ selectedPatternIndex, patternCount });
   const patterns = isPatternsState(state.patterns)
     ? migratePatternsToLanes(state.patterns, laneIds)
     : createPatternsState({ patternCount, laneIds });
