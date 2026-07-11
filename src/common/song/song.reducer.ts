@@ -35,6 +35,12 @@ export const songSlice = createSlice({
         arrangement[columnIndex] = patternId;
       }
     },
+    clearArrangementPattern(state, action: PayloadAction<number>) {
+      const arrangement = state.arrangementPatternIds || [];
+      if (action.payload >= 0 && action.payload < arrangement.length) {
+        arrangement[action.payload] = null;
+      }
+    },
     removeArrangementColumn(state, action: PayloadAction<number>) {
       const arrangement = state.arrangementPatternIds || [];
       if (action.payload >= 0 && action.payload < arrangement.length) {
@@ -45,13 +51,13 @@ export const songSlice = createSlice({
       id: string;
       name: string;
       patternPackId: string;
-      arrangementPatternIds: string[];
+      arrangementPatternIds: Array<string | null>;
     }>) {
       state.id = action.payload.id;
       state.name = action.payload.name;
       state.patternPackId = action.payload.patternPackId;
-      state.arrangementPatternIds = action.payload.arrangementPatternIds.filter(
-        patternId => state.patternIds.includes(patternId),
+      state.arrangementPatternIds = action.payload.arrangementPatternIds.map(
+        patternId => (patternId === null || state.patternIds.includes(patternId) ? patternId : null),
       );
     },
     clearSongArrangement(state) {
@@ -67,6 +73,7 @@ export const {
   setSelectedKitId,
   setSongPatternPackId,
   setArrangementPattern,
+  clearArrangementPattern,
   removeArrangementColumn,
   loadSong,
   clearSongArrangement,

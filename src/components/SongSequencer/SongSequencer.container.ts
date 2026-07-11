@@ -2,6 +2,7 @@ import { connect } from 'react-redux';
 import {
   arrangementIndexSelector,
   arrangementPatternIdsSelector,
+  clearArrangementPattern,
   patternsSelector,
   playbackModeSelector,
   playingSelector,
@@ -35,8 +36,14 @@ const mapDispatchToProps = (dispatch: AppDispatch) => ({
     clearScheduledNotes();
     dispatch(stopPlayback());
     dispatch(selected
-      ? removeArrangementColumn(columnIndex)
+      ? clearArrangementPattern(columnIndex)
       : setArrangementPattern({ columnIndex, patternId }));
+  },
+  onDeleteColumn: (columnIndex: number) => {
+    stopAllNotes();
+    clearScheduledNotes();
+    dispatch(stopPlayback());
+    dispatch(removeArrangementColumn(columnIndex));
   },
 });
 

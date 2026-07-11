@@ -39,14 +39,14 @@ export type SongState = {
   selectedPatternId: string;
   patternIds: string[];
   patternPackId?: string;
-  arrangementPatternIds?: string[];
+  arrangementPatternIds?: Array<string | null>;
 };
 
 export type SavedSong = {
   id: string;
   name: string;
   patternPackId: string;
-  arrangementPatternIds: string[];
+  arrangementPatternIds: Array<string | null>;
 };
 
 export type Kit = {

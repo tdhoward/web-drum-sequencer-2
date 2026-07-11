@@ -1,15 +1,17 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Box, Text } from '../design-system';
+import { RemoveButton } from '../ChannelButtons';
 
 export type SongPatternRow = { id: string; name: string };
 
 type Props = {
-  arrangementPatternIds: string[];
+  arrangementPatternIds: Array<string | null>;
   arrangementIndex: number;
   isSongPlaying: boolean;
   patterns: SongPatternRow[];
   onSelectCell: (columnIndex: number, patternId: string, selected: boolean) => void;
+  onDeleteColumn: (columnIndex: number) => void;
 };
 
 const Panel = styled.div`
@@ -25,7 +27,7 @@ const GridRow = styled.div<{ $columns: number }>`
   align-items: center;
   display: grid;
   gap: 0.4rem;
-  grid-template-columns: minmax(9rem, 14rem) repeat(${({ $columns }) => $columns}, 2.35rem);
+  grid-template-columns: minmax(6rem, 8rem) repeat(${({ $columns }) => $columns}, 2.35rem);
   margin-bottom: 0.4rem;
   min-width: max-content;
 `;
@@ -45,10 +47,17 @@ const RowName = styled.div`
 `;
 
 const ColumnLabel = styled.div<{ $playing: boolean }>`
-  color: ${({ $playing, theme }) => ($playing ? theme.colors.accentPrimary : theme.colors.textMuted)};
+  align-items: center;
+  background: ${({ $playing, theme }) => ($playing ? theme.colors.accentPrimary : 'transparent')};
+  border-radius: 0.3rem;
+  color: ${({ $playing, theme }) => ($playing ? theme.colors.textInverse : theme.colors.textMuted)};
+  display: flex;
   font-size: 0.65rem;
   font-weight: 600;
-  text-align: center;
+  height: 1.35rem;
+  justify-content: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  width: 2.35rem;
 `;
 
 const Cell = styled.button<{ $selected: boolean; $playing: boolean }>`
@@ -74,12 +83,21 @@ const Cell = styled.button<{ $selected: boolean; $playing: boolean }>`
   }
 `;
 
+const DeleteCell = styled.div`
+  align-items: center;
+  display: flex;
+  height: 2rem;
+  justify-content: center;
+  width: 2.35rem;
+`;
+
 export const SongSequencerComponent = ({
   arrangementPatternIds,
   arrangementIndex,
   isSongPlaying,
   patterns,
   onSelectCell,
+  onDeleteColumn,
 }: Props) => {
   const columnCount = arrangementPatternIds.length + 1;
 
@@ -93,7 +111,7 @@ export const SongSequencerComponent = ({
       </Box>
       <div role="grid" aria-label="Pattern sequence">
         <GridRow $columns={columnCount} role="row">
-          <RowName role="columnheader">Pattern</RowName>
+          <RowName aria-hidden="true" />
           {Array.from({ length: columnCount }, (_, columnIndex) => (
             <ColumnLabel
               key={columnIndex}
@@ -125,6 +143,19 @@ export const SongSequencerComponent = ({
             })}
           </GridRow>
         ))}
+        <GridRow $columns={columnCount} role="row">
+          <RowName aria-hidden="true" />
+          {Array.from({ length: columnCount }, (_, columnIndex) => (
+            <DeleteCell key={columnIndex} role="gridcell">
+              {columnIndex < arrangementPatternIds.length && (
+                <RemoveButton
+                  ariaLabel={`Delete song column ${columnIndex + 1}`}
+                  onClick={() => onDeleteColumn(columnIndex)}
+                />
+              )}
+            </DeleteCell>
+          ))}
+        </GridRow>
       </div>
     </Panel>
   );

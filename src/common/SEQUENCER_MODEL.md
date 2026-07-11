@@ -23,7 +23,8 @@ song
 `patternIds` lists the pattern slots available to the current project, while
 `arrangementPatternIds` is the ordered Song-workspace playback sequence. Each
 array entry is one song column, so the model permits only one pattern at a time.
-The trailing empty editor column is derived UI and is never stored. A saved song
+An entry may be `null` to preserve an intentionally empty column; empty columns
+are skipped during playback. The trailing empty editor column is derived UI and is never stored. A saved song
 stores its pattern-pack reference and arrangement, but continues to use the
 currently selected kit so kits remain swappable.
 

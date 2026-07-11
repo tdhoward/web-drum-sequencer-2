@@ -36,6 +36,7 @@ export const createSongTimeline = (
 ): SongOccurrence[] => {
   let occurrenceStartTime = startTime;
   return arrangementPatternIdsSelector(state).reduce<SongOccurrence[]>((timeline, patternId, index) => {
+    if (patternId === null) return timeline;
     const patternState = state.patterns.entities[patternId];
     if (!patternState) return timeline;
     const lengthInBeats = getPatternLengthInQuarterBeats(patternState);
@@ -92,14 +93,14 @@ const playSong = (
     return;
   }
 
-  const currentIndex = timeline.findIndex(occurrence => audioTime < occurrence.endTime);
-  const occurrence = timeline[Math.max(0, currentIndex)];
+  const timelineIndex = timeline.findIndex(occurrence => audioTime < occurrence.endTime);
+  const occurrence = timeline[Math.max(0, timelineIndex)];
   if (state.playbackSession.arrangementIndex !== occurrence.index) {
     store.dispatch(setArrangementIndex(occurrence.index));
   }
 
   scheduleSongOccurrence(occurrence, audioTime, state, notes, channels);
-  const nextOccurrence = timeline[occurrence.index + 1];
+  const nextOccurrence = timeline[timelineIndex + 1];
   if (nextOccurrence) {
     scheduleSongOccurrence(nextOccurrence, audioTime, state, notes, channels);
   }

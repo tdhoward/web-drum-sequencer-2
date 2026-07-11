@@ -4,6 +4,7 @@ import {
   songReducer,
   setArrangementPattern,
   removeArrangementColumn,
+  clearArrangementPattern,
 } from './song.reducer';
 import type { SongState } from '../sequencerModel';
 
@@ -36,5 +37,14 @@ describe('song arrangement', () => {
     state = songReducer(state, removeArrangementColumn(1));
 
     expect(state.arrangementPatternIds).toEqual(['pattern-0', 'pattern-2']);
+  });
+
+  test('clears a pattern without removing its column', () => {
+    const state = songReducer({
+      ...songInitialState,
+      arrangementPatternIds: ['pattern-0', 'pattern-1'],
+    }, clearArrangementPattern(0));
+
+    expect(state.arrangementPatternIds).toEqual([null, 'pattern-1']);
   });
 });
