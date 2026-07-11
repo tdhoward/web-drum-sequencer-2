@@ -1,1 +1,1 @@
-export * from './PatternChannelHeader.component';
+export * from './PatternChannelHeader.container';

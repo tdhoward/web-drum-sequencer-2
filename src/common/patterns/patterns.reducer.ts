@@ -1,7 +1,12 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { Draft } from 'immer';
 import { createDefaultPatternsState } from '../defaultSequencerState';
-import type { PatternsState } from '../sequencerModel';
+import {
+  normalizePatternSettings,
+  type PatternSettings,
+  type PatternsState,
+  type TimeSignature,
+} from '../sequencerModel';
 import { channelsSlice } from '../channels/channels.reducer';
 
 export const patternsInitialState = createDefaultPatternsState();
@@ -41,6 +46,12 @@ const reorderLaneIds = (
   });
 };
 
+type SetPatternTimeSignaturePayload = {
+  patternId: string;
+  timeSignature: TimeSignature;
+  stepsPerBeat: number;
+};
+
 export const patternsSlice = createSlice({
   name: 'patterns',
   initialState: patternsInitialState,
@@ -55,11 +66,30 @@ export const patternsSlice = createSlice({
         state.entities[patternId].name = action.payload[index] || `Pattern ${index + 1}`;
       });
     },
+    replacePatternSettings(state, action: PayloadAction<PatternSettings[]>) {
+      state.ids.forEach((patternId, index) => {
+        const pattern = state.entities[patternId];
+
+        if (!pattern) {
+          return;
+        }
+
+        Object.assign(pattern, normalizePatternSettings(action.payload[index]));
+      });
+    },
     setPatternName(state, action: PayloadAction<{ patternId: string; name: string }>) {
       const pattern = state.entities[action.payload.patternId];
 
       if (pattern) {
         pattern.name = action.payload.name;
+      }
+    },
+    setPatternTimeSignature(state, action: PayloadAction<SetPatternTimeSignaturePayload>) {
+      const pattern = state.entities[action.payload.patternId];
+
+      if (pattern) {
+        pattern.timeSignature = action.payload.timeSignature;
+        pattern.stepsPerBeat = action.payload.stepsPerBeat;
       }
     },
   },
@@ -86,7 +116,9 @@ export const patternsSlice = createSlice({
 export const {
   replacePatternLanes,
   replacePatternNames,
+  replacePatternSettings,
   setPatternName,
+  setPatternTimeSignature,
 } = patternsSlice.actions;
 
 export const replacePatternChannels = replacePatternLanes;

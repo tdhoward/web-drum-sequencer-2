@@ -124,6 +124,7 @@ export type PatternPack = {
   bpm: number;
   swing: number;
   patternNames?: string[];
+  patternSettings?: PatternSettings[];
   lanes: PatternPackLane[];
   notes: LegacyNotes;
 };
@@ -177,6 +178,34 @@ export const DEFAULT_PATTERN_SETTINGS: PatternSettings = {
   bars: 1,
   stepsPerBeat: 4,
 };
+
+type PatternSettingsInput = Partial<PatternSettings> | undefined;
+
+const positiveNumberOrDefault = (value: unknown, fallback: number): number => (
+  typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? value
+    : fallback
+);
+
+export const normalizePatternSettings = (
+  settings: PatternSettingsInput = DEFAULT_PATTERN_SETTINGS,
+): PatternSettings => ({
+  timeSignature: {
+    beatsPerBar: positiveNumberOrDefault(
+      settings?.timeSignature?.beatsPerBar,
+      DEFAULT_PATTERN_SETTINGS.timeSignature.beatsPerBar,
+    ),
+    beatUnit: positiveNumberOrDefault(
+      settings?.timeSignature?.beatUnit,
+      DEFAULT_PATTERN_SETTINGS.timeSignature.beatUnit,
+    ),
+  },
+  bars: positiveNumberOrDefault(settings?.bars, DEFAULT_PATTERN_SETTINGS.bars),
+  stepsPerBeat: positiveNumberOrDefault(
+    settings?.stepsPerBeat,
+    DEFAULT_PATTERN_SETTINGS.stepsPerBeat,
+  ),
+});
 
 export const patternIndexToId = (index: number): string => `pattern-${index}`;
 
@@ -327,29 +356,30 @@ export const createKitChannelAssignmentsState = (
   }), {}),
 });
 
-type PatternSettingsInput = Partial<PatternSettings> | undefined;
+export const getPatternLengthInQuarterBeats = (
+  settings: PatternSettingsInput = DEFAULT_PATTERN_SETTINGS,
+): number => {
+  const { timeSignature, bars } = normalizePatternSettings(settings);
+  return timeSignature.beatsPerBar * bars * (4 / timeSignature.beatUnit);
+};
 
-export const getPatternLengthInQuarterBeats = ({
-  timeSignature = DEFAULT_PATTERN_SETTINGS.timeSignature,
-  bars = DEFAULT_PATTERN_SETTINGS.bars,
-}: PatternSettingsInput = DEFAULT_PATTERN_SETTINGS): number => (
-  timeSignature.beatsPerBar * bars * (4 / timeSignature.beatUnit)
-);
+export const getPatternTotalSteps = (
+  settings: PatternSettingsInput = DEFAULT_PATTERN_SETTINGS,
+): number => {
+  const {
+    timeSignature,
+    bars,
+    stepsPerBeat,
+  } = normalizePatternSettings(settings);
+  return timeSignature.beatsPerBar * bars * stepsPerBeat;
+};
 
-export const getPatternTotalSteps = ({
-  timeSignature = DEFAULT_PATTERN_SETTINGS.timeSignature,
-  bars = DEFAULT_PATTERN_SETTINGS.bars,
-  stepsPerBeat = DEFAULT_PATTERN_SETTINGS.stepsPerBeat,
-}: PatternSettingsInput = DEFAULT_PATTERN_SETTINGS): number => (
-  timeSignature.beatsPerBar * bars * stepsPerBeat
-);
-
-export const getQuarterBeatsPerStep = ({
-  timeSignature = DEFAULT_PATTERN_SETTINGS.timeSignature,
-  stepsPerBeat = DEFAULT_PATTERN_SETTINGS.stepsPerBeat,
-}: PatternSettingsInput = DEFAULT_PATTERN_SETTINGS): number => (
-  (4 / timeSignature.beatUnit) / stepsPerBeat
-);
+export const getQuarterBeatsPerStep = (
+  settings: PatternSettingsInput = DEFAULT_PATTERN_SETTINGS,
+): number => {
+  const { timeSignature, stepsPerBeat } = normalizePatternSettings(settings);
+  return (4 / timeSignature.beatUnit) / stepsPerBeat;
+};
 
 export const beatToStep = (
   beat: number,
@@ -491,6 +521,7 @@ const migratePatternsToLanes = (patternsState: PatternsState, laneIds: string[])
     const pattern = patternsState.entities[patternId];
     entities[patternId] = {
       ...pattern,
+      ...normalizePatternSettings(pattern),
       laneIds: pattern.laneIds || pattern.channelIds || laneIds,
     };
     delete entities[patternId].channelIds;

@@ -4,10 +4,11 @@ import { channelsSelector, type LegacyChannel } from '../channels';
 import { notesStateSelector } from '../notes';
 import { patternsSelector } from '../patterns';
 import { bpmSelector, swingSelector } from '../tempo';
-import { notesStateToLegacyNotes } from '../sequencerModel';
+import { normalizePatternSettings, notesStateToLegacyNotes } from '../sequencerModel';
 import type {
   LegacyNotes,
   NotesState,
+  PatternSettings,
   PatternPack,
   PatternPackLane,
   PatternsState,
@@ -18,6 +19,7 @@ type CurrentPatternPackState = {
   bpm: number;
   swing: number;
   patternNames: string[];
+  patternSettings: PatternSettings[];
   lanes: PatternPackLane[];
   notes: LegacyNotes;
 };
@@ -132,6 +134,10 @@ const createPatternNames = (patterns: PatternsState): string[] => (
   ))
 );
 
+const createPatternSettings = (patterns: PatternsState): PatternSettings[] => (
+  patterns.ids.map(patternId => normalizePatternSettings(patterns.entities[patternId]))
+);
+
 export const currentPatternPackStateSelector = createSelector(
   bpmSelector,
   swingSelector,
@@ -153,6 +159,7 @@ export const currentPatternPackStateSelector = createSelector(
       bpm,
       swing,
       patternNames: createPatternNames(patterns),
+      patternSettings: createPatternSettings(patterns),
       lanes: createPatternPackLanes(laneIds, selectedPatternPack, channels),
       notes: notesStateToLegacyNotes({
         notesState,

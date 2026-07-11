@@ -16,3 +16,4 @@ export * from './compatibility.selectors';
 export * from './workspace';
 export * from './uiPreferences';
 export * from './percussion';
+export * from './timeSignatures';

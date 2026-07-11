@@ -1,7 +1,7 @@
 import { resolveKitChannelMapping } from '../percussion';
 import patternPacks from '../../patternPacks';
 import { setSwing, setBPM } from '../tempo';
-import { replacePatternLanes, replacePatternNames } from '../patterns';
+import { replacePatternLanes, replacePatternNames, replacePatternSettings } from '../patterns';
 import { setNotes } from '../notes';
 import { channelsStateSelector } from '../channels';
 import {
@@ -12,8 +12,12 @@ import { setSelectedChannel } from '../master';
 import { setPattern } from '../song';
 import {
   DEFAULT_PATTERN_COUNT,
+  createPatternsState,
+  normalizePatternSettings,
   type KitChannel,
   type PatternPack,
+  type PatternSettings,
+  type PatternsState,
   type SequencerRootState,
 } from '../sequencerModel';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
@@ -67,6 +71,8 @@ const createPatternPackId = (name: string, existingPatternPacks: PatternPack[]):
 
 const getPatternPackPatternCount = (patternPack: PatternPack): number => Math.max(
   DEFAULT_PATTERN_COUNT,
+  patternPack.patternNames?.length || 0,
+  patternPack.patternSettings?.length || 0,
   ...Object.values(patternPack.notes).map(channelPatterns => channelPatterns.length),
 );
 
@@ -77,12 +83,42 @@ const getPatternPackPatternNames = (patternPack: PatternPack): string[] => (
   )
 );
 
+const getPatternPackPatternSettings = (patternPack: PatternPack): PatternSettings[] => (
+  Array.from(
+    { length: getPatternPackPatternCount(patternPack) },
+    (_, index) => normalizePatternSettings(patternPack.patternSettings?.[index]),
+  )
+);
+
+const createPatternsStateForPatternPack = (
+  patternPack: PatternPack,
+  laneIds: string[],
+): PatternsState => {
+  const patternSettings = getPatternPackPatternSettings(patternPack);
+  const patterns = createPatternsState({
+    patternCount: getPatternPackPatternCount(patternPack),
+    laneIds,
+  });
+
+  patterns.ids.forEach((patternId, index) => {
+    patterns.entities[patternId] = {
+      ...patterns.entities[patternId],
+      ...patternSettings[index],
+    };
+  });
+
+  return patterns;
+};
+
 export const loadPatternPack = (patternPack: PatternPack) => (
   dispatch: Dispatch,
   getState: () => SequencerRootState,
 ) => {
   const state = getState();
   const targetKitChannels = getSelectedKitChannels(state);
+  const laneIds = patternPack.lanes.map(lane => lane.laneId || lane.id);
+  const patternSettings = getPatternPackPatternSettings(patternPack);
+  const patterns = createPatternsStateForPatternPack(patternPack, laneIds);
   const mappingResult = resolveKitChannelMapping({
     patternLanes: patternPack.lanes,
     sourceKitChannels: patternPack.lanes,
@@ -91,9 +127,13 @@ export const loadPatternPack = (patternPack: PatternPack) => (
 
   dispatch(setBPM(patternPack.bpm));
   dispatch(setSwing(patternPack.swing));
-  dispatch(replacePatternLanes(patternPack.lanes.map(lane => lane.laneId || lane.id)));
+  dispatch(replacePatternLanes(laneIds));
   dispatch(replacePatternNames(getPatternPackPatternNames(patternPack)));
-  dispatch(setNotes(patternPack.notes));
+  dispatch(replacePatternSettings(patternSettings));
+  dispatch(setNotes({
+    notes: patternPack.notes,
+    patterns,
+  }));
   dispatch(replaceKitChannelAssignments({
     assignments: mappingToAssignments(mappingResult.mappings, targetKitChannels),
   }));

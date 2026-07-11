@@ -23,6 +23,9 @@ type TogglesComponentProps = {
   bpm: number;
   playing: boolean;
   pattern: number;
+  quarterBeatsPerStep: number;
+  stepsPerBeat: number;
+  totalSteps: number;
 };
 
 type TogglesComponentState = {
@@ -36,8 +39,6 @@ type OpenVelocityEditorOptions = {
 const findNote = (notes: ToggleNote[], beat: number): ToggleNote | undefined => (
   notes.find(note => note.beat === beat)
 );
-
-const sixteenthNotes = Array.from({ length: 16 }, (_, index) => index);
 
 const splitEvery = <TItem,>(size: number, items: TItem[]): TItem[][] => (
   items.reduce<TItem[][]>((groups, item, index) => {
@@ -143,10 +144,15 @@ export class TogglesComponent extends React.PureComponent<
   render() {
     const {
       notes,
+      quarterBeatsPerStep,
+      stepsPerBeat,
+      totalSteps,
     } = this.props;
     const { velocityEditorBeat } = this.state;
-    const toggles = sixteenthNotes.map((index) => {
-      const beat = 1 + index / 4;
+    const stepCount = Math.max(1, Math.round(totalSteps));
+    const groupSize = Math.max(1, Math.round(stepsPerBeat));
+    const toggles = Array.from({ length: stepCount }, (_, index) => {
+      const beat = 1 + (index * quarterBeatsPerStep);
       const note = findNote(notes, beat);
       const velocity = note?.velocity ?? DEFAULT_NOTE_VELOCITY;
       const isActive = Boolean(note);
@@ -173,7 +179,7 @@ export class TogglesComponent extends React.PureComponent<
       );
     });
 
-    const toggleGroups = splitEvery(4, toggles);
+    const toggleGroups = splitEvery(groupSize, toggles);
 
     return (
       <Box ref={this.rootRef} display="flex" flex="1 1 auto" alignItems="center">

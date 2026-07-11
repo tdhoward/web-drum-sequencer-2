@@ -33,3 +33,4 @@ export * from './KitWorkspaceControls';
 export * from './SongWorkspaceControls';
 export * from './WorkspaceControls';
 export * from './ThemeSelector';
+export * from './TimeSignatureSelector';

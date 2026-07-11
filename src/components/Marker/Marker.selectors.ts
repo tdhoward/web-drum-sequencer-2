@@ -3,10 +3,12 @@ import {
   bpmSelector,
   startTimeSelector,
   playingSelector,
+  selectedPatternLengthSelector,
 } from '../../common';
 
 export const markerSelectors = createStructuredSelector({
   bpm: bpmSelector,
+  patternLengthInBeats: selectedPatternLengthSelector,
   startTime: startTimeSelector,
   playing: playingSelector,
 });

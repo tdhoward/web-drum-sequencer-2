@@ -70,6 +70,56 @@ describe('getScheduledNotes', () => {
     expect(scheduledNotes[1].time).toBeNull();
   });
 
+  test('should not schedule notes outside the active pattern length', () => {
+    const scheduledThreeFourNotes = getScheduledNotes({
+      channel: {
+        id: 'test-channel',
+        sample: '/whatever.wav',
+      },
+      channelNotes: [
+        {
+          beat: 3.75,
+          id: 'visible-last-sixteenth',
+        },
+        {
+          beat: 4,
+          id: 'hidden-fourth-beat',
+        },
+        {
+          beat: 4.25,
+          id: 'hidden-fourth-beat-second-sixteenth',
+        },
+        {
+          beat: 1,
+          id: 'wrapped-first-beat',
+        },
+      ],
+      tempo: {
+        bpm: 120,
+      },
+      startTime: 0,
+      currentBeat: 3.7,
+      patternLengthInBeats: 3,
+    });
+
+    expect(scheduledThreeFourNotes[0]).toEqual(expect.objectContaining({
+      id: 'visible-last-sixteenth',
+    }));
+    expect(scheduledThreeFourNotes[0].time).not.toBeNull();
+    expect(scheduledThreeFourNotes[1]).toEqual(expect.objectContaining({
+      id: 'hidden-fourth-beat',
+      time: null,
+    }));
+    expect(scheduledThreeFourNotes[2]).toEqual(expect.objectContaining({
+      id: 'hidden-fourth-beat-second-sixteenth',
+      time: null,
+    }));
+    expect(scheduledThreeFourNotes[3]).toEqual(expect.objectContaining({
+      id: 'wrapped-first-beat',
+      time: 1.5,
+    }));
+  });
+
   test('should preserve note velocity when humanize is zero', () => {
     const humanizedNotes = getScheduledNotes({
       channel: {

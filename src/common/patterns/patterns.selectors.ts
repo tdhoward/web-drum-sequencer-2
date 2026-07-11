@@ -1,9 +1,11 @@
 import { createSelector } from 'reselect';
 import {
+  getQuarterBeatsPerStep,
   getPatternLengthInQuarterBeats,
   getPatternTotalSteps,
+  normalizePatternSettings,
 } from '../sequencerModel';
-import type { Pattern, PatternsState, SequencerRootState } from '../sequencerModel';
+import type { Pattern, PatternSettings, PatternsState, SequencerRootState } from '../sequencerModel';
 import { selectedPatternIdSelector } from '../song';
 
 type PatternsRootState = SequencerRootState & {
@@ -23,12 +25,37 @@ export const selectedPatternNameSelector = createSelector(
   pattern => pattern?.name || '',
 );
 
-export const selectedPatternLengthSelector = createSelector(
+export const selectedPatternSettingsSelector = createSelector(
   selectedPatternSelector,
-  pattern => getPatternLengthInQuarterBeats(pattern),
+  (pattern): PatternSettings => normalizePatternSettings(pattern),
+);
+
+export const selectedPatternLengthSelector = createSelector(
+  selectedPatternSettingsSelector,
+  patternSettings => getPatternLengthInQuarterBeats(patternSettings),
 );
 
 export const selectedPatternTotalStepsSelector = createSelector(
-  selectedPatternSelector,
-  pattern => getPatternTotalSteps(pattern),
+  selectedPatternSettingsSelector,
+  patternSettings => getPatternTotalSteps(patternSettings),
+);
+
+export const selectedPatternTimeSignatureSelector = createSelector(
+  selectedPatternSettingsSelector,
+  patternSettings => patternSettings.timeSignature,
+);
+
+export const selectedPatternStepsPerBeatSelector = createSelector(
+  selectedPatternSettingsSelector,
+  patternSettings => patternSettings.stepsPerBeat,
+);
+
+export const selectedPatternBeatsPerBarSelector = createSelector(
+  selectedPatternTimeSignatureSelector,
+  timeSignature => timeSignature.beatsPerBar,
+);
+
+export const selectedPatternQuarterBeatsPerStepSelector = createSelector(
+  selectedPatternSettingsSelector,
+  patternSettings => getQuarterBeatsPerStep(patternSettings),
 );

@@ -41,6 +41,13 @@ which preserves the existing 16-step behavior. Other signatures such as 3/4,
 5/8, and 6/8 can be represented by changing `timeSignature` and
 `stepsPerBeat`.
 
+Changing a pattern's timing does not delete notes that fall outside the newly
+visible grid. Those notes remain in state so they can be restored if the pattern
+returns to a longer signature, but compatibility selectors, rendering code, and
+the audio scheduler must treat notes outside the active pattern length as
+inactive. For example, when a one-bar pattern changes from 4/4 to 3/4, notes on
+beat 4 are preserved but must not be shown or played.
+
 ## Notes
 
 Notes are normalized separately from patterns. A note points to a pattern and a
@@ -92,9 +99,10 @@ per-voice gain.
 
 Factory pattern content is selected separately from kits. A pattern pack is a
 named bank of related pattern slots, currently matching the app's eight-pattern
-workflow. Loading a pattern pack updates pattern lanes, notes, tempo/swing, and
-kit-channel assignments for the selected kit. It must not replace the selected
-kit, mutate kit channel/sample data, or overwrite the user's Humanize setting.
+workflow. Loading a pattern pack updates pattern lanes, pattern timing, notes,
+tempo/swing, and kit-channel assignments for the selected kit. It must not
+replace the selected kit, mutate kit channel/sample data, or overwrite the
+user's Humanize setting.
 
 Kit preset loading is the inverse operation: it replaces kit channels/samples
 and rebuilds lane assignments for the currently loaded pattern content, but it
@@ -107,6 +115,12 @@ patternPack
   bpm
   swing
   patternNames[]
+  patternSettings[]
+    timeSignature
+      beatsPerBar
+      beatUnit
+    bars
+    stepsPerBeat
   lanes[]
     laneId
     name

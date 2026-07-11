@@ -133,6 +133,20 @@ export const isBetween = (query: number, a: number, b: number): boolean => query
 
 const getNoteVelocity = (note: ChannelNote): number => normalizeNoteVelocity(note.velocity);
 
+const getUnscheduledNote = (
+  note: ChannelNote,
+  channel: NoteChannel,
+): ScheduledNote => ({
+  id: note.id,
+  time: null,
+  channel,
+  velocity: getNoteVelocity(note),
+});
+
+const isBeatInPattern = (beat: number, patternLengthInBeats: number): boolean => (
+  isBetween(beat, 1, 1 + patternLengthInBeats)
+);
+
 const getHumanizeSeed = (
   note: ChannelNote,
   channel: NoteChannel,
@@ -173,6 +187,10 @@ export const getScheduledNotes = ({
     const lookaheadBeats = LOOKAHEAD * (tempo.bpm / 60);
     const secondsPerBeat = 60 / tempo.bpm;
 
+    if (!isBeatInPattern(note.beat, patternLengthInBeats)) {
+      return getUnscheduledNote(note, channel);
+    }
+
     const swingAmount = typeof tempo.swing === 'undefined' ? 0 : tempo.swing;
     const swingBeat = swing(note.beat, swingAmount);
 
@@ -199,12 +217,7 @@ export const getScheduledNotes = ({
       );
     }
     // Return note objects with time: null that should not be scheduled
-    return {
-      id: note.id,
-      time: null,
-      channel,
-      velocity: getNoteVelocity(note),
-    };
+    return getUnscheduledNote(note, channel);
   },
 );
 
