@@ -21,6 +21,11 @@ type RemoveSampleFromUrlPayload = {
   sampleURL: string;
 };
 
+type SetSampleAlignmentOffsetPayload = {
+  sampleId: string;
+  alignmentOffset: number;
+};
+
 const upsertSampleFromUrl = (
   state: Draft<SamplesState>,
   sampleURL?: string,
@@ -32,10 +37,12 @@ const upsertSampleFromUrl = (
     state.ids.push(sampleId);
   }
   state.entities[sampleId] = {
+    ...state.entities[sampleId],
     id: sampleId,
     name,
     url: sampleURL,
     sourceType,
+    alignmentOffset: state.entities[sampleId]?.alignmentOffset || 0,
   };
 };
 
@@ -77,6 +84,13 @@ export const samplesSlice = createSlice({
         return { payload: { sampleURL } };
       },
     },
+    setSampleAlignmentOffset(state, action: PayloadAction<SetSampleAlignmentOffsetPayload>) {
+      const sample = state.entities[action.payload.sampleId];
+      if (sample) {
+        const offset = action.payload.alignmentOffset;
+        sample.alignmentOffset = Number.isFinite(offset) ? Math.max(0, offset) : 0;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -99,6 +113,7 @@ export const {
   addSampleFromUrl,
   renameSampleFromUrl,
   removeSampleFromUrl,
+  setSampleAlignmentOffset,
 } = samplesSlice.actions;
 
 export const samplesReducer = samplesSlice.reducer;

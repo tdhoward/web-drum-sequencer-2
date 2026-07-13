@@ -249,4 +249,37 @@ describe('song occurrence scheduling', () => {
 
     expect(mockedPlayNote).toHaveBeenCalledTimes(2);
   });
+
+  test('looks ahead far enough to start an aligned sample before its beat', () => {
+    const alignedNotes = getScheduledNotes({
+      channel: {
+        id: 'test-channel',
+        alignmentOffset: 0.2,
+      },
+      channelNotes: [{ beat: 1.2, id: 'early-attack' }],
+      tempo: { bpm: 60, humanize: 0 },
+      startTime: 10,
+      currentBeat: 1,
+    });
+
+    expect(alignedNotes[0].time).not.toBeNull();
+  });
+
+  test('starts playback early by the sample alignment offset', () => {
+    scheduleNote('aligned-note', 2, {
+      id: 'snare',
+      sample: 'snare.wav',
+      alignmentOffset: 0.126,
+    });
+
+    expect(mockedPlayNote).toHaveBeenCalledWith(1.874, undefined, 'snare', 0, 1);
+  });
+
+  test('zero alignment preserves timing and startup never schedules negative audio time', () => {
+    scheduleNote('zero-note', 2, { id: 'kick', alignmentOffset: 0 });
+    scheduleNote('startup-note', 0.08, { id: 'snare', alignmentOffset: 0.2 });
+
+    expect(mockedPlayNote).toHaveBeenNthCalledWith(1, 2, undefined, 'kick', 0, 1);
+    expect(mockedPlayNote).toHaveBeenNthCalledWith(2, 1, undefined, 'snare', 0, 1);
+  });
 });

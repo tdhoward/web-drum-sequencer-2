@@ -48,6 +48,7 @@ type KitChannelListComponentProps = {
   onSetPan: (channel: KitChannelListChannel, event: Event) => void;
   onSetChannelPitchCoarse: (channel: KitChannelListChannel, event: Event) => void;
   onSetReverb: (channel: KitChannelListChannel, event: Event) => void;
+  onSetSampleAlignment: (channel: KitChannelListChannel, alignmentOffset: number) => void;
   onSaveEditedSample: (
     channel: KitChannelListChannel,
     audioBuffer: AudioBuffer,
@@ -571,6 +572,10 @@ export class KitChannelListComponent extends React.Component<
                 </Box>
                 <WaveformCell>
                   <SampleWaveform
+                    alignmentOffset={channel.alignmentOffset || 0}
+                    onAlignmentChange={alignmentOffset => (
+                      this.props.onSetSampleAlignment(channel, alignmentOffset)
+                    )}
                     onClick={() => this.openSampleEditor(channel)}
                     sampleUrl={channel.sample}
                     title="Edit sample"

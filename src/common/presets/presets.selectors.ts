@@ -48,6 +48,9 @@ export const currentKitPresetStateSelector = createSelector(
           return omitTransientChannelFields({
             ...channel,
             sample: sample?.url || channel.sample,
+            ...(sample?.alignmentOffset
+              ? { alignmentOffset: sample.alignmentOffset }
+              : {}),
           });
         }),
     };

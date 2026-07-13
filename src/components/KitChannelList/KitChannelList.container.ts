@@ -10,6 +10,7 @@ import {
   setChannelPan,
   setChannelPitchCoarse,
   setChannelReverb,
+  setSampleAlignmentOffset,
   updateChannelOrder,
 } from '../../common';
 import { playNoteNow } from '../../services/audioScheduler';
@@ -37,6 +38,7 @@ type KitChannelListDispatchProps = {
   setChannelPan: (channelId: string, pan: number) => void;
   setChannelPitchCoarse: (channelId: string, pitchCoarse: number) => void;
   setChannelReverb: (channelId: string, reverb: number) => void;
+  setSampleAlignmentOffset: (sampleId: string, alignmentOffset: number) => void;
   saveEditedUserSample: (
     channelId: string,
     audioBuffer: AudioBuffer,
@@ -85,6 +87,9 @@ const mapDispatchToProps = (dispatch: AppDispatch): KitChannelListDispatchProps 
   },
   setChannelReverb: (channelId, reverb) => {
     dispatch(setChannelReverb(channelId, reverb));
+  },
+  setSampleAlignmentOffset: (sampleId, alignmentOffset) => {
+    dispatch(setSampleAlignmentOffset({ sampleId, alignmentOffset }));
   },
   saveEditedUserSample: (channelId, audioBuffer, sourceName, sampleName) => (
     dispatch(saveEditedUserSample(
@@ -139,6 +144,9 @@ const mergeProps = (
   },
   onSetReverb: (channel: LegacyChannel, event: Event) => {
     dispatchProps.setChannelReverb(getKitChannelId(channel), getEventNumber(event));
+  },
+  onSetSampleAlignment: (channel: LegacyChannel, alignmentOffset: number) => {
+    dispatchProps.setSampleAlignmentOffset(channel.sampleId, alignmentOffset);
   },
   onSaveEditedSample: (
     channel: LegacyChannel,

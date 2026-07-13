@@ -97,6 +97,7 @@ export type Sample = {
   url?: string;
   sourceType: string;
   fileName?: string;
+  alignmentOffset?: number;
 };
 
 export type SamplesState = EntityState<Sample>;
@@ -321,6 +322,10 @@ export const createSamplesState = (channels: KitChannelInput[] = []): SamplesSta
       url: sampleUrl,
       sourceType: channel.sourceType || 'factory',
       fileName: channel.fileName || undefined,
+      alignmentOffset: typeof channel.alignmentOffset === 'number'
+        && Number.isFinite(channel.alignmentOffset)
+        ? Math.max(0, channel.alignmentOffset)
+        : 0,
     };
     return state;
   }, { ids: [], entities: {} })

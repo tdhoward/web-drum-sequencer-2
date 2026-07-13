@@ -190,6 +190,7 @@ sample
   url
   sourceType
   fileName
+  alignmentOffset (seconds, defaults to 0)
 
 userSample
   id
@@ -216,6 +217,14 @@ manager. The audio payload for uploaded, edited, and recorded samples is stored 
 IndexedDB and mirrored in the in-memory sample store under `userSample.id`.
 Older persisted user-sample lists may contain bare string ids; reducers should
 continue to normalize those entries when they are renamed or otherwise edited.
+
+Each sample may store an `alignmentOffset` in seconds from its beginning. Zero
+preserves normal playback. The waveform's alignment mode clamps the value to the
+decoded sample duration and offers drag/tap placement, reset, and 10 ms steps.
+For a note whose beat time is `T`, playback begins at `T - alignmentOffset` so
+the marker lands on the beat. The scheduler expands its lookahead by the offset;
+at transport startup it clamps source start times to the current Web Audio time
+instead of passing a negative or already elapsed scheduling time.
 
 Sample editing is non-destructive. Trimming or normalizing a factory sample
 creates a new `userSample` and a corresponding `sample` entity rather than

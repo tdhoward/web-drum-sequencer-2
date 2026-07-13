@@ -15,6 +15,7 @@ type PitchInput = {
 type NoteChannel = PitchInput & {
   id: string;
   sample?: string;
+  alignmentOffset?: number;
 };
 
 type ChannelNote = {
@@ -68,6 +69,12 @@ const getSampleBuffer = (noteChannel: NoteChannel): AudioBuffer | undefined => (
     : sampleStore[noteChannel.sample]
 );
 
+const getAlignmentOffset = (noteChannel: NoteChannel): number => (
+  typeof noteChannel.alignmentOffset === 'number' && Number.isFinite(noteChannel.alignmentOffset)
+    ? Math.max(0, noteChannel.alignmentOffset)
+    : 0
+);
+
 export const pitchToCents = ({ pitchCoarse = 0, pitchFine = 0 }: PitchInput): number => Math.round(
   pitchCoarse * 100 + pitchFine,
 );
@@ -113,8 +120,13 @@ export const scheduleNote = (
 ): void => {
   if (typeof schedule[noteId] === 'undefined') {
     const pitch = pitchToCents(noteChannel);
+    const alignmentOffset = getAlignmentOffset(noteChannel);
+    const playbackTime = Math.max(
+      getAudioContext().currentTime,
+      noteTime - alignmentOffset,
+    );
     schedule[noteId] = playNote(
-      noteTime,
+      playbackTime,
       getSampleBuffer(noteChannel),
       noteChannel.id,
       pitch,
@@ -190,6 +202,7 @@ export const getScheduledNotes = ({
   (note) => {
     const lookaheadBeats = LOOKAHEAD * (tempo.bpm / 60);
     const secondsPerBeat = 60 / tempo.bpm;
+    const alignmentBeats = getAlignmentOffset(channel) / secondsPerBeat;
 
     if (!isBeatInPattern(note.beat, patternLengthInBeats)) {
       return getUnscheduledNote(note, channel);
@@ -199,14 +212,16 @@ export const getScheduledNotes = ({
     const swingBeat = swing(note.beat, swingAmount);
 
     const noteTime = startTime + ((swingBeat - 1) * secondsPerBeat);
-    if (isBetween(note.beat, currentBeat, currentBeat + lookaheadBeats)) {
+    if (isBetween(note.beat, currentBeat, currentBeat + lookaheadBeats + alignmentBeats)) {
       return getHumanizedScheduledNote(note, channel, noteTime, tempo, startTime);
     }
     // If nearing the end of the bar, schedule notes at the start of the bar too
     if (wrap && isBetween(
       note.beat,
       currentBeat - patternLengthInBeats,
-      currentBeat + lookaheadBeats - patternLengthInBeats,
+      // Alignment extends how far ahead the scheduler must inspect so playback
+      // can begin before the wrapped beat.
+      currentBeat + lookaheadBeats + alignmentBeats - patternLengthInBeats,
     )) {
       const nextPatternStartTime = startTime + (patternLengthInBeats * secondsPerBeat);
       const wrappedNoteTime = startTime
