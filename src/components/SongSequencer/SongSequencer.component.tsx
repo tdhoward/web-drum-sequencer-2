@@ -46,7 +46,9 @@ const RowName = styled.div`
   z-index: 2;
 `;
 
-const ColumnLabel = styled.div<{ $playing: boolean }>`
+const PENDING_COLUMN_OPACITY = 0.68;
+
+const ColumnLabel = styled.div<{ $pending: boolean; $playing: boolean }>`
   align-items: center;
   background: ${({ $playing, theme }) => ($playing ? theme.colors.accentPrimary : 'transparent')};
   border-radius: 0.3rem;
@@ -56,11 +58,14 @@ const ColumnLabel = styled.div<{ $playing: boolean }>`
   font-weight: 600;
   height: 1.35rem;
   justify-content: center;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  opacity: ${({ $pending }) => ($pending ? PENDING_COLUMN_OPACITY : 1)};
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
   width: 2.35rem;
+
+  &:hover { opacity: 1; }
 `;
 
-const Cell = styled.button<{ $selected: boolean; $playing: boolean }>`
+const Cell = styled.button<{ $pending: boolean; $selected: boolean; $playing: boolean }>`
   background: ${({ $selected, theme }) => ($selected
     ? theme.colors.accentPrimary
     : theme.colors.sequencerBeatInactiveBackground)};
@@ -73,13 +78,19 @@ const Cell = styled.button<{ $selected: boolean; $playing: boolean }>`
     : 'none')};
   cursor: pointer;
   height: 2.35rem;
+  opacity: ${({ $pending }) => ($pending ? PENDING_COLUMN_OPACITY : 1)};
   padding: 0;
+  transition: border-color 0.15s ease, opacity 0.15s ease;
   width: 2.35rem;
 
-  &:hover { border-color: ${({ theme }) => theme.colors.borderHover}; }
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.borderHover};
+    opacity: 1;
+  }
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.colors.accentPrimary};
     outline-offset: 2px;
+    opacity: 1;
   }
 `;
 
@@ -100,6 +111,7 @@ export const SongSequencerComponent = ({
   onDeleteColumn,
 }: Props) => {
   const columnCount = arrangementPatternIds.length + 1;
+  const pendingColumnIndex = columnCount - 1;
 
   return (
     <Panel aria-label="Song arrangement">
@@ -115,6 +127,7 @@ export const SongSequencerComponent = ({
           {Array.from({ length: columnCount }, (_, columnIndex) => (
             <ColumnLabel
               key={columnIndex}
+              $pending={columnIndex === pendingColumnIndex}
               $playing={isSongPlaying && arrangementIndex === columnIndex}
               role="columnheader"
             >
@@ -131,6 +144,7 @@ export const SongSequencerComponent = ({
               return (
                 <Cell
                   key={columnIndex}
+                  $pending={columnIndex === pendingColumnIndex}
                   $selected={selected}
                   $playing={playing}
                   aria-label={`${selected ? 'Remove' : 'Use'} ${pattern.name} at song position ${columnIndex + 1}`}
