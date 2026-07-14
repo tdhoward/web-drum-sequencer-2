@@ -23,12 +23,14 @@ type AudioStore = {
 
 type SongOccurrence = {
   index: number;
-  patternId: string;
-  pattern: number;
+  patternId: string | null;
+  pattern: number | null;
   startTime: number;
   endTime: number;
   lengthInBeats: number;
 };
+
+const EMPTY_BAR_LENGTH_IN_BEATS = getPatternLengthInQuarterBeats();
 
 export const createSongTimeline = (
   state: RootState,
@@ -36,15 +38,16 @@ export const createSongTimeline = (
 ): SongOccurrence[] => {
   let occurrenceStartTime = startTime;
   return arrangementPatternIdsSelector(state).reduce<SongOccurrence[]>((timeline, patternId, index) => {
-    if (patternId === null) return timeline;
-    const patternState = state.patterns.entities[patternId];
-    if (!patternState) return timeline;
-    const lengthInBeats = getPatternLengthInQuarterBeats(patternState);
+    const patternState = patternId === null ? undefined : state.patterns.entities[patternId];
+    if (patternId !== null && !patternState) return timeline;
+    const lengthInBeats = patternState
+      ? getPatternLengthInQuarterBeats(patternState)
+      : EMPTY_BAR_LENGTH_IN_BEATS;
     const durationSeconds = (lengthInBeats * 60) / state.tempo.bpm;
     const occurrence = {
       index,
       patternId,
-      pattern: patternIdToIndex(patternId),
+      pattern: patternId === null ? null : patternIdToIndex(patternId),
       startTime: occurrenceStartTime,
       endTime: occurrenceStartTime + durationSeconds,
       lengthInBeats,
@@ -62,6 +65,10 @@ const scheduleSongOccurrence = (
   notes: ReturnType<typeof notesSelector>,
   channels: ReturnType<typeof channelsSelector>,
 ): void => {
+  if (occurrence.pattern === null) {
+    return;
+  }
+
   const elapsedBeats = (audioTime - occurrence.startTime) * (state.tempo.bpm / 60);
   scheduleNotes({
     notes,
