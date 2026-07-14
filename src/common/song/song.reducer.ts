@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { patternIndexToId } from '../sequencerModel';
+import { normalizeArrangementPatternIds, patternIndexToId } from '../sequencerModel';
 import { createDefaultSongState } from '../defaultSequencerState';
 
 export const songInitialState = createDefaultSongState();
@@ -30,15 +30,22 @@ export const songSlice = createSlice({
       }
       const arrangement = state.arrangementPatternIds || (state.arrangementPatternIds = []);
       if (columnIndex === arrangement.length) {
-        arrangement.push(patternId);
+        arrangement.push([patternId]);
       } else if (columnIndex < arrangement.length) {
-        arrangement[columnIndex] = patternId;
+        const column = arrangement[columnIndex];
+        if (!column.includes(patternId)) {
+          column.push(patternId);
+        }
       }
     },
-    clearArrangementPattern(state, action: PayloadAction<number>) {
+    clearArrangementPattern(
+      state,
+      action: PayloadAction<{ columnIndex: number; patternId: string }>,
+    ) {
+      const { columnIndex, patternId } = action.payload;
       const arrangement = state.arrangementPatternIds || [];
-      if (action.payload >= 0 && action.payload < arrangement.length) {
-        arrangement[action.payload] = null;
+      if (columnIndex >= 0 && columnIndex < arrangement.length) {
+        arrangement[columnIndex] = arrangement[columnIndex].filter(id => id !== patternId);
       }
     },
     removeArrangementColumn(state, action: PayloadAction<number>) {
@@ -47,18 +54,46 @@ export const songSlice = createSlice({
         arrangement.splice(action.payload, 1);
       }
     },
+    reorderArrangementColumn(
+      state,
+      action: PayloadAction<{ oldIndex: number; newIndex: number }>,
+    ) {
+      const { oldIndex, newIndex } = action.payload;
+      const arrangement = state.arrangementPatternIds || [];
+      const pendingColumnIndex = arrangement.length;
+      if (
+        oldIndex < 0
+        || oldIndex > pendingColumnIndex
+        || newIndex < 0
+        || newIndex > pendingColumnIndex
+        || oldIndex === newIndex
+      ) {
+        return;
+      }
+
+      const columns = arrangement.map(patternIds => ({ patternIds, pending: false }));
+      columns.push({ patternIds: [] as string[], pending: true });
+      const [movedColumn] = columns.splice(oldIndex, 1);
+      columns.splice(newIndex, 0, movedColumn);
+
+      const pendingIndex = columns.findIndex(column => column.pending);
+      const persistedColumns = pendingIndex === columns.length - 1
+        ? columns.slice(0, -1)
+        : columns;
+      state.arrangementPatternIds = persistedColumns.map(column => column.patternIds);
+    },
     loadSong(state, action: PayloadAction<{
       id: string;
       name: string;
       patternPackId: string;
-      arrangementPatternIds: Array<string | null>;
+      arrangementPatternIds: string[][];
     }>) {
       state.id = action.payload.id;
       state.name = action.payload.name;
       state.patternPackId = action.payload.patternPackId;
-      state.arrangementPatternIds = action.payload.arrangementPatternIds.map(
-        patternId => (patternId === null || state.patternIds.includes(patternId) ? patternId : null),
-      );
+      state.arrangementPatternIds = normalizeArrangementPatternIds(
+        action.payload.arrangementPatternIds,
+      ).map(column => column.filter(patternId => state.patternIds.includes(patternId)));
     },
     clearSongArrangement(state) {
       state.arrangementPatternIds = [];
@@ -75,6 +110,7 @@ export const {
   setArrangementPattern,
   clearArrangementPattern,
   removeArrangementColumn,
+  reorderArrangementColumn,
   loadSong,
   clearSongArrangement,
 } = songSlice.actions;

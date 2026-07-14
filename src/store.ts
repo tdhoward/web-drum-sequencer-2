@@ -17,6 +17,7 @@ import type { RootState } from './reducer';
 import {
   migrateToKitSequencerState,
   migrateToNormalizedSequencerState,
+  normalizeArrangementPatternIds,
 } from './common/sequencerModel';
 import type { LegacySequencerState } from './common/sequencerModel';
 import presets from './presets';
@@ -42,11 +43,32 @@ export const migrations = {
       }
       : state.song,
   }),
+  7: (state: LegacySequencerState = {}) => ({
+    ...state,
+    song: state.song
+      ? {
+        ...state.song,
+        arrangementPatternIds: normalizeArrangementPatternIds(
+          state.song.arrangementPatternIds,
+        ),
+      }
+      : state.song,
+    songLibrary: state.songLibrary
+      ? {
+        ...(state.songLibrary as object),
+        userSongs: ((state.songLibrary as { userSongs?: Array<Record<string, unknown>> })
+          .userSongs || []).map(song => ({
+          ...song,
+          arrangementPatternIds: normalizeArrangementPatternIds(song.arrangementPatternIds),
+        })),
+      }
+      : state.songLibrary,
+  }),
 };
 
 const persistConfig = {
   key: 'root',
-  version: 6,
+  version: 7,
   storage,
   blacklist: ['playbackSession', 'window', 'workspace'],
   migrate: createMigrate(migrations as unknown as MigrationManifest, { debug: import.meta.env.DEV }),

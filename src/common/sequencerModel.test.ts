@@ -7,6 +7,7 @@ import {
   MIN_NOTE_VELOCITY,
   migrateToKitSequencerState,
   migrateToNormalizedSequencerState,
+  normalizeArrangementPatternIds,
   normalizeChannelsState,
   normalizeNoteVelocity,
   normalizeNotesState,
@@ -77,6 +78,20 @@ describe('note velocity helpers', () => {
     expect(normalizeNoteVelocity(3)).toBe(MAX_NOTE_VELOCITY);
     expect(normalizeNoteVelocity(Number.NaN)).toBe(DEFAULT_NOTE_VELOCITY);
     expect(normalizeNoteVelocity(undefined)).toBe(DEFAULT_NOTE_VELOCITY);
+  });
+});
+
+describe('song arrangement migration', () => {
+  test('normalizes legacy columns and removes duplicate pattern selections', () => {
+    expect(normalizeArrangementPatternIds([
+      'pattern-0',
+      null,
+      ['pattern-1', 'pattern-2', 'pattern-1'],
+    ])).toEqual([
+      ['pattern-0'],
+      [],
+      ['pattern-1', 'pattern-2'],
+    ]);
   });
 });
 

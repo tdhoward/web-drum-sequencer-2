@@ -92,10 +92,12 @@ export const validateSequencerModelState = (state: SequencerModelStateInput = {}
     }
   });
 
-  (song.arrangementPatternIds || []).forEach((patternId) => {
-    if (patternId !== null && !hasEntity(patterns, patternId)) {
-      addError(errors, `song.arrangementPatternIds contains missing patternId: ${patternId}`);
-    }
+  (song.arrangementPatternIds || []).forEach((patternIds) => {
+    patternIds.forEach((patternId) => {
+      if (!hasEntity(patterns, patternId)) {
+        addError(errors, `song.arrangementPatternIds contains missing patternId: ${patternId}`);
+      }
+    });
   });
 
   (kits?.ids || []).forEach((kitId) => {

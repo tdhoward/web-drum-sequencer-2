@@ -39,15 +39,29 @@ export type SongState = {
   selectedPatternId: string;
   patternIds: string[];
   patternPackId?: string;
-  arrangementPatternIds?: Array<string | null>;
+  arrangementPatternIds?: string[][];
 };
 
 export type SavedSong = {
   id: string;
   name: string;
   patternPackId: string;
-  arrangementPatternIds: Array<string | null>;
+  arrangementPatternIds: string[][];
 };
+
+export const normalizeArrangementPatternIds = (value: unknown): string[][] => (
+  Array.isArray(value)
+    ? value.map((column) => {
+      const patternIds = Array.isArray(column) ? column : [column];
+      return patternIds.reduce<string[]>((normalized, patternId) => {
+        if (typeof patternId === 'string' && !normalized.includes(patternId)) {
+          normalized.push(patternId);
+        }
+        return normalized;
+      }, []);
+    })
+    : []
+);
 
 export type Kit = {
   id: string;
@@ -566,7 +580,7 @@ export const migrateToNormalizedSequencerState = (
   const song = existingSong
     ? {
       ...existingSong,
-      arrangementPatternIds: existingSong.arrangementPatternIds || [],
+      arrangementPatternIds: normalizeArrangementPatternIds(existingSong.arrangementPatternIds),
     }
     : createSongState({ selectedPatternIndex, patternCount });
   const patterns = isPatternsState(state.patterns)

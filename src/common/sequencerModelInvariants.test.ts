@@ -28,7 +28,7 @@ describe('sequencer model invariants', () => {
 
   test('detects an arrangement entry that references a missing pattern', () => {
     const state = clone(createDefaultSequencerState());
-    state.song.arrangementPatternIds = ['missing-pattern'];
+    state.song.arrangementPatternIds = [['missing-pattern']];
 
     expect(validateSequencerModelState(state)).toContain(
       'song.arrangementPatternIds contains missing patternId: missing-pattern',

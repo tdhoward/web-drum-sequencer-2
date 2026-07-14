@@ -35,5 +35,5 @@ export const songPatternPackIdSelector = createSelector(
 
 export const hasPlayableArrangementSelector = createSelector(
   arrangementPatternIdsSelector,
-  arrangementPatternIds => arrangementPatternIds.some(patternId => patternId !== null),
+  arrangementPatternIds => arrangementPatternIds.some(patternIds => patternIds.length > 0),
 );

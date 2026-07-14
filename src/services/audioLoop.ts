@@ -23,8 +23,12 @@ type AudioStore = {
 
 type SongOccurrence = {
   index: number;
-  patternId: string | null;
-  pattern: number | null;
+  patternIds: string[];
+  patterns: Array<{
+    id: string;
+    index: number;
+    lengthInBeats: number;
+  }>;
   startTime: number;
   endTime: number;
   lengthInBeats: number;
@@ -37,17 +41,26 @@ export const createSongTimeline = (
   startTime: number,
 ): SongOccurrence[] => {
   let occurrenceStartTime = startTime;
-  return arrangementPatternIdsSelector(state).reduce<SongOccurrence[]>((timeline, patternId, index) => {
-    const patternState = patternId === null ? undefined : state.patterns.entities[patternId];
-    if (patternId !== null && !patternState) return timeline;
-    const lengthInBeats = patternState
-      ? getPatternLengthInQuarterBeats(patternState)
+  return arrangementPatternIdsSelector(state).reduce<SongOccurrence[]>((timeline, patternIds, index) => {
+    const patterns = patternIds.reduce<SongOccurrence['patterns']>((columnPatterns, patternId) => {
+      const patternState = state.patterns.entities[patternId];
+      if (patternState) {
+        columnPatterns.push({
+          id: patternId,
+          index: patternIdToIndex(patternId),
+          lengthInBeats: getPatternLengthInQuarterBeats(patternState),
+        });
+      }
+      return columnPatterns;
+    }, []);
+    const lengthInBeats = patterns.length > 0
+      ? Math.max(...patterns.map(pattern => pattern.lengthInBeats))
       : EMPTY_BAR_LENGTH_IN_BEATS;
     const durationSeconds = (lengthInBeats * 60) / state.tempo.bpm;
     const occurrence = {
       index,
-      patternId,
-      pattern: patternId === null ? null : patternIdToIndex(patternId),
+      patternIds: patterns.map(pattern => pattern.id),
+      patterns,
       startTime: occurrenceStartTime,
       endTime: occurrenceStartTime + durationSeconds,
       lengthInBeats,
@@ -58,28 +71,26 @@ export const createSongTimeline = (
   }, []);
 };
 
-const scheduleSongOccurrence = (
+export const scheduleSongOccurrence = (
   occurrence: SongOccurrence,
   audioTime: number,
   state: RootState,
   notes: ReturnType<typeof notesSelector>,
   channels: ReturnType<typeof channelsSelector>,
 ): void => {
-  if (occurrence.pattern === null) {
-    return;
-  }
-
   const elapsedBeats = (audioTime - occurrence.startTime) * (state.tempo.bpm / 60);
-  scheduleNotes({
-    notes,
-    channels,
-    startTime: occurrence.startTime,
-    tempo: state.tempo,
-    pattern: occurrence.pattern,
-    patternLengthInBeats: occurrence.lengthInBeats,
-    currentBeat: 1 + elapsedBeats,
-    occurrenceKey: `song-${occurrence.index}`,
-    wrap: false,
+  occurrence.patterns.forEach((pattern) => {
+    scheduleNotes({
+      notes,
+      channels,
+      startTime: occurrence.startTime,
+      tempo: state.tempo,
+      pattern: pattern.index,
+      patternLengthInBeats: pattern.lengthInBeats,
+      currentBeat: 1 + elapsedBeats,
+      occurrenceKey: `song-${occurrence.index}-${pattern.id}`,
+      wrap: false,
+    });
   });
 };
 

@@ -31,7 +31,7 @@ const draw = (store: AnimationStore): void => {
       item => item.index === arrangementIndex,
     );
     animateSelectedPattern = Boolean(
-      occurrence && occurrence.patternId === selectedPatternIdSelector(state),
+      occurrence && occurrence.patternIds.includes(selectedPatternIdSelector(state)),
     );
     if (occurrence) {
       patternStartTime = occurrence.startTime;

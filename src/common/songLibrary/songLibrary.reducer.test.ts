@@ -10,7 +10,7 @@ const savedSong = {
   id: 'user-test-song',
   name: 'Test Song',
   patternPackId: 'hip-hop',
-  arrangementPatternIds: ['pattern-0', 'pattern-2'],
+  arrangementPatternIds: [['pattern-0', 'pattern-2']],
 };
 
 describe('song library', () => {
@@ -18,11 +18,11 @@ describe('song library', () => {
     let state = songLibraryReducer(songLibraryInitialState, saveSongAs(savedSong));
     state = songLibraryReducer(state, saveSong({
       ...savedSong,
-      arrangementPatternIds: ['pattern-1'],
+      arrangementPatternIds: [['pattern-1']],
     }));
 
     expect(state.selectedSongId).toBe(savedSong.id);
-    expect(state.userSongs[0].arrangementPatternIds).toEqual(['pattern-1']);
+    expect(state.userSongs[0].arrangementPatternIds).toEqual([['pattern-1']]);
   });
 
   test('deletes a selected user song', () => {

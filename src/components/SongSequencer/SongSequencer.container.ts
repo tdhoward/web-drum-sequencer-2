@@ -8,6 +8,7 @@ import {
   playingSelector,
   PLAYBACK_MODES,
   removeArrangementColumn,
+  reorderArrangementColumn,
   setArrangementPattern,
   stopPlayback,
 } from '../../common';
@@ -36,14 +37,24 @@ const mapDispatchToProps = (dispatch: AppDispatch) => ({
     clearScheduledNotes();
     dispatch(stopPlayback());
     dispatch(selected
-      ? clearArrangementPattern(columnIndex)
+      ? clearArrangementPattern({ columnIndex, patternId })
       : setArrangementPattern({ columnIndex, patternId }));
   },
   onDeleteColumn: (columnIndex: number) => {
+    if (!window.confirm(`Delete song column ${columnIndex + 1}?`)) {
+      return;
+    }
+
     stopAllNotes();
     clearScheduledNotes();
     dispatch(stopPlayback());
     dispatch(removeArrangementColumn(columnIndex));
+  },
+  onReorderColumn: (oldIndex: number, newIndex: number) => {
+    stopAllNotes();
+    clearScheduledNotes();
+    dispatch(stopPlayback());
+    dispatch(reorderArrangementColumn({ oldIndex, newIndex }));
   },
 });
 

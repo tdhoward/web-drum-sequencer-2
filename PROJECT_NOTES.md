@@ -32,6 +32,7 @@ The app should be organized around three main workspaces:
 3. Song workspace
 
    * Arrange patterns into a song structure.
+   * A song column may select multiple patterns to start together. The column lasts as long as its longest pattern; shorter patterns play once without looping.
    * Song data should reference patterns and the selected/current kit as appropriate.
    * Song editing should not be responsible for kit design.
 

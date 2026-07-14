@@ -17,17 +17,28 @@ song
   selectedPatternId
   patternIds[]
   patternPackId
-  arrangementPatternIds[]
+  arrangementPatternIds[][]
 ```
 
 `patternIds` lists the pattern slots available to the current project, while
 `arrangementPatternIds` is the ordered Song-workspace playback sequence. Each
-array entry is one song column, so the model permits only one pattern at a time.
-An entry may be `null` to preserve an intentionally empty column; empty columns
-play back as silent one-bar rests. The trailing empty editor column is derived
-UI and is never stored. A saved song stores its pattern-pack reference and
-arrangement, but continues to use the currently selected kit so kits remain
-swappable.
+outer-array entry is one song column, and its inner array lists every pattern
+that starts together in that column. Pattern IDs are unique within a column. An
+empty inner array preserves an intentionally empty column and plays back as a
+silent one-bar rest.
+
+When a column contains patterns with different lengths, each pattern plays once
+and the column lasts as long as its longest pattern. A shorter pattern is silent
+for the remainder of the column; it does not loop. The next column starts after
+the longest pattern finishes.
+
+The trailing empty editor column is derived UI and is never stored until it is
+dragged among the arranged columns, at which point it becomes an intentional
+empty column and a new trailing editor column is derived. A saved song stores
+its pattern-pack reference and the nested arrangement, but continues to use the
+currently selected kit so kits remain swappable. Persisted arrangements from
+the earlier single-pattern model migrate from `string | null` columns to
+`[string] | []` columns.
 
 ## Patterns and lanes
 

@@ -14,7 +14,7 @@ export const {
 
 type PlaybackRootState = {
   playbackSession: { mode: string };
-  song: { arrangementPatternIds?: Array<string | null> };
+  song: { arrangementPatternIds?: string[][] };
 };
 
 export const startPlaybackAndResume = () => (
@@ -24,7 +24,7 @@ export const startPlaybackAndResume = () => (
   const state = getState();
   if (
     state.playbackSession.mode === 'song'
-    && !(state.song.arrangementPatternIds || []).some(patternId => patternId !== null)
+    && !(state.song.arrangementPatternIds || []).some(patternIds => patternIds.length > 0)
   ) {
     return;
   }
