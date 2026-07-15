@@ -98,14 +98,14 @@ const AlignmentGuide = styled.span<{ $position: number }>`
 `;
 
 const AlignmentMarker = styled.span<{ $position: number }>`
-  border-left: 0.28rem solid transparent;
-  border-right: 0.28rem solid transparent;
-  border-top: 0.42rem solid ${({ theme }) => theme.colors.accentPrimary};
-  left: ${({ $position }) => `clamp(0.28rem, ${$position}%, calc(100% - 0.28rem))`};
+  background: ${({ theme }) => theme.colors.accentPrimary};
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+  height: 0.48rem;
+  left: ${({ $position }) => `${$position}%`};
   pointer-events: none;
   position: absolute;
-  top: 0.08rem;
-  transform: translateX(-50%);
+  top: 0;
+  width: 0.24rem;
 `;
 
 const AlignmentModeLabel = styled.span`
