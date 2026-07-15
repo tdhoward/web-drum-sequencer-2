@@ -4,14 +4,13 @@ import {
   userPresetsSelector,
   presetPromptOpenSelector,
   currentKitPresetStateSelector,
+  normalizeKitPresetState,
 } from '../../common';
-import { deepEqual, omitFields } from '../../common/presetMemory';
-import type { UserPreset } from '../../common';
+import { deepEqual } from '../../common/presetMemory';
+import type { KitPresetStateInput, UserPreset } from '../../common';
 import presets from '../../presets';
 
 type PresetOption = (typeof presets)[number] | UserPreset;
-
-const presetMetadataFields = new Set(['name', 'bpm', 'swing', 'notes']);
 
 // presetSelector returns the preset name - this will get the whole preset object
 const currentPresetSelector = createSelector(
@@ -26,7 +25,10 @@ const currentPresetSelector = createSelector(
 const isEditedSelector = createSelector(
   currentPresetSelector,
   currentKitPresetStateSelector,
-  (preset, currentState): boolean => !deepEqual(omitFields(preset, presetMetadataFields), currentState),
+  (preset, currentState): boolean => !deepEqual(
+    normalizeKitPresetState(preset as KitPresetStateInput | undefined),
+    currentState,
+  ),
 );
 
 export const presetSelectorSelectors = createStructuredSelector({

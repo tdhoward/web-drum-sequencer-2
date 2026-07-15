@@ -11,13 +11,8 @@ import {
 import { setSelectedChannel } from '../master';
 import { setPattern, setSongPatternPackId } from '../song';
 import {
-  DEFAULT_PATTERN_COUNT,
-  createPatternsState,
-  normalizePatternSettings,
   type KitChannel,
   type PatternPack,
-  type PatternSettings,
-  type PatternsState,
   type SequencerRootState,
 } from '../sequencerModel';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
@@ -33,6 +28,11 @@ import {
   userPatternPacksSelector,
 } from './patternPacks.selectors';
 import { stopPlayback } from '../playbackSession';
+import {
+  createPatternsStateForPatternPack,
+  getPatternPackPatternNames,
+  getPatternPackPatternSettings,
+} from './patternPacks.utils';
 
 type Dispatch = (action: unknown) => void;
 
@@ -68,47 +68,6 @@ const createPatternPackId = (name: string, existingPatternPacks: PatternPack[]):
   }
 
   return id;
-};
-
-const getPatternPackPatternCount = (patternPack: PatternPack): number => Math.max(
-  DEFAULT_PATTERN_COUNT,
-  patternPack.patternNames?.length || 0,
-  patternPack.patternSettings?.length || 0,
-  ...Object.values(patternPack.notes).map(channelPatterns => channelPatterns.length),
-);
-
-const getPatternPackPatternNames = (patternPack: PatternPack): string[] => (
-  patternPack.patternNames || Array.from(
-    { length: getPatternPackPatternCount(patternPack) },
-    (_, index) => `Pattern ${index + 1}`,
-  )
-);
-
-const getPatternPackPatternSettings = (patternPack: PatternPack): PatternSettings[] => (
-  Array.from(
-    { length: getPatternPackPatternCount(patternPack) },
-    (_, index) => normalizePatternSettings(patternPack.patternSettings?.[index]),
-  )
-);
-
-const createPatternsStateForPatternPack = (
-  patternPack: PatternPack,
-  laneIds: string[],
-): PatternsState => {
-  const patternSettings = getPatternPackPatternSettings(patternPack);
-  const patterns = createPatternsState({
-    patternCount: getPatternPackPatternCount(patternPack),
-    laneIds,
-  });
-
-  patterns.ids.forEach((patternId, index) => {
-    patterns.entities[patternId] = {
-      ...patterns.entities[patternId],
-      ...patternSettings[index],
-    };
-  });
-
-  return patterns;
 };
 
 export const loadPatternPack = (patternPack: PatternPack) => (

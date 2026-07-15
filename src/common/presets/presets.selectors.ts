@@ -2,7 +2,8 @@ import { createSelector } from 'reselect';
 import { channelsStateSelector } from '../channels';
 import { selectedKitSelector } from '../kits';
 import { samplesSelector } from '../samples';
-import type { KitChannel, SequencerRootState } from '../sequencerModel';
+import { normalizeKitChannelsState } from '../sequencerModel';
+import type { KitChannel, KitChannelInput, SequencerRootState } from '../sequencerModel';
 import type { PresetsState, UserPreset } from './presets.reducer';
 
 type PresetsRootState = SequencerRootState & {
@@ -17,6 +18,10 @@ export type CurrentKitPresetState = {
   channels: CurrentKitPresetChannel[];
 };
 
+export type KitPresetStateInput = {
+  channels?: KitChannelInput[];
+};
+
 const transientChannelFields = ['sampleLoaded', 'noteIds', 'sampleId', 'kitId'];
 
 const omitTransientChannelFields = (channel: KitChannel): CurrentKitPresetChannel => {
@@ -25,6 +30,22 @@ const omitTransientChannelFields = (channel: KitChannel): CurrentKitPresetChanne
     delete presetChannel[field];
   });
   return presetChannel as CurrentKitPresetChannel;
+};
+
+export const normalizeKitPresetState = (
+  preset: KitPresetStateInput | undefined,
+): CurrentKitPresetState | undefined => {
+  if (!preset || !Array.isArray(preset.channels)) {
+    return undefined;
+  }
+
+  const channels = normalizeKitChannelsState(preset.channels);
+  return {
+    channels: channels.ids
+      .map(channelId => channels.entities[channelId])
+      .filter((channel): channel is KitChannel => Boolean(channel))
+      .map(omitTransientChannelFields),
+  };
 };
 
 export const userPresetsSelector = (state: PresetsRootState): UserPreset[] | undefined => (
