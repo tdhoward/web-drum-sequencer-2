@@ -400,6 +400,22 @@ pattern content ----------------> pattern-pack hash
 drumkit hash + pattern-pack hash + arrangement/tempo -> song hash
 ```
 
+### Standalone kit bundles
+
+The Kit workspace exports the selected kit as a versioned, GZIP-compressed
+`.wds-kit` bundle. The decompressed content contains a JSON manifest for the kit,
+its ordered channel snapshot, and its referenced sample metadata, together with
+base64-encoded copies of the raw sample payloads. Payload keys are sample
+content hashes, so a sample referenced more than once is stored only once.
+Import requires the GZIP wrapper; uncompressed `.wds-kit` files are invalid.
+
+Import parses the complete file and verifies every raw sample payload and the
+canonical kit hash before changing Redux state. Matching user samples and saved
+kit presets are reused by content hash. New imports receive collision-safe local
+kit, channel, and sample IDs, their sample payloads are stored in IndexedDB, and
+the imported kit is then saved as a user preset and selected. Portable IDs from
+the bundle are never treated as authoritative local IDs.
+
 ### Import and export plan
 
 1. Calculate and persist a full raw-byte sample hash whenever a sample is

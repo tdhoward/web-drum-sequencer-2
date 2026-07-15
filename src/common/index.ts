@@ -20,3 +20,4 @@ export * from './percussion';
 export * from './timeSignatures';
 export * from './contentHash';
 export * from './songBundles';
+export * from './kitBundles';

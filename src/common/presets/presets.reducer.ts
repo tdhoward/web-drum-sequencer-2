@@ -1,10 +1,13 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import defaultPresets from '../../presets';
+import type { ContentHashMetadata, KitChannelInput } from '../sequencerModel';
 
 export type UserPreset = {
   name: string;
+  kitId?: string;
+  channels?: KitChannelInput[];
   [key: string]: unknown;
-};
+} & Partial<ContentHashMetadata>;
 
 export type PresetsState = {
   userPresets: UserPreset[];

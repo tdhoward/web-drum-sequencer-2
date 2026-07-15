@@ -4,7 +4,7 @@ import { PresetSelector } from '../PresetSelector';
 import { SampleManagerModal } from '../SampleManagerModal';
 import { WorkspaceControls } from '../WorkspaceControls';
 
-const ManageSamplesButton = styled.button`
+const KitActionButton = styled.button`
   background: ${({ theme }) => theme.colors.surfaceControl};
   border: 2px solid ${({ theme }) => theme.colors.borderDefault};
   border-radius: 0.25rem;
@@ -19,6 +19,7 @@ const ManageSamplesButton = styled.button`
   &:hover, &:focus-visible {
     border-color: ${({ theme }) => theme.colors.borderHover};
   }
+
 `;
 
 export const KitWorkspaceControls = () => {
@@ -28,12 +29,12 @@ export const KitWorkspaceControls = () => {
     <>
       <WorkspaceControls>
         <PresetSelector label="KIT PRESET" />
-        <ManageSamplesButton
+        <KitActionButton
           onClick={() => setIsSampleManagerOpen(true)}
           type="button"
         >
           Manage Samples
-        </ManageSamplesButton>
+        </KitActionButton>
       </WorkspaceControls>
       <SampleManagerModal
         onClose={() => setIsSampleManagerOpen(false)}

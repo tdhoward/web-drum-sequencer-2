@@ -32,6 +32,7 @@ type Dispatch = (action: unknown) => unknown;
 
 type KitPreset = {
   name: string;
+  kitId?: string;
   channels: FactoryPresetChannel[];
   bpm?: number;
   swing?: number;
@@ -94,7 +95,7 @@ export const loadPreset = (preset: KitPreset) => (
   getState: () => PresetRootState,
 ) => {
   const state = getState();
-  const kitId = kitIdFromPresetName(preset.name);
+  const kitId = preset.kitId || kitIdFromPresetName(preset.name);
   const { mappingResult, assignments } = resolveAssignmentsForPreset(preset, kitId, state);
   dispatch(setSelectedKitId(kitId));
   dispatch(loadChannels(preset.channels, kitId));

@@ -12,6 +12,11 @@ import { PatternPackSaved } from '../PatternPackSaved.component';
 import { PatternPackDeleted } from '../PatternPackDeleted.component';
 import { SongSaved } from '../SongSaved.component';
 import { SongDeleted } from '../SongDeleted.component';
+import {
+  KitExported,
+  KitImported,
+  KitTransferError,
+} from '../KitTransferMessage.component';
 
 type FlashMessageComponentProps = {
   messageKey?: string | null;
@@ -41,6 +46,12 @@ const getMessageComponent = (messageKey: string | null | undefined): FlashMessag
       return SongSaved;
     case FLASH_MESSAGES.SONG_DELETED:
       return SongDeleted;
+    case FLASH_MESSAGES.KIT_EXPORTED:
+      return KitExported;
+    case FLASH_MESSAGES.KIT_IMPORTED:
+      return KitImported;
+    case FLASH_MESSAGES.KIT_TRANSFER_ERROR:
+      return KitTransferError;
     default:
       return undefined;
   }

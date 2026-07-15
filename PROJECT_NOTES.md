@@ -72,6 +72,7 @@ Current model baseline:
 * The sample selector can record device audio as a user sample. Recorded samples are saved through the same WAV/IndexedDB path as edited samples and can be assigned to the current kit channel immediately.
 * `userSamples` now stores user-facing sample metadata records, while older persisted string entries are still normalized when edited. The audio data itself is stored in IndexedDB and mirrored in the in-memory sample store by sample id.
 * The Kit workspace sample manager lists user samples, shows whether each sample is assigned to a channel, lets the user rename samples, previews samples through a dedicated preview channel, and only deletes samples that are not currently in use.
+* The Kit preset dropdown's Memory group can export the selected kit as a self-contained, GZIP-compressed `.wds-kit` file and import one as a selected user kit. The versioned bundle includes channel settings and every referenced sample payload; import requires GZIP, verifies sample and kit hashes before changing state, reuses matching user content, and remaps portable IDs to collision-safe local IDs.
 
 ## UI direction
 
