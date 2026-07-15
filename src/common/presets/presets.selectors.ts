@@ -11,6 +11,7 @@ type PresetsRootState = SequencerRootState & {
 };
 
 type CurrentKitPresetChannel = Omit<KitChannel, 'sampleId' | 'kitId'> & {
+  id: string;
   sample?: string;
 };
 

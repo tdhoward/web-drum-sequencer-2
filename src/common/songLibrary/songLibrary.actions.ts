@@ -1,6 +1,7 @@
 import patternPacks from '../../patternPacks';
+import kitPresets from '../../presets';
 import { loadPatternPack } from '../patternPacks';
-import { loadSong } from '../song';
+import { loadSong, setSelectedKitId } from '../song';
 import { stopPlayback } from '../playbackSession';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import type { SavedSong } from '../sequencerModel';
@@ -15,11 +16,24 @@ import {
   setSelectedSongId,
 } from './songLibrary.reducer';
 import { allPatternPacksSelector } from '../patternPacks';
+import {
+  currentKitPresetStateSelector,
+  loadPreset,
+  userPresetsSelector,
+} from '../presets';
+import { kitIdFromPresetName } from '../kits';
+import {
+  calculatePatternPackContentHash,
+  calculateSongContentHash,
+} from '../contentHash';
+import { calculateKitPresetContentHash } from '../../services/libraryContentHash';
 
 type Dispatch = (action: unknown) => void;
 type SongMemoryState = Parameters<typeof currentSavedSongStateSelector>[0]
   & Parameters<typeof userSongsSelector>[0]
-  & Parameters<typeof allPatternPacksSelector>[0];
+  & Parameters<typeof allPatternPacksSelector>[0]
+  & Parameters<typeof currentKitPresetStateSelector>[0]
+  & Parameters<typeof userPresetsSelector>[0];
 
 const stopForSongChange = (dispatch: Dispatch): void => {
   dispatch(stopPlayback());
@@ -44,33 +58,77 @@ const createSongId = (name: string, songs: SavedSong[]): string => {
 export const doSaveSongAs = (name: string) => (
   dispatch: Dispatch,
   getState: () => SongMemoryState,
-): void => {
+): Promise<void> => {
   const state = getState();
-  const song = {
+  const song: SavedSong = {
     ...currentSavedSongStateSelector(state),
     id: createSongId(name, userSongsSelector(state)),
     name,
   };
-  dispatch(saveSongAs(song));
-  dispatch(loadSong(song));
-  dispatch(showFlashMessage(FLASH_MESSAGES.SONG_SAVED));
+  const patternPack = allPatternPacksSelector(state).find(
+    candidate => candidate.id === song.patternPackId,
+  );
+  if (!patternPack) return Promise.resolve();
+
+  return Promise.all([
+    calculateKitPresetContentHash(currentKitPresetStateSelector(state)),
+    calculatePatternPackContentHash(patternPack),
+  ]).then(async ([kitResult, patternPackHash]) => {
+    const songWithDependencies: SavedSong = {
+      ...song,
+      kitContentHash: kitResult.hash.contentHash,
+      patternPackContentHash: patternPackHash.contentHash,
+    };
+    const songHash = await calculateSongContentHash({
+      song: songWithDependencies,
+      kitContentHash: kitResult.hash.contentHash,
+      patternPack,
+      patternPackContentHash: patternPackHash.contentHash,
+    });
+    const hashedSong = { ...songWithDependencies, ...songHash };
+    dispatch(saveSongAs(hashedSong));
+    dispatch(loadSong(hashedSong));
+    dispatch(showFlashMessage(FLASH_MESSAGES.SONG_SAVED));
+  });
 };
 
 export const doSaveSong = (songId: string) => (
   dispatch: Dispatch,
   getState: () => SongMemoryState,
-): void => {
+): Promise<void> => {
   const state = getState();
   const existingSong = userSongsSelector(state).find(song => song.id === songId);
-  if (!existingSong) return;
-  const song = {
+  if (!existingSong) return Promise.resolve();
+  const song: SavedSong = {
     ...currentSavedSongStateSelector(state),
     id: existingSong.id,
     name: existingSong.name,
   };
-  dispatch(saveSong(song));
-  dispatch(loadSong(song));
-  dispatch(showFlashMessage(FLASH_MESSAGES.SONG_SAVED));
+  const patternPack = allPatternPacksSelector(state).find(
+    candidate => candidate.id === song.patternPackId,
+  );
+  if (!patternPack) return Promise.resolve();
+
+  return Promise.all([
+    calculateKitPresetContentHash(currentKitPresetStateSelector(state)),
+    calculatePatternPackContentHash(patternPack),
+  ]).then(async ([kitResult, patternPackHash]) => {
+    const songWithDependencies: SavedSong = {
+      ...song,
+      kitContentHash: kitResult.hash.contentHash,
+      patternPackContentHash: patternPackHash.contentHash,
+    };
+    const songHash = await calculateSongContentHash({
+      song: songWithDependencies,
+      kitContentHash: kitResult.hash.contentHash,
+      patternPack,
+      patternPackContentHash: patternPackHash.contentHash,
+    });
+    const hashedSong = { ...songWithDependencies, ...songHash };
+    dispatch(saveSong(hashedSong));
+    dispatch(loadSong(hashedSong));
+    dispatch(showFlashMessage(FLASH_MESSAGES.SONG_SAVED));
+  });
 };
 
 export const loadSavedSong = (song: SavedSong) => (
@@ -81,6 +139,13 @@ export const loadSavedSong = (song: SavedSong) => (
     || patternPacks[0];
   if (!patternPack) return;
   stopForSongChange(dispatch);
+  dispatch(setSelectedKitId(song.selectedKitId));
+  const kitPreset = [...kitPresets, ...(userPresetsSelector(getState()) || [])].find(
+    preset => kitIdFromPresetName(preset.name) === song.selectedKitId,
+  );
+  if (kitPreset) {
+    dispatch(loadPreset(kitPreset as Parameters<typeof loadPreset>[0]));
+  }
   dispatch(loadPatternPack(patternPack));
   dispatch(loadSong({
     ...song,
@@ -99,6 +164,7 @@ export const startNewSong = () => (
   dispatch(loadSong({
     id: 'song-1',
     name: 'Untitled Song',
+    selectedKitId: current.selectedKitId,
     patternPackId: current.patternPackId,
     arrangementPatternIds: [],
     tempoChanges: [],

@@ -1,9 +1,9 @@
-import { loadSample } from '../../services/sampleStore';
+import { getSampleFingerprint, loadSample } from '../../services/sampleStore';
 import { initializeChannelNotes, removeChannelNotes } from '../notes';
 import { uuid } from '../../services/uuid';
 import factorySamples from '../../samples.config';
 import { setSelectedChannel } from '../master';
-import { addSampleFromUrl } from '../samples';
+import { addSampleFromUrl, setSampleFingerprint } from '../samples';
 import { PERCUSSION_TYPES } from '../percussion';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import { DEFAULT_KIT_ID } from '../sequencerModel';
@@ -75,6 +75,10 @@ export const loadSampleStatefully = (dispatch: Dispatch, channel: SampleChannel)
   loadSample(channel.sample).then((success: boolean) => {
     if (success) {
       dispatch(sampleLoaded(channel.id, true));
+      const fingerprint = getSampleFingerprint?.(channel.sample);
+      if (fingerprint) {
+        dispatch(setSampleFingerprint(channel.sample, fingerprint));
+      }
     }
   });
 };
@@ -83,8 +87,11 @@ const getSelectedKitId = (state: SequencerRootState): string => (
   state.song?.selectedKitId || DEFAULT_KIT_ID
 );
 
-export const loadChannels = (channels: SampleChannel[]): Thunk => (dispatch, getState) => {
-  const kitId = getSelectedKitId(getState());
+export const loadChannels = (
+  channels: SampleChannel[],
+  targetKitId?: string,
+): Thunk => (dispatch, getState) => {
+  const kitId = targetKitId || getSelectedKitId(getState());
   channels.forEach((channel) => {
     dispatch(addSampleFromUrl(channel.sample, 'factory'));
     loadSampleStatefully(dispatch, channel);
@@ -127,6 +134,10 @@ export const loadAndSetChannelSample = (channelId: string, sampleURL: string) =>
   loadSample(sampleURL).then((success: boolean) => {
     if (success) {
       dispatch(sampleLoaded(channelId, true));
+      const fingerprint = getSampleFingerprint?.(sampleURL);
+      if (fingerprint) {
+        dispatch(setSampleFingerprint(sampleURL, fingerprint));
+      }
     } else {
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
     }

@@ -12,6 +12,12 @@ export type EntityState<TEntity> = {
   entities: Record<string, TEntity>;
 };
 
+export type ContentHashMetadata = {
+  contentHashAlgorithm: 'sha256';
+  contentHashVersion: number;
+  contentHash: string;
+};
+
 export type TimeSignature = {
   beatsPerBar: number;
   beatUnit: number;
@@ -46,10 +52,13 @@ export type SongState = {
 export type SavedSong = {
   id: string;
   name: string;
+  selectedKitId: string;
   patternPackId: string;
   arrangementPatternIds: string[][];
   tempoChanges?: Array<number | null>;
-};
+  kitContentHash?: string;
+  patternPackContentHash?: string;
+} & Partial<ContentHashMetadata>;
 
 const isValidBpm = (value: unknown): value is number => (
   typeof value === 'number' && Number.isFinite(value) && value > 0
@@ -112,7 +121,7 @@ export type Kit = {
   id: string;
   name: string;
   channelIds: string[];
-};
+} & Partial<ContentHashMetadata>;
 
 export type KitsState = EntityState<Kit>;
 
@@ -157,7 +166,8 @@ export type Sample = {
   sourceType: string;
   fileName?: string;
   alignmentOffset?: number;
-};
+  byteLength?: number;
+} & Partial<ContentHashMetadata>;
 
 export type SamplesState = EntityState<Sample>;
 
@@ -196,7 +206,7 @@ export type PatternPack = {
   patternSettings?: PatternSettings[];
   lanes: PatternPackLane[];
   notes: LegacyNotes;
-};
+} & Partial<ContentHashMetadata>;
 
 export type SequencerModelState = {
   song: SongState;

@@ -226,11 +226,11 @@ describe('loadPatternPack', () => {
 });
 
 describe('doSavePatternPackAs', () => {
-  test('saves the current pattern state as a user pattern pack', () => {
+  test('saves the current pattern state as a user pattern pack', async () => {
     const state = createSaveState();
     const actions: DispatchedAction[] = [];
 
-    doSavePatternPackAs('My Patterns')(
+    await doSavePatternPackAs('My Patterns')(
       (action) => {
         actions.push(action as DispatchedAction);
       },
@@ -280,7 +280,7 @@ describe('doSavePatternPackAs', () => {
 });
 
 describe('doSavePatternPack', () => {
-  test('updates the selected user pattern pack', () => {
+  test('updates the selected user pattern pack', async () => {
     const userPatternPack: PatternPack = {
       id: 'user-my-patterns',
       name: 'My Patterns',
@@ -300,7 +300,7 @@ describe('doSavePatternPack', () => {
     const state = createSaveState([userPatternPack]);
     const actions: DispatchedAction[] = [];
 
-    doSavePatternPack(userPatternPack.id)(
+    await doSavePatternPack(userPatternPack.id)(
       (action) => {
         actions.push(action as DispatchedAction);
       },

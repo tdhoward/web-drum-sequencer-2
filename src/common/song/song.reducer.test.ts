@@ -149,6 +149,7 @@ describe('song arrangement', () => {
     const state = songReducer(songInitialState, loadSong({
       id: 'saved-song',
       name: 'Saved Song',
+      selectedKitId: 'saved-kit',
       patternPackId: 'test-pack',
       arrangementPatternIds: [['pattern-0', 'missing-pattern', 'pattern-2'], []],
       tempoChanges: [128, null],
@@ -156,6 +157,7 @@ describe('song arrangement', () => {
 
     expect(state.arrangementPatternIds).toEqual([['pattern-0', 'pattern-2'], []]);
     expect(state.tempoChanges).toEqual([128, null]);
+    expect(state.selectedKitId).toBe('saved-kit');
   });
 
   test('gives legacy loaded songs a first-column tempo', () => {

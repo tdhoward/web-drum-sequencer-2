@@ -28,6 +28,7 @@ import {
   userPatternPacksSelector,
 } from './patternPacks.selectors';
 import { stopPlayback } from '../playbackSession';
+import { calculatePatternPackContentHash } from '../contentHash';
 import {
   createPatternsStateForPatternPack,
   getPatternPackPatternNames,
@@ -109,40 +110,46 @@ export const loadPatternPack = (patternPack: PatternPack) => (
 export const doSavePatternPackAs = (patternPackName: string) => (
   dispatch: Dispatch,
   getState: () => PatternPackMemoryRootState,
-): void => {
+): Promise<void> => {
   const state = getState();
   const id = createPatternPackId(patternPackName, allPatternPacksSelector(state));
   const currentState = currentPatternPackStateSelector(state);
-
-  dispatch(savePatternPackAs({
+  const patternPack: PatternPack = {
     ...currentState,
     id,
     name: patternPackName,
-  }));
-  dispatch(setSelectedPatternPack(id));
-  dispatch(showFlashMessage(FLASH_MESSAGES.PATTERN_PACK_SAVED));
+  };
+
+  return calculatePatternPackContentHash(patternPack).then((contentHash) => {
+    dispatch(savePatternPackAs({ ...patternPack, ...contentHash }));
+    dispatch(setSelectedPatternPack(id));
+    dispatch(showFlashMessage(FLASH_MESSAGES.PATTERN_PACK_SAVED));
+  });
 };
 
 export const doSavePatternPack = (patternPackId: string) => (
   dispatch: Dispatch,
   getState: () => PatternPackMemoryRootState,
-): void => {
+): Promise<void> => {
   const state = getState();
   const userPatternPack = (userPatternPacksSelector(state) || []).find(
     patternPack => patternPack.id === patternPackId,
   );
 
   if (!userPatternPack) {
-    return;
+    return Promise.resolve();
   }
 
-  dispatch(savePatternPack({
+  const patternPack: PatternPack = {
     ...currentPatternPackStateSelector(state),
     id: userPatternPack.id,
     name: userPatternPack.name,
-  }));
-  dispatch(setSelectedPatternPack(userPatternPack.id));
-  dispatch(showFlashMessage(FLASH_MESSAGES.PATTERN_PACK_SAVED));
+  };
+  return calculatePatternPackContentHash(patternPack).then((contentHash) => {
+    dispatch(savePatternPack({ ...patternPack, ...contentHash }));
+    dispatch(setSelectedPatternPack(userPatternPack.id));
+    dispatch(showFlashMessage(FLASH_MESSAGES.PATTERN_PACK_SAVED));
+  });
 };
 
 export const erasePatternPack = (patternPackId: string) => (

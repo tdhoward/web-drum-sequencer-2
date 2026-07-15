@@ -1,4 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { ContentHashMetadata } from '../sequencerModel';
+import type { SampleFingerprint } from '../contentHash';
 
 export type UserSampleRecord = {
   id: string;
@@ -6,8 +8,9 @@ export type UserSampleRecord = {
   createdAt?: number;
   sourceName?: string;
   sourceType?: 'uploaded' | 'edited' | 'recorded';
+  byteLength?: number;
   [key: string]: unknown;
-};
+} & Partial<ContentHashMetadata>;
 
 export type UserSample = string | UserSampleRecord;
 
@@ -47,11 +50,17 @@ type AddUserSamplePayload = {
   createdAt?: number;
   sourceName?: string;
   sourceType?: 'uploaded' | 'edited' | 'recorded';
-};
+  byteLength?: number;
+} & Partial<ContentHashMetadata>;
 
 type RenameUserSamplePayload = {
   id: string;
   name: string;
+};
+
+type SetUserSampleFingerprintPayload = {
+  id: string;
+  fingerprint: SampleFingerprint;
 };
 
 const upsertUserSample = (
@@ -127,6 +136,22 @@ export const userSamplesSlice = createSlice({
       },
       prepare(id: string, name: string) {
         return { payload: { id, name } };
+      },
+    },
+    setUserSampleFingerprint: {
+      reducer(state, action: PayloadAction<SetUserSampleFingerprintPayload>) {
+        const existingIndex = state.findIndex(
+          userSample => getUserSampleId(userSample) === action.payload.id,
+        );
+        if (existingIndex >= 0) {
+          state[existingIndex] = {
+            ...normalizeUserSample(state[existingIndex]),
+            ...action.payload.fingerprint,
+          };
+        }
+      },
+      prepare(id: string, fingerprint: SampleFingerprint) {
+        return { payload: { id, fingerprint } };
       },
     },
     removeUserSample(state, action: PayloadAction<string>) {

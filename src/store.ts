@@ -17,11 +17,13 @@ import type { RootState } from './reducer';
 import {
   migrateToKitSequencerState,
   migrateToNormalizedSequencerState,
+  DEFAULT_KIT_ID,
   normalizeArrangementPatternIds,
   normalizeTempoChanges,
 } from './common/sequencerModel';
 import type { LegacySequencerState } from './common/sequencerModel';
 import presets from './presets';
+import { kitIdFromPresetName } from './common/kits';
 
 export const migrations = {
   1: () => ({}),
@@ -106,11 +108,35 @@ export const migrations = {
         : state.songLibrary,
     };
   },
+  9: (state: LegacySequencerState = {}) => {
+    const selectedPresetName = (state.presets as { preset?: string } | undefined)?.preset;
+    const selectedKitId = selectedPresetName
+      ? kitIdFromPresetName(selectedPresetName)
+      : state.song?.selectedKitId || DEFAULT_KIT_ID;
+    return {
+      ...state,
+      song: state.song
+        ? { ...state.song, selectedKitId }
+        : state.song,
+      songLibrary: state.songLibrary
+        ? {
+          ...(state.songLibrary as object),
+          userSongs: ((state.songLibrary as { userSongs?: Array<Record<string, unknown>> })
+            .userSongs || []).map(song => ({
+            ...song,
+            selectedKitId: typeof song.selectedKitId === 'string'
+              ? song.selectedKitId
+              : selectedKitId,
+          })),
+        }
+        : state.songLibrary,
+    };
+  },
 };
 
 const persistConfig = {
   key: 'root',
-  version: 8,
+  version: 9,
   storage,
   blacklist: ['playbackSession', 'window', 'workspace'],
   migrate: createMigrate(migrations as unknown as MigrationManifest, { debug: import.meta.env.DEV }),

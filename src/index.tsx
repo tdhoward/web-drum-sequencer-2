@@ -5,11 +5,19 @@ import { PersistGate } from 'redux-persist/integration/react';
 import App from './components/App';
 import { initializeAudio } from './services/audioLoop';
 import { store, persistor } from './store';
-import { channelsSelector, loadSampleStatefully } from './common';
+import {
+  channelsSelector,
+  getUserSampleId,
+  loadSampleStatefully,
+  setSampleFingerprint,
+  setUserSampleFingerprint,
+  userSamplesSelector,
+} from './common';
 import { startAnimations } from './services/animations';
 import { initializePwaInstall } from './services/pwaInstall';
 import { initializeDB } from './services/database';
 import type { LegacyChannel } from './common';
+import { ensureSampleFingerprint } from './services/sampleStore';
 
 type LegacyDispatch = (action: unknown) => unknown;
 
@@ -78,6 +86,17 @@ initializeDB()
 
     // Redux can persist sampleLoaded=true, but sampleStore is memory-only after a refresh.
     channels.forEach(channel => loadChannelSample(channel, { force: true }));
+
+    const userSamples = userSamplesSelector(store.getState()) || [];
+    userSamples.forEach((userSample) => {
+      const sampleId = getUserSampleId(userSample);
+      ensureSampleFingerprint(sampleId).then((fingerprint) => {
+        dispatchLegacyAction(setUserSampleFingerprint(sampleId, fingerprint));
+        dispatchLegacyAction(setSampleFingerprint(sampleId, fingerprint));
+      }).catch(() => {
+        // Missing legacy payloads remain available for the normal sample-load error path.
+      });
+    });
   });
 
 if ('serviceWorker' in navigator) {

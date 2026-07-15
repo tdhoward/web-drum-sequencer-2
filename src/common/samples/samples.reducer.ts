@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { Draft } from 'immer';
 import { createSamplesState, sampleIdFromUrl } from '../sequencerModel';
 import type { SamplesState } from '../sequencerModel';
+import type { SampleFingerprint } from '../contentHash';
 import { createDefaultSamplesState } from '../defaultSequencerState';
 import { channelsSlice } from '../channels/channels.reducer';
 
@@ -24,6 +25,11 @@ type RemoveSampleFromUrlPayload = {
 type SetSampleAlignmentOffsetPayload = {
   sampleId: string;
   alignmentOffset: number;
+};
+
+type SetSampleFingerprintPayload = {
+  sampleURL: string;
+  fingerprint: SampleFingerprint;
 };
 
 const upsertSampleFromUrl = (
@@ -91,6 +97,18 @@ export const samplesSlice = createSlice({
         sample.alignmentOffset = Number.isFinite(offset) ? Math.max(0, offset) : 0;
       }
     },
+    setSampleFingerprint: {
+      reducer(state, action: PayloadAction<SetSampleFingerprintPayload>) {
+        const sampleId = sampleIdFromUrl(action.payload.sampleURL);
+        const sample = state.entities[sampleId];
+        if (sample) {
+          Object.assign(sample, action.payload.fingerprint);
+        }
+      },
+      prepare(sampleURL: string, fingerprint: SampleFingerprint) {
+        return { payload: { sampleURL, fingerprint } };
+      },
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -114,6 +132,7 @@ export const {
   renameSampleFromUrl,
   removeSampleFromUrl,
   setSampleAlignmentOffset,
+  setSampleFingerprint,
 } = samplesSlice.actions;
 
 export const samplesReducer = samplesSlice.reducer;

@@ -28,6 +28,7 @@ export const currentSavedSongStateSelector = createSelector(
   (song, selectedPatternPackId): SavedSong => ({
     id: song.id,
     name: song.name,
+    selectedKitId: song.selectedKitId,
     patternPackId: selectedPatternPackId || song.patternPackId || '',
     arrangementPatternIds: song.arrangementPatternIds || [],
     tempoChanges: song.tempoChanges || [],

@@ -5,7 +5,11 @@ import {
   saveToSampleStore,
 } from '../../services/sampleStore';
 import { loadAndSetChannelSample } from '../channels';
-import { removeSampleFromUrl, renameSampleFromUrl } from '../samples';
+import {
+  removeSampleFromUrl,
+  renameSampleFromUrl,
+  setSampleFingerprint,
+} from '../samples';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import { userSamplesSlice } from './userSamples.reducer';
 
@@ -16,6 +20,7 @@ export const {
   renameUserSample,
   removeUserSample,
   clearUserSamples,
+  setUserSampleFingerprint,
 } = userSamplesSlice.actions;
 
 export const saveUserSample = (channel: string, files: FileList | File[]) => (
@@ -24,13 +29,15 @@ export const saveUserSample = (channel: string, files: FileList | File[]) => (
   const file = files[0];
 
   saveToSampleStore(file)
-    .then((sampleURL: string) => {
+    .then(({ id: sampleURL, fingerprint }) => {
       dispatch(addUserSample({
         id: sampleURL,
         name: file.name,
         sourceType: 'uploaded',
+        ...fingerprint,
       }));
       dispatch(loadAndSetChannelSample(channel, sampleURL));
+      dispatch(setSampleFingerprint(sampleURL, fingerprint));
     })
     .catch(() => {
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
@@ -48,14 +55,16 @@ export const saveEditedUserSample = (
   const displayName = sampleName?.trim() || sourceName?.trim() || 'Edited Sample';
 
   return saveEditedSampleBuffer(audioBuffer, displayName)
-    .then((sampleURL: string) => {
+    .then(({ id: sampleURL, fingerprint }) => {
       dispatch(addUserSample({
         id: sampleURL,
         name: displayName,
         sourceName,
         sourceType: 'edited',
+        ...fingerprint,
       }));
       dispatch(loadAndSetChannelSample(channel, sampleURL));
+      dispatch(setSampleFingerprint(sampleURL, fingerprint));
     })
     .catch((error) => {
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
@@ -73,13 +82,15 @@ export const saveRecordedUserSample = (
   const displayName = sampleName?.trim() || 'Recorded Sample';
 
   return saveRecordedSampleBuffer(audioBuffer, displayName)
-    .then((sampleURL: string) => {
+    .then(({ id: sampleURL, fingerprint }) => {
       dispatch(addUserSample({
         id: sampleURL,
         name: displayName,
         sourceType: 'recorded',
+        ...fingerprint,
       }));
       dispatch(loadAndSetChannelSample(channel, sampleURL));
+      dispatch(setSampleFingerprint(sampleURL, fingerprint));
     })
     .catch((error) => {
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));

@@ -99,6 +99,7 @@ describe('loadPreset', () => {
     loadPreset(preset)(dispatch, getState);
 
     expect(actions.map(action => action.type)).toEqual([
+      'song/setSelectedKitId',
       'samples/addSampleFromUrl',
       'kitChannels/sampleLoaded',
       'kitChannels/replaceKitChannels',
@@ -107,6 +108,7 @@ describe('loadPreset', () => {
       'kitChannelAssignments/replaceKitChannelAssignments',
       'master/setSelectedChannel',
     ]);
+    expect(actions[0].payload).toBe('kit-djembe-kit');
     expect(actions.find(action => action.type === 'notes/setNotes')).toBeUndefined();
     expect(actions.find(action => action.type === 'patterns/replacePatternLanes')).toBeUndefined();
     expect(actions.find(action => action.type === 'tempo/setBPM')).toBeUndefined();

@@ -1,6 +1,7 @@
 import { loadChannels } from '../channels';
 import { setSelectedChannel } from '../master';
-import { setKitName } from '../kits';
+import { kitIdFromPresetName, setKitName } from '../kits';
+import { setSelectedKitId } from '../song';
 import { resolveKitChannelMapping } from '../percussion';
 import {
   mappingToAssignments,
@@ -18,6 +19,7 @@ import type {
 } from '../sequencerModel';
 import { currentKitPresetStateSelector } from './presets.selectors';
 import { presetsSlice, type UserPreset } from './presets.reducer';
+import { calculateKitPresetContentHash } from '../../services/libraryContentHash';
 
 export const {
   setPreset,
@@ -43,10 +45,6 @@ type PresetRootState = SequencerRootState & {
     selectedPatternPackId?: string;
   };
 };
-
-const getSelectedKitId = (state: SequencerRootState): string => (
-  state.song?.selectedKitId || 'default-kit'
-);
 
 const channelForKit = (
   kitId: string,
@@ -96,9 +94,10 @@ export const loadPreset = (preset: KitPreset) => (
   getState: () => PresetRootState,
 ) => {
   const state = getState();
-  const kitId = getSelectedKitId(state);
+  const kitId = kitIdFromPresetName(preset.name);
   const { mappingResult, assignments } = resolveAssignmentsForPreset(preset, kitId, state);
-  dispatch(loadChannels(preset.channels));
+  dispatch(setSelectedKitId(kitId));
+  dispatch(loadChannels(preset.channels, kitId));
   dispatch(setKitName(kitId, preset.name));
   dispatch(setPreset(preset.name));
   dispatch(replaceKitChannelAssignments({ assignments }));
@@ -111,10 +110,11 @@ export const erasePreset = (presetName: string) => (
   getState: () => PresetRootState,
 ) => {
   const state = getState();
-  const kitId = getSelectedKitId(state);
   const emptyPreset = presets[0];
+  const kitId = kitIdFromPresetName(emptyPreset.name);
   const { mappingResult, assignments } = resolveAssignmentsForPreset(emptyPreset, kitId, state);
-  dispatch(loadChannels(emptyPreset.channels));
+  dispatch(setSelectedKitId(kitId));
+  dispatch(loadChannels(emptyPreset.channels, kitId));
   dispatch(setKitName(kitId, emptyPreset.name));
   dispatch(setPreset(emptyPreset.name));
   dispatch(replaceKitChannelAssignments({ assignments }));
@@ -127,26 +127,31 @@ export const erasePreset = (presetName: string) => (
 export const doSavePresetAs = (presetName: string) => (
   dispatch: Dispatch,
   getState: () => PresetRootState,
-): void => {
+): Promise<void> => {
   const currentState = currentKitPresetStateSelector(getState());
-  const kitId = getSelectedKitId(getState());
-  dispatch(savePresetAs({
-    ...currentState,
-    name: presetName,
-  } as UserPreset));
-  dispatch(setKitName(kitId, presetName));
-  dispatch(setPreset(presetName));
-  dispatch(showFlashMessage(FLASH_MESSAGES.PRESET_SAVED));
+  return calculateKitPresetContentHash(currentState).then(({ hash }) => {
+    const savedPreset = {
+      ...currentState,
+      ...hash,
+      name: presetName,
+    } as UserPreset;
+    dispatch(savePresetAs(savedPreset));
+    dispatch(loadPreset(savedPreset as unknown as KitPreset));
+    dispatch(showFlashMessage(FLASH_MESSAGES.PRESET_SAVED));
+  });
 };
 
 export const doSavePreset = (presetName: string) => (
   dispatch: Dispatch,
   getState: () => PresetRootState,
-): void => {
+): Promise<void> => {
   const currentState = currentKitPresetStateSelector(getState());
-  dispatch(savePreset({
-    ...currentState,
-    name: presetName,
-  } as UserPreset));
-  dispatch(showFlashMessage(FLASH_MESSAGES.PRESET_SAVED));
+  return calculateKitPresetContentHash(currentState).then(({ hash }) => {
+    dispatch(savePreset({
+      ...currentState,
+      ...hash,
+      name: presetName,
+    } as UserPreset));
+    dispatch(showFlashMessage(FLASH_MESSAGES.PRESET_SAVED));
+  });
 };

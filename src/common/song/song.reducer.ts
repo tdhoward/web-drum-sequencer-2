@@ -141,6 +141,7 @@ export const songSlice = createSlice({
     loadSong(state, action: PayloadAction<{
       id: string;
       name: string;
+      selectedKitId?: string;
       patternPackId: string;
       arrangementPatternIds: string[][];
       tempoChanges?: Array<number | null>;
@@ -148,6 +149,9 @@ export const songSlice = createSlice({
     }>) {
       state.id = action.payload.id;
       state.name = action.payload.name;
+      if (action.payload.selectedKitId) {
+        state.selectedKitId = action.payload.selectedKitId;
+      }
       state.patternPackId = action.payload.patternPackId;
       state.arrangementPatternIds = normalizeArrangementPatternIds(
         action.payload.arrangementPatternIds,

@@ -11,7 +11,7 @@ import {
   startNewSong,
   userSongsSelector,
 } from '../../common';
-import { deepEqual } from '../../common/presetMemory';
+import { deepEqual, omitFields } from '../../common/presetMemory';
 import type { SavedSong } from '../../common/sequencerModel';
 import type { AppDispatch } from '../../store';
 import type { RootState } from '../../reducer';
@@ -27,6 +27,13 @@ import { stopAllNotes } from '../../services/audioRouter';
 type Command = 'SAVE_SONG_AS' | 'SAVE_SONG' | 'DELETE_SONG';
 type AppAction = Parameters<AppDispatch>[0];
 const Selector = PresetSelectorComponent<SavedSong, Command>;
+const derivedHashFields = new Set([
+  'contentHash',
+  'contentHashAlgorithm',
+  'contentHashVersion',
+  'kitContentHash',
+  'patternPackContentHash',
+]);
 
 const mapStateToProps = (state: RootState) => {
   const currentSong = currentSavedSongStateSelector(state);
@@ -36,7 +43,7 @@ const mapStateToProps = (state: RootState) => {
     selectedSong,
     userSongs: userSongsSelector(state),
     isEdited: selectedSong
-      ? !deepEqual(currentSong, selectedSong)
+      ? !deepEqual(currentSong, omitFields(selectedSong, derivedHashFields))
       : currentSong.arrangementPatternIds.length > 0,
     patternPackEdited: isCurrentPatternPackEditedSelector(state),
   };
@@ -89,6 +96,7 @@ const mergeProps = (state: StateProps, actions: DispatchProps) => {
   const blankSong: SavedSong = {
     id: 'song-1',
     name: 'Untitled Song',
+    selectedKitId: state.currentSong.selectedKitId,
     patternPackId: state.currentSong.patternPackId,
     arrangementPatternIds: [],
   };

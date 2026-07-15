@@ -1,6 +1,13 @@
+import type { SampleFingerprint } from '../common/contentHash';
+
 const DB_NAME = 'wds-1';
 const DB_VERSION = 1;
 const USER_SAMPLES = 'USER_SAMPLES';
+
+export type StoredSampleRecord = {
+  audioData: ArrayBuffer;
+  fingerprint?: SampleFingerprint;
+};
 
 let db: IDBDatabase;
 
@@ -25,9 +32,13 @@ export const initializeDB = (): Promise<void> => new Promise((resolve, reject) =
 export const saveToDB = (
   myArrayBuffer: ArrayBuffer,
   myKey: string,
+  fingerprint?: SampleFingerprint,
 ): Promise<string> => new Promise((resolve, reject) => {
   const trans = db.transaction([USER_SAMPLES], 'readwrite');
-  trans.objectStore(USER_SAMPLES).put(myArrayBuffer, myKey);
+  const value: ArrayBuffer | StoredSampleRecord = fingerprint
+    ? { audioData: myArrayBuffer, fingerprint }
+    : myArrayBuffer;
+  trans.objectStore(USER_SAMPLES).put(value, myKey);
   trans.onerror = (event) => {
     reject(event);
   };
@@ -36,19 +47,36 @@ export const saveToDB = (
   };
 });
 
-export const getFromDB = (myKey: string): Promise<ArrayBuffer> => new Promise((resolve, reject) => {
+const isStoredSampleRecord = (value: unknown): value is StoredSampleRecord => Boolean(
+  value
+    && typeof value === 'object'
+    && (value as StoredSampleRecord).audioData instanceof ArrayBuffer,
+);
+
+export const getSampleRecordFromDB = (
+  myKey: string,
+): Promise<StoredSampleRecord> => new Promise((resolve, reject) => {
   const trans = db.transaction([USER_SAMPLES], 'readwrite');
   const request = trans.objectStore(USER_SAMPLES).get(myKey);
   request.onerror = (event) => {
     reject(event);
   };
   request.onsuccess = () => {
-    if (request.result) {
-      resolve(request.result as ArrayBuffer);
+    if (request.result instanceof ArrayBuffer) {
+      resolve({ audioData: request.result });
+      return;
     }
-    reject();
+    if (isStoredSampleRecord(request.result)) {
+      resolve(request.result);
+      return;
+    }
+    reject(new Error(`Sample not found: ${myKey}`));
   };
 });
+
+export const getFromDB = (myKey: string): Promise<ArrayBuffer> => (
+  getSampleRecordFromDB(myKey).then(record => record.audioData)
+);
 
 export const deleteFromDB = (myKey: string): Promise<string> => new Promise((resolve, reject) => {
   const trans = db.transaction([USER_SAMPLES], 'readwrite');

@@ -9,6 +9,7 @@ import {
 const savedSong = {
   id: 'user-test-song',
   name: 'Test Song',
+  selectedKitId: 'test-kit',
   patternPackId: 'hip-hop',
   arrangementPatternIds: [['pattern-0', 'pattern-2']],
 };
