@@ -2,10 +2,11 @@ import { getCurrentBeat } from './audioContext';
 import { swing } from './swing';
 import {
   PLAYBACK_MODES,
+  arrangementPatternIdsSelector,
   selectedPatternIdSelector,
   selectedPatternLengthSelector,
 } from '../common';
-import { createSongTimeline } from './audioLoop';
+import { getPatternLengthInQuarterBeats } from '../common/sequencerModel';
 import type { RootState } from '../reducer';
 
 type AnimationStore = {
@@ -15,11 +16,14 @@ type AnimationStore = {
 const draw = (store: AnimationStore): void => {
   // Get some data from redux store
   const state = store.getState();
-  const { bpm, swing: swingAmount } = state.tempo;
+  let { bpm } = state.tempo;
+  const { swing: swingAmount } = state.tempo;
   const {
     arrangementIndex,
+    activeBpm,
     mode,
     playing,
+    songOccurrenceStartTime,
     startTime,
   } = state.playbackSession;
   let patternLengthInBeats = selectedPatternLengthSelector(state);
@@ -27,16 +31,16 @@ const draw = (store: AnimationStore): void => {
   let animateSelectedPattern = playing;
 
   if (playing && mode === PLAYBACK_MODES.SONG) {
-    const occurrence = createSongTimeline(state, patternStartTime).find(
-      item => item.index === arrangementIndex,
-    );
-    animateSelectedPattern = Boolean(
-      occurrence && occurrence.patternIds.includes(selectedPatternIdSelector(state)),
-    );
-    if (occurrence) {
-      patternStartTime = occurrence.startTime;
-      patternLengthInBeats = occurrence.lengthInBeats;
-    }
+    const patternIds = arrangementPatternIdsSelector(state)[arrangementIndex] || [];
+    const patternLengths = patternIds.map(patternId => (
+      getPatternLengthInQuarterBeats(state.patterns.entities[patternId])
+    ));
+    animateSelectedPattern = patternIds.includes(selectedPatternIdSelector(state));
+    patternStartTime = songOccurrenceStartTime ?? patternStartTime;
+    patternLengthInBeats = patternLengths.length > 0
+      ? Math.max(...patternLengths)
+      : getPatternLengthInQuarterBeats();
+    bpm = activeBpm ?? bpm;
   }
 
   const currentBeat = getCurrentBeat(

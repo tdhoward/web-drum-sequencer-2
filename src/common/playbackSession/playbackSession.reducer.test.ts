@@ -8,6 +8,7 @@ import {
   stopPlayback,
   setStartTime,
   setPlaybackMode,
+  setSongPlaybackPosition,
 } from './playbackSession.actions';
 import { LOOKAHEAD } from '../../services/audioEngine.config';
 
@@ -61,5 +62,22 @@ describe('setPlaybackMode', () => {
 
     expect(state.mode).toBe(PLAYBACK_MODES.SONG);
     expect(state.arrangementIndex).toBe(0);
+  });
+
+  test('clears the active Song tempo and timing anchor', () => {
+    const playingState = playbackSessionReducer(
+      playbackSessionInitialState,
+      setSongPlaybackPosition({
+        arrangementIndex: 2,
+        activeBpm: 90,
+        activeTempoColumn: 1,
+        occurrenceStartTime: 12,
+      }),
+    );
+    const state = playbackSessionReducer(playingState, stopPlayback());
+
+    expect(state.activeBpm).toBeNull();
+    expect(state.activeTempoColumn).toBe(0);
+    expect(state.songOccurrenceStartTime).toBeNull();
   });
 });

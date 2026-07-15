@@ -1,4 +1,8 @@
-import { createSongTimeline, scheduleSongOccurrence } from './audioLoop';
+import {
+  createSongTimeline,
+  reanchorOccurrenceStartTime,
+  scheduleSongOccurrence,
+} from './audioLoop';
 import { createDefaultSequencerState } from '../common/defaultSequencerState';
 import { channelsSelector, notesSelector } from '../common';
 import { scheduleNotes } from './audioScheduler';
@@ -93,6 +97,31 @@ describe('createSongTimeline', () => {
     }));
   });
 
+  test('uses each column tempo to calculate boundaries and inherited tempo', () => {
+    const defaultState = createDefaultSequencerState();
+    const state = {
+      ...defaultState,
+      song: {
+        ...defaultState.song,
+        arrangementPatternIds: [['pattern-0'], ['pattern-1'], ['pattern-2']],
+        tempoChanges: [120, null, 60],
+      },
+      tempo: {
+        bpm: 100,
+        swing: 0,
+        humanize: 0,
+      },
+    } as unknown as RootState;
+
+    const timeline = createSongTimeline(state, 10);
+
+    expect(timeline).toEqual([
+      expect.objectContaining({ bpm: 120, startTime: 10, endTime: 12 }),
+      expect.objectContaining({ bpm: 120, startTime: 12, endTime: 14 }),
+      expect.objectContaining({ bpm: 60, startTime: 14, endTime: 18 }),
+    ]);
+  });
+
   test('schedules every selected pattern once with its own length', () => {
     const defaultState = createDefaultSequencerState();
     const state = {
@@ -133,6 +162,7 @@ describe('createSongTimeline', () => {
       patternLengthInBeats: 4,
       occurrenceKey: 'song-0-pattern-0',
       wrap: false,
+      tempo: expect.objectContaining({ bpm: 120 }),
     }));
     expect(scheduleNotes).toHaveBeenNthCalledWith(2, expect.objectContaining({
       pattern: 1,
@@ -140,5 +170,22 @@ describe('createSongTimeline', () => {
       occurrenceKey: 'song-0-pattern-1',
       wrap: false,
     }));
+  });
+});
+
+describe('live song tempo changes', () => {
+  test('reanchors the occurrence so its current beat does not jump', () => {
+    const audioTime = 11;
+    const originalStart = 10;
+    const currentBeatAt120 = 1 + ((audioTime - originalStart) * (120 / 60));
+    const newStart = reanchorOccurrenceStartTime(originalStart, 120, 60, audioTime);
+    const currentBeatAt60 = 1 + ((audioTime - newStart) * (60 / 60));
+
+    expect(newStart).toBe(9);
+    expect(currentBeatAt60).toBe(currentBeatAt120);
+  });
+
+  test('does not move a column that has not started yet', () => {
+    expect(reanchorOccurrenceStartTime(10, 120, 90, 9.5)).toBe(10);
   });
 });

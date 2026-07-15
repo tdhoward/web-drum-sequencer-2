@@ -40,6 +40,7 @@ export type SongState = {
   patternIds: string[];
   patternPackId?: string;
   arrangementPatternIds?: string[][];
+  tempoChanges?: Array<number | null>;
 };
 
 export type SavedSong = {
@@ -47,6 +48,50 @@ export type SavedSong = {
   name: string;
   patternPackId: string;
   arrangementPatternIds: string[][];
+  tempoChanges?: Array<number | null>;
+};
+
+const isValidBpm = (value: unknown): value is number => (
+  typeof value === 'number' && Number.isFinite(value) && value > 0
+);
+
+export const normalizeTempoChanges = (
+  value: unknown,
+  columnCount: number,
+  fallbackBpm: number,
+): Array<number | null> => {
+  const normalized = Array.from({ length: columnCount }, (_, index) => {
+    if (!Array.isArray(value)) return null;
+    return isValidBpm(value[index]) ? value[index] : null;
+  });
+
+  if (normalized.length > 0 && normalized[0] === null) {
+    normalized[0] = isValidBpm(fallbackBpm) ? fallbackBpm : 120;
+  }
+
+  return normalized;
+};
+
+export const getEffectiveSongBpm = (
+  tempoChanges: Array<number | null> | undefined,
+  columnIndex: number,
+  fallbackBpm: number,
+): number => {
+  for (let index = Math.min(columnIndex, (tempoChanges?.length || 0) - 1); index >= 0; index -= 1) {
+    const bpm = tempoChanges?.[index];
+    if (isValidBpm(bpm)) return bpm;
+  }
+  return isValidBpm(fallbackBpm) ? fallbackBpm : 120;
+};
+
+export const getEffectiveSongTempoColumn = (
+  tempoChanges: Array<number | null> | undefined,
+  columnIndex: number,
+): number => {
+  for (let index = Math.min(columnIndex, (tempoChanges?.length || 0) - 1); index >= 0; index -= 1) {
+    if (isValidBpm(tempoChanges?.[index])) return index;
+  }
+  return 0;
 };
 
 export const normalizeArrangementPatternIds = (value: unknown): string[][] => (
@@ -275,6 +320,7 @@ export const createSongState = ({
   selectedPatternId: patternIndexToId(selectedPatternIndex),
   patternIds: createPatternIds(patternCount),
   arrangementPatternIds: [],
+  tempoChanges: [],
 });
 
 const channelToLaneId = (channel: { id: string; laneId?: string }): string => (
@@ -390,6 +436,13 @@ export const getPatternLengthInQuarterBeats = (
 ): number => {
   const { timeSignature, bars } = normalizePatternSettings(settings);
   return timeSignature.beatsPerBar * bars * (4 / timeSignature.beatUnit);
+};
+
+export const getBarLengthInQuarterBeats = (
+  settings: PatternSettingsInput = DEFAULT_PATTERN_SETTINGS,
+): number => {
+  const { timeSignature } = normalizePatternSettings(settings);
+  return timeSignature.beatsPerBar * (4 / timeSignature.beatUnit);
 };
 
 export const getPatternTotalSteps = (

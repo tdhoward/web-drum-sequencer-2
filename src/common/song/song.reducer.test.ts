@@ -7,9 +7,14 @@ import {
   clearArrangementPattern,
   loadSong,
   reorderArrangementColumn,
+  setSongTempo,
 } from './song.reducer';
 import { hasPlayableArrangementSelector } from './song.selectors';
-import type { SongState } from '../sequencerModel';
+import {
+  getEffectiveSongBpm,
+  getEffectiveSongTempoColumn,
+  type SongState,
+} from '../sequencerModel';
 
 describe('setPattern', () => {
   test('should change the selected pattern', () => {
@@ -23,6 +28,7 @@ describe('song arrangement', () => {
     let state = songReducer(songInitialState, setArrangementPattern({
       columnIndex: 0,
       patternId: 'pattern-2',
+      bpm: 132,
     }));
     state = songReducer(state, setArrangementPattern({
       columnIndex: 0,
@@ -30,6 +36,33 @@ describe('song arrangement', () => {
     }));
 
     expect(state.arrangementPatternIds).toEqual([['pattern-2', 'pattern-3']]);
+    expect(state.tempoChanges).toEqual([132]);
+  });
+
+  test('stores sparse tempo changes that apply until the next change', () => {
+    let state = songReducer(songInitialState, setArrangementPattern({
+      columnIndex: 0,
+      patternId: 'pattern-0',
+      bpm: 120,
+    }));
+    state = songReducer(state, setArrangementPattern({
+      columnIndex: 1,
+      patternId: 'pattern-1',
+      bpm: 120,
+    }));
+    state = songReducer(state, setArrangementPattern({
+      columnIndex: 2,
+      patternId: 'pattern-2',
+      bpm: 120,
+    }));
+    state = songReducer(state, setSongTempo({ columnIndex: 1, bpm: 90 }));
+
+    expect(state.tempoChanges).toEqual([120, 90, null]);
+    expect(getEffectiveSongBpm(state.tempoChanges, 2, 120)).toBe(90);
+    expect(getEffectiveSongTempoColumn(state.tempoChanges, 2)).toBe(1);
+
+    state = songReducer(state, setSongTempo({ columnIndex: 1, bpm: 120 }));
+    expect(state.tempoChanges).toEqual([120, null, null]);
   });
 
   test('does not add the same pattern to a column twice', () => {
@@ -73,6 +106,7 @@ describe('song arrangement', () => {
     const state = songReducer({
       ...songInitialState,
       arrangementPatternIds: [['pattern-0', 'pattern-3'], ['pattern-1'], ['pattern-2']],
+      tempoChanges: [120, null, 150],
     }, reorderArrangementColumn({ oldIndex: 2, newIndex: 0 }));
 
     expect(state.arrangementPatternIds).toEqual([
@@ -80,6 +114,7 @@ describe('song arrangement', () => {
       ['pattern-0', 'pattern-3'],
       ['pattern-1'],
     ]);
+    expect(state.tempoChanges).toEqual([150, 120, null]);
   });
 
   test('turns the derived final column into an arranged empty column when moved', () => {
@@ -116,9 +151,23 @@ describe('song arrangement', () => {
       name: 'Saved Song',
       patternPackId: 'test-pack',
       arrangementPatternIds: [['pattern-0', 'missing-pattern', 'pattern-2'], []],
+      tempoChanges: [128, null],
     }));
 
     expect(state.arrangementPatternIds).toEqual([['pattern-0', 'pattern-2'], []]);
+    expect(state.tempoChanges).toEqual([128, null]);
+  });
+
+  test('gives legacy loaded songs a first-column tempo', () => {
+    const state = songReducer(songInitialState, loadSong({
+      id: 'legacy-song',
+      name: 'Legacy Song',
+      patternPackId: 'test-pack',
+      arrangementPatternIds: [['pattern-0'], ['pattern-1']],
+      fallbackBpm: 104,
+    }));
+
+    expect(state.tempoChanges).toEqual([104, null]);
   });
 });
 

@@ -2,6 +2,7 @@ import {
   isBetween,
   getScheduledNotes,
   scheduleNote,
+  cancelScheduledNotesAfter,
   clearScheduledNotes,
   scheduleNotes,
 } from './audioScheduler';
@@ -229,6 +230,28 @@ describe('clearScheduledNotes', () => {
     scheduleNote('note-velocity', 1, channel, 0.72);
 
     expect(mockedPlayNote).toHaveBeenCalledWith(1, undefined, 'kick', 0, 0.72);
+  });
+});
+
+describe('cancelScheduledNotesAfter', () => {
+  test('stops and releases only sources that have not started', () => {
+    const futureSource = { stop: jest.fn() };
+    const startedSource = { stop: jest.fn() };
+    mockedPlayNote
+      .mockReturnValueOnce(futureSource)
+      .mockReturnValueOnce(startedSource);
+    const channel = { id: 'kick', sample: 'kick.wav' };
+
+    scheduleNote('future-note', 2, channel);
+    scheduleNote('started-note', 1, channel);
+    cancelScheduledNotesAfter(1);
+
+    expect(futureSource.stop).toHaveBeenCalledTimes(1);
+    expect(startedSource.stop).not.toHaveBeenCalled();
+
+    scheduleNote('future-note', 3, channel);
+    scheduleNote('started-note', 3, channel);
+    expect(mockedPlayNote).toHaveBeenCalledTimes(3);
   });
 });
 

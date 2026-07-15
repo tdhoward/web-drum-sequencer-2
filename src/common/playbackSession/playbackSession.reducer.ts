@@ -8,6 +8,9 @@ export type PlaybackSessionState = {
   currentBeat: number;
   mode: PlaybackMode;
   arrangementIndex: number;
+  activeBpm: number | null;
+  activeTempoColumn: number;
+  songOccurrenceStartTime: number | null;
 };
 
 export const PLAYBACK_MODES = {
@@ -27,6 +30,9 @@ export const playbackSessionInitialState: PlaybackSessionState = {
   currentBeat: 1,
   mode: PLAYBACK_MODES.PATTERN,
   arrangementIndex: 0,
+  activeBpm: null,
+  activeTempoColumn: 0,
+  songOccurrenceStartTime: null,
 };
 
 export const playbackSessionSlice = createSlice({
@@ -37,6 +43,9 @@ export const playbackSessionSlice = createSlice({
       reducer(state, action: PayloadAction<StartPlaybackPayload>) {
         state.playing = true;
         state.startTime = action.payload.startTime;
+        state.activeBpm = null;
+        state.activeTempoColumn = 0;
+        state.songOccurrenceStartTime = null;
       },
       prepare() {
         return {
@@ -51,6 +60,9 @@ export const playbackSessionSlice = createSlice({
         state.playing = false;
         state.startTime = null;
         state.arrangementIndex = 0;
+        state.activeBpm = null;
+        state.activeTempoColumn = 0;
+        state.songOccurrenceStartTime = null;
       },
       prepare() {
         return { payload: undefined };
@@ -65,6 +77,20 @@ export const playbackSessionSlice = createSlice({
     },
     setArrangementIndex(state, action: PayloadAction<number>) {
       state.arrangementIndex = action.payload;
+    },
+    setActiveSongBpm(state, action: PayloadAction<number>) {
+      state.activeBpm = action.payload;
+    },
+    setSongPlaybackPosition(state, action: PayloadAction<{
+      arrangementIndex: number;
+      activeBpm: number;
+      activeTempoColumn: number;
+      occurrenceStartTime: number;
+    }>) {
+      state.arrangementIndex = action.payload.arrangementIndex;
+      state.activeBpm = action.payload.activeBpm;
+      state.activeTempoColumn = action.payload.activeTempoColumn;
+      state.songOccurrenceStartTime = action.payload.occurrenceStartTime;
     },
   },
 });

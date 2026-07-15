@@ -18,6 +18,7 @@ import {
   migrateToKitSequencerState,
   migrateToNormalizedSequencerState,
   normalizeArrangementPatternIds,
+  normalizeTempoChanges,
 } from './common/sequencerModel';
 import type { LegacySequencerState } from './common/sequencerModel';
 import presets from './presets';
@@ -64,11 +65,52 @@ export const migrations = {
       }
       : state.songLibrary,
   }),
+  8: (state: LegacySequencerState = {}) => {
+    const fallbackBpm = (state.tempo as { bpm?: number } | undefined)?.bpm || presets[1].bpm;
+    const arrangement = normalizeArrangementPatternIds(state.song?.arrangementPatternIds);
+    return {
+      ...state,
+      song: state.song
+        ? {
+          ...state.song,
+          arrangementPatternIds: arrangement,
+          tempoChanges: normalizeTempoChanges(
+            state.song.tempoChanges,
+            arrangement.length,
+            fallbackBpm,
+          ),
+        }
+        : state.song,
+      songLibrary: state.songLibrary
+        ? {
+          ...(state.songLibrary as object),
+          userSongs: ((state.songLibrary as { userSongs?: Array<Record<string, unknown>> })
+            .userSongs || []).map((song) => {
+            const songArrangement = normalizeArrangementPatternIds(song.arrangementPatternIds);
+            const migratedSong = {
+              ...song,
+              arrangementPatternIds: songArrangement,
+            };
+            return Array.isArray(song.tempoChanges)
+              ? {
+                ...migratedSong,
+                tempoChanges: normalizeTempoChanges(
+                song.tempoChanges,
+                songArrangement.length,
+                fallbackBpm,
+                ),
+              }
+              : migratedSong;
+          }),
+        }
+        : state.songLibrary,
+    };
+  },
 };
 
 const persistConfig = {
   key: 'root',
-  version: 7,
+  version: 8,
   storage,
   blacklist: ['playbackSession', 'window', 'workspace'],
   migrate: createMigrate(migrations as unknown as MigrationManifest, { debug: import.meta.env.DEV }),

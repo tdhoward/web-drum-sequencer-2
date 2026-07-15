@@ -30,5 +30,6 @@ export const currentSavedSongStateSelector = createSelector(
     name: song.name,
     patternPackId: selectedPatternPackId || song.patternPackId || '',
     arrangementPatternIds: song.arrangementPatternIds || [],
+    tempoChanges: song.tempoChanges || [],
   }),
 );

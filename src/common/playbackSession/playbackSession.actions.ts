@@ -10,6 +10,8 @@ export const {
   setStartTime,
   setPlaybackMode,
   setArrangementIndex,
+  setActiveSongBpm,
+  setSongPlaybackPosition,
 } = playbackSessionSlice.actions;
 
 type PlaybackRootState = {

@@ -82,7 +82,11 @@ export const loadSavedSong = (song: SavedSong) => (
   if (!patternPack) return;
   stopForSongChange(dispatch);
   dispatch(loadPatternPack(patternPack));
-  dispatch(loadSong({ ...song, patternPackId: patternPack.id }));
+  dispatch(loadSong({
+    ...song,
+    patternPackId: patternPack.id,
+    fallbackBpm: patternPack.bpm,
+  }));
   dispatch(setSelectedSongId(song.id));
 };
 
@@ -97,6 +101,7 @@ export const startNewSong = () => (
     name: 'Untitled Song',
     patternPackId: current.patternPackId,
     arrangementPatternIds: [],
+    tempoChanges: [],
   }));
   dispatch(setSelectedSongId(undefined));
 };

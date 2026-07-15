@@ -28,6 +28,11 @@ export const arrangementPatternIdsSelector = createSelector(
   song => song.arrangementPatternIds || [],
 );
 
+export const songTempoChangesSelector = createSelector(
+  songSelector,
+  song => song.tempoChanges || [],
+);
+
 export const songPatternPackIdSelector = createSelector(
   songSelector,
   song => song.patternPackId,

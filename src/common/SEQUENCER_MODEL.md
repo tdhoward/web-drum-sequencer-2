@@ -18,6 +18,7 @@ song
   patternIds[]
   patternPackId
   arrangementPatternIds[][]
+  tempoChanges[]
 ```
 
 `patternIds` lists the pattern slots available to the current project, while
@@ -39,6 +40,18 @@ its pattern-pack reference and the nested arrangement, but continues to use the
 currently selected kit so kits remain swappable. Persisted arrangements from
 the earlier single-pattern model migrate from `string | null` columns to
 `[string] | []` columns.
+
+`tempoChanges` is aligned with the stored arrangement columns. Its first entry
+is always a BPM number; later entries are either a BPM change or `null` to keep
+using the most recent tempo. Tempo-marker selection is transient workspace UI
+state and is not part of the saved song.
+
+During Song playback, the transport publishes the active BPM, governing tempo
+marker, and current column start time. The master BPM control uses that live
+state in every workspace. Editing it updates the governing marker, preserves
+the current beat by re-anchoring the column under the new BPM, and selectively
+cancels and reschedules audio sources that have not begun yet. Already sounding
+voices are not interrupted.
 
 ## Patterns and lanes
 

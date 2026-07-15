@@ -59,8 +59,13 @@ type ScheduleNotesArgs = {
   wrap?: boolean;
 };
 
+type ScheduledSource = {
+  source: AudioBufferSourceNode;
+  playbackTime: number;
+};
+
 // schedule is a lookup table of all the notes currently scheduled to be played
-const schedule: Record<string, unknown> = {};
+const schedule: Record<string, ScheduledSource> = {};
 const visualTriggerSchedule: Record<string, ReturnType<typeof globalThis.setTimeout>> = {};
 
 const getSampleBuffer = (noteChannel: NoteChannel): AudioBuffer | undefined => (
@@ -125,15 +130,32 @@ export const scheduleNote = (
       getAudioContext().currentTime,
       noteTime - alignmentOffset,
     );
-    schedule[noteId] = playNote(
+    schedule[noteId] = {
+      source: playNote(
+        playbackTime,
+        getSampleBuffer(noteChannel),
+        noteChannel.id,
+        pitch,
+        noteVelocity,
+      ),
       playbackTime,
-      getSampleBuffer(noteChannel),
-      noteChannel.id,
-      pitch,
-      noteVelocity,
-    );
+    };
     scheduleChannelTrigger(noteId, noteTime, noteChannel.id);
   }
+};
+
+export const cancelScheduledNotesAfter = (audioTime: number): void => {
+  Object.entries(schedule).forEach(([noteId, scheduled]) => {
+    if (scheduled.playbackTime > audioTime) {
+      try {
+        scheduled.source.stop();
+      } catch {
+        // The source may have started or ended between the time check and stop.
+      }
+      clearScheduledTrigger(noteId);
+      delete schedule[noteId];
+    }
+  });
 };
 
 export const clearScheduledNotes = (): void => {

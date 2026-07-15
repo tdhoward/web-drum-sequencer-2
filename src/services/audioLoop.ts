@@ -7,12 +7,20 @@ import {
   channelsSelector,
   notesSelector,
   patternSelector,
+  selectedSongTempoColumnSelector,
   selectedPatternLengthSelector,
-  setArrangementIndex,
+  setSelectedSongTempoColumn,
+  setSongPlaybackPosition,
   setStartTime,
+  songTempoChangesSelector,
   stopPlayback,
 } from '../common';
-import { getPatternLengthInQuarterBeats, patternIdToIndex } from '../common/sequencerModel';
+import {
+  getEffectiveSongBpm,
+  getEffectiveSongTempoColumn,
+  getPatternLengthInQuarterBeats,
+  patternIdToIndex,
+} from '../common/sequencerModel';
 import { INTERVAL } from './audioEngine.config';
 import type { RootState } from '../reducer';
 
@@ -32,39 +40,77 @@ type SongOccurrence = {
   startTime: number;
   endTime: number;
   lengthInBeats: number;
+  bpm: number;
 };
 
 const EMPTY_BAR_LENGTH_IN_BEATS = getPatternLengthInQuarterBeats();
+
+type SongTransport = {
+  playbackStartTime: number;
+  occurrenceIndex: number;
+  occurrenceStartTime: number;
+  bpm: number;
+};
+
+let songTransport: SongTransport | null = null;
+
+const createSongOccurrence = (
+  state: RootState,
+  index: number,
+  startTime: number,
+  bpm: number,
+): SongOccurrence | undefined => {
+  const patternIds = arrangementPatternIdsSelector(state)[index];
+  if (!patternIds) return undefined;
+
+  const patterns = patternIds.reduce<SongOccurrence['patterns']>((columnPatterns, patternId) => {
+    const patternState = state.patterns.entities[patternId];
+    if (patternState) {
+      columnPatterns.push({
+        id: patternId,
+        index: patternIdToIndex(patternId),
+        lengthInBeats: getPatternLengthInQuarterBeats(patternState),
+      });
+    }
+    return columnPatterns;
+  }, []);
+  const lengthInBeats = patterns.length > 0
+    ? Math.max(...patterns.map(pattern => pattern.lengthInBeats))
+    : EMPTY_BAR_LENGTH_IN_BEATS;
+  const durationSeconds = (lengthInBeats * 60) / bpm;
+
+  return {
+    index,
+    patternIds: patterns.map(pattern => pattern.id),
+    patterns,
+    startTime,
+    endTime: startTime + durationSeconds,
+    lengthInBeats,
+    bpm,
+  };
+};
+
+export const reanchorOccurrenceStartTime = (
+  occurrenceStartTime: number,
+  oldBpm: number,
+  newBpm: number,
+  audioTime: number,
+): number => {
+  if (audioTime <= occurrenceStartTime) return occurrenceStartTime;
+  const elapsedBeats = (audioTime - occurrenceStartTime) * (oldBpm / 60);
+  return audioTime - ((elapsedBeats * 60) / newBpm);
+};
 
 export const createSongTimeline = (
   state: RootState,
   startTime: number,
 ): SongOccurrence[] => {
   let occurrenceStartTime = startTime;
+  const tempoChanges = songTempoChangesSelector(state);
   return arrangementPatternIdsSelector(state).reduce<SongOccurrence[]>((timeline, patternIds, index) => {
-    const patterns = patternIds.reduce<SongOccurrence['patterns']>((columnPatterns, patternId) => {
-      const patternState = state.patterns.entities[patternId];
-      if (patternState) {
-        columnPatterns.push({
-          id: patternId,
-          index: patternIdToIndex(patternId),
-          lengthInBeats: getPatternLengthInQuarterBeats(patternState),
-        });
-      }
-      return columnPatterns;
-    }, []);
-    const lengthInBeats = patterns.length > 0
-      ? Math.max(...patterns.map(pattern => pattern.lengthInBeats))
-      : EMPTY_BAR_LENGTH_IN_BEATS;
-    const durationSeconds = (lengthInBeats * 60) / state.tempo.bpm;
-    const occurrence = {
-      index,
-      patternIds: patterns.map(pattern => pattern.id),
-      patterns,
-      startTime: occurrenceStartTime,
-      endTime: occurrenceStartTime + durationSeconds,
-      lengthInBeats,
-    };
+    const bpm = getEffectiveSongBpm(tempoChanges, index, state.tempo.bpm);
+    const occurrence = createSongOccurrence(state, index, occurrenceStartTime, bpm);
+    if (!occurrence) return timeline;
     occurrenceStartTime = occurrence.endTime;
     timeline.push(occurrence);
     return timeline;
@@ -78,13 +124,13 @@ export const scheduleSongOccurrence = (
   notes: ReturnType<typeof notesSelector>,
   channels: ReturnType<typeof channelsSelector>,
 ): void => {
-  const elapsedBeats = (audioTime - occurrence.startTime) * (state.tempo.bpm / 60);
+  const elapsedBeats = (audioTime - occurrence.startTime) * (occurrence.bpm / 60);
   occurrence.patterns.forEach((pattern) => {
     scheduleNotes({
       notes,
       channels,
       startTime: occurrence.startTime,
-      tempo: state.tempo,
+      tempo: { ...state.tempo, bpm: occurrence.bpm },
       pattern: pattern.index,
       patternLengthInBeats: pattern.lengthInBeats,
       currentBeat: 1 + elapsedBeats,
@@ -101,24 +147,83 @@ const playSong = (
   notes: ReturnType<typeof notesSelector>,
   channels: ReturnType<typeof channelsSelector>,
 ): void => {
-  const startTime = state.playbackSession.startTime ?? audioTime;
-  const timeline = createSongTimeline(state, startTime);
-  const finalOccurrence = timeline[timeline.length - 1];
+  const playbackStartTime = state.playbackSession.startTime ?? audioTime;
+  const tempoChanges = songTempoChangesSelector(state);
+  if (!songTransport || songTransport.playbackStartTime !== playbackStartTime) {
+    songTransport = {
+      playbackStartTime,
+      occurrenceIndex: 0,
+      occurrenceStartTime: playbackStartTime,
+      bpm: getEffectiveSongBpm(tempoChanges, 0, state.tempo.bpm),
+    };
+  }
 
-  if (!finalOccurrence || audioTime >= finalOccurrence.endTime) {
+  const authoredBpm = getEffectiveSongBpm(
+    tempoChanges,
+    songTransport.occurrenceIndex,
+    state.tempo.bpm,
+  );
+  if (authoredBpm !== songTransport.bpm) {
+    songTransport.occurrenceStartTime = reanchorOccurrenceStartTime(
+      songTransport.occurrenceStartTime,
+      songTransport.bpm,
+      authoredBpm,
+      audioTime,
+    );
+    songTransport.bpm = authoredBpm;
+  }
+
+  let occurrence = createSongOccurrence(
+    state,
+    songTransport.occurrenceIndex,
+    songTransport.occurrenceStartTime,
+    songTransport.bpm,
+  );
+  while (occurrence && audioTime >= occurrence.endTime) {
+    songTransport.occurrenceIndex += 1;
+    songTransport.occurrenceStartTime = occurrence.endTime;
+    songTransport.bpm = getEffectiveSongBpm(
+      tempoChanges,
+      songTransport.occurrenceIndex,
+      state.tempo.bpm,
+    );
+    occurrence = createSongOccurrence(
+      state,
+      songTransport.occurrenceIndex,
+      songTransport.occurrenceStartTime,
+      songTransport.bpm,
+    );
+  }
+
+  if (!occurrence) {
     clearScheduledNotes();
+    songTransport = null;
     store.dispatch(stopPlayback());
     return;
   }
 
-  const timelineIndex = timeline.findIndex(occurrence => audioTime < occurrence.endTime);
-  const occurrence = timeline[Math.max(0, timelineIndex)];
-  if (state.playbackSession.arrangementIndex !== occurrence.index) {
-    store.dispatch(setArrangementIndex(occurrence.index));
+  const activeTempoColumn = getEffectiveSongTempoColumn(tempoChanges, occurrence.index);
+  if (
+    state.playbackSession.arrangementIndex !== occurrence.index
+    || state.playbackSession.activeBpm !== occurrence.bpm
+    || state.playbackSession.activeTempoColumn !== activeTempoColumn
+    || state.playbackSession.songOccurrenceStartTime !== occurrence.startTime
+  ) {
+    store.dispatch(setSongPlaybackPosition({
+      arrangementIndex: occurrence.index,
+      activeBpm: occurrence.bpm,
+      activeTempoColumn,
+      occurrenceStartTime: occurrence.startTime,
+    }));
+  }
+  if (selectedSongTempoColumnSelector(state) !== activeTempoColumn) {
+    store.dispatch(setSelectedSongTempoColumn(activeTempoColumn));
   }
 
   scheduleSongOccurrence(occurrence, audioTime, state, notes, channels);
-  const nextOccurrence = timeline[timelineIndex + 1];
+  const nextIndex = occurrence.index + 1;
+  const nextBpm = getEffectiveSongBpm(tempoChanges, nextIndex, state.tempo.bpm);
+  const nextOccurrence = createSongOccurrence(state, nextIndex, occurrence.endTime, nextBpm);
   if (nextOccurrence) {
     scheduleSongOccurrence(nextOccurrence, audioTime, state, notes, channels);
   }
@@ -144,6 +249,7 @@ export const initializeAudio = (store: AudioStore): void => {
         playSong(store, state, audioCtx.currentTime, notes, channels);
         return;
       }
+      songTransport = null;
       const playbackStartTime = playbackSession.startTime ?? audioCtx.currentTime;
       let sT = playbackStartTime;
       // Loop if we reached the end of the pattern
@@ -167,6 +273,8 @@ export const initializeAudio = (store: AudioStore): void => {
           patternLengthInBeats,
         ),
       });
+    } else {
+      songTransport = null;
     }
   }, INTERVAL);
 };

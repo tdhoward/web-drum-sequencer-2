@@ -2,6 +2,7 @@ import { connect } from 'react-redux';
 import {
   arrangementIndexSelector,
   arrangementPatternIdsSelector,
+  bpmSelector,
   clearArrangementPattern,
   patternsSelector,
   playbackModeSelector,
@@ -10,6 +11,9 @@ import {
   removeArrangementColumn,
   reorderArrangementColumn,
   setArrangementPattern,
+  setSelectedSongTempoColumn,
+  selectedSongTempoColumnSelector,
+  songTempoChangesSelector,
   stopPlayback,
 } from '../../common';
 import { stopAllNotes } from '../../services/audioRouter';
@@ -23,7 +27,10 @@ const mapStateToProps = (state: RootState) => {
   return {
     arrangementPatternIds: arrangementPatternIdsSelector(state),
     arrangementIndex: arrangementIndexSelector(state),
+    fallbackBpm: bpmSelector(state),
     isSongPlaying: playingSelector(state) && playbackModeSelector(state) === PLAYBACK_MODES.SONG,
+    selectedTempoColumn: selectedSongTempoColumnSelector(state),
+    tempoChanges: songTempoChangesSelector(state),
     patterns: patterns.ids.map((id, index) => ({
       id,
       name: patterns.entities[id]?.name || `Pattern ${index + 1}`,
@@ -32,15 +39,21 @@ const mapStateToProps = (state: RootState) => {
 };
 
 const mapDispatchToProps = (dispatch: AppDispatch) => ({
-  onSelectCell: (columnIndex: number, patternId: string, selected: boolean) => {
+  onSelectCell: (
+    columnIndex: number,
+    patternId: string,
+    selected: boolean,
+    fallbackBpm: number,
+  ) => {
     stopAllNotes();
     clearScheduledNotes();
     dispatch(stopPlayback());
     dispatch(selected
       ? clearArrangementPattern({ columnIndex, patternId })
-      : setArrangementPattern({ columnIndex, patternId }));
+      : setArrangementPattern({ columnIndex, patternId, bpm: fallbackBpm }));
   },
-  onDeleteColumn: (columnIndex: number) => {
+  onSelectTempo: (columnIndex: number) => dispatch(setSelectedSongTempoColumn(columnIndex)),
+  onDeleteColumn: (columnIndex: number, selectedTempoColumn: number) => {
     if (!window.confirm(`Delete song column ${columnIndex + 1}?`)) {
       return;
     }
@@ -49,12 +62,27 @@ const mapDispatchToProps = (dispatch: AppDispatch) => ({
     clearScheduledNotes();
     dispatch(stopPlayback());
     dispatch(removeArrangementColumn(columnIndex));
+    if (selectedTempoColumn >= columnIndex) {
+      dispatch(setSelectedSongTempoColumn(Math.max(0, selectedTempoColumn - 1)));
+    }
   },
-  onReorderColumn: (oldIndex: number, newIndex: number) => {
+  onReorderColumn: (
+    oldIndex: number,
+    newIndex: number,
+    selectedTempoColumn: number,
+    fallbackBpm: number,
+  ) => {
     stopAllNotes();
     clearScheduledNotes();
     dispatch(stopPlayback());
-    dispatch(reorderArrangementColumn({ oldIndex, newIndex }));
+    dispatch(reorderArrangementColumn({ oldIndex, newIndex, bpm: fallbackBpm }));
+    if (selectedTempoColumn === oldIndex) {
+      dispatch(setSelectedSongTempoColumn(newIndex));
+    } else if (oldIndex < selectedTempoColumn && newIndex >= selectedTempoColumn) {
+      dispatch(setSelectedSongTempoColumn(selectedTempoColumn - 1));
+    } else if (oldIndex > selectedTempoColumn && newIndex <= selectedTempoColumn) {
+      dispatch(setSelectedSongTempoColumn(selectedTempoColumn + 1));
+    }
   },
 });
 

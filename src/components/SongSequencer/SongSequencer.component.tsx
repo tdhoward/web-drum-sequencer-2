@@ -9,11 +9,25 @@ export type SongPatternRow = { id: string; name: string };
 type Props = {
   arrangementPatternIds: string[][];
   arrangementIndex: number;
+  fallbackBpm: number;
   isSongPlaying: boolean;
   patterns: SongPatternRow[];
-  onSelectCell: (columnIndex: number, patternId: string, selected: boolean) => void;
-  onDeleteColumn: (columnIndex: number) => void;
-  onReorderColumn: (oldIndex: number, newIndex: number) => void;
+  selectedTempoColumn: number;
+  tempoChanges: Array<number | null>;
+  onSelectCell: (
+    columnIndex: number,
+    patternId: string,
+    selected: boolean,
+    fallbackBpm: number,
+  ) => void;
+  onSelectTempo: (columnIndex: number) => void;
+  onDeleteColumn: (columnIndex: number, selectedTempoColumn: number) => void;
+  onReorderColumn: (
+    oldIndex: number,
+    newIndex: number,
+    selectedTempoColumn: number,
+    fallbackBpm: number,
+  ) => void;
 };
 
 const Panel = styled.div`
@@ -83,6 +97,41 @@ const ColumnLabel = styled.div<{ $pending: boolean; $playing: boolean }>`
   }
 `;
 
+const TempoMarker = styled.button<{ $change: boolean; $selected: boolean }>`
+  align-items: center;
+  background: ${({ $change, theme }) => ($change ? theme.colors.accentPrimary : 'transparent')};
+  border: 1px solid ${({ $change, theme }) => ($change
+    ? theme.colors.accentPrimaryActive
+    : theme.colors.borderDefault)};
+  border-radius: 50%;
+  box-shadow: ${({ $selected, theme }) => ($selected
+    ? `0 0 0 2px ${theme.colors.surfacePanel}, 0 0 0 4px ${theme.colors.accentPrimary}`
+    : 'none')};
+  color: ${({ theme }) => theme.colors.textInverse};
+  cursor: pointer;
+  display: flex;
+  font-size: 0.56rem;
+  font-weight: 700;
+  height: 1.75rem;
+  justify-content: center;
+  justify-self: center;
+  letter-spacing: -0.02em;
+  opacity: ${({ $change }) => ($change ? 0.82 : 0.62)};
+  padding: 0;
+  transition: box-shadow 0.15s ease, opacity 0.15s ease;
+  width: 1.75rem;
+
+  &:hover { opacity: 1; }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.accentPrimary};
+    outline-offset: 2px;
+  }
+  &:disabled {
+    cursor: default;
+    opacity: 0.16;
+  }
+`;
+
 const Cell = styled.button<{ $pending: boolean; $selected: boolean; $playing: boolean }>`
   background: ${({ $selected, theme }) => ($selected
     ? theme.colors.accentPrimary
@@ -124,9 +173,13 @@ const DeleteCell = styled.div`
 export const SongSequencerComponent = ({
   arrangementPatternIds,
   arrangementIndex,
+  fallbackBpm,
   isSongPlaying,
   patterns,
+  selectedTempoColumn,
+  tempoChanges,
   onSelectCell,
+  onSelectTempo,
   onDeleteColumn,
   onReorderColumn,
 }: Props) => {
@@ -134,6 +187,13 @@ export const SongSequencerComponent = ({
   const [sortVersion, setSortVersion] = useState(0);
   const columnCount = arrangementPatternIds.length + 1;
   const pendingColumnIndex = columnCount - 1;
+  const effectiveTempos = arrangementPatternIds.map((_, columnIndex) => {
+    for (let index = columnIndex; index >= 0; index -= 1) {
+      const bpm = tempoChanges[index];
+      if (typeof bpm === 'number') return bpm;
+    }
+    return fallbackBpm;
+  });
 
   useEffect(() => {
     const container = columnHeadingContainer.current;
@@ -148,13 +208,13 @@ export const SongSequencerComponent = ({
     });
     sortable.on('sortable:stop', ({ oldIndex, newIndex }) => {
       if (oldIndex !== newIndex) {
-        onReorderColumn(oldIndex, newIndex);
+        onReorderColumn(oldIndex, newIndex, selectedTempoColumn, fallbackBpm);
         setSortVersion(version => version + 1);
       }
     });
 
     return () => sortable.destroy();
-  }, [onReorderColumn, sortVersion]);
+  }, [fallbackBpm, onReorderColumn, selectedTempoColumn, sortVersion]);
 
   return (
     <Panel aria-label="Song arrangement">
@@ -166,6 +226,34 @@ export const SongSequencerComponent = ({
         </Text>
       </Box>
       <div role="grid" aria-label="Pattern sequence">
+        <GridRow $columns={columnCount} role="row">
+          <RowName role="rowheader">Tempo</RowName>
+          {Array.from({ length: columnCount }, (_, columnIndex) => {
+            const pending = columnIndex === pendingColumnIndex;
+            const bpm = effectiveTempos[columnIndex] ?? fallbackBpm;
+            const isChange = !pending && (
+              columnIndex === 0 || bpm !== effectiveTempos[columnIndex - 1]
+            );
+            const selected = !pending && selectedTempoColumn === columnIndex;
+            return (
+              <TempoMarker
+                key={columnIndex}
+                $change={isChange}
+                $selected={selected}
+                aria-label={pending
+                  ? 'Add a song column before setting its tempo'
+                  : `${isChange ? `${bpm} BPM tempo setting` : `Add tempo setting, currently ${bpm} BPM`} at song position ${columnIndex + 1}`}
+                aria-pressed={selected}
+                disabled={pending}
+                onClick={() => onSelectTempo(columnIndex)}
+                role="gridcell"
+                type="button"
+              >
+                {isChange ? bpm : null}
+              </TempoMarker>
+            );
+          })}
+        </GridRow>
         <GridRow $columns={columnCount} role="row">
           <RowName aria-hidden="true" />
           <ColumnHeadingContainer
@@ -201,7 +289,12 @@ export const SongSequencerComponent = ({
                   $playing={playing}
                   aria-label={`${selected ? 'Remove' : 'Use'} ${pattern.name} at song position ${columnIndex + 1}`}
                   aria-pressed={selected}
-                  onClick={() => onSelectCell(columnIndex, pattern.id, selected)}
+                  onClick={() => onSelectCell(
+                    columnIndex,
+                    pattern.id,
+                    selected,
+                    fallbackBpm,
+                  )}
                   role="gridcell"
                   type="button"
                 />
@@ -216,7 +309,7 @@ export const SongSequencerComponent = ({
               {columnIndex < arrangementPatternIds.length && (
                 <RemoveButton
                   ariaLabel={`Delete song column ${columnIndex + 1}`}
-                  onClick={() => onDeleteColumn(columnIndex)}
+                  onClick={() => onDeleteColumn(columnIndex, selectedTempoColumn)}
                 />
               )}
             </DeleteCell>

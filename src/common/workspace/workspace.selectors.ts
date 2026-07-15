@@ -8,3 +8,7 @@ type WorkspaceRootState = {
 export const selectedWorkspaceSelector = (state: WorkspaceRootState): Workspace => (
   state.workspace?.selectedWorkspace || WORKSPACES.PATTERN
 );
+
+export const selectedSongTempoColumnSelector = (state: WorkspaceRootState): number => (
+  state.workspace?.selectedSongTempoColumn || 0
+);
