@@ -9,7 +9,7 @@ import {
   TextInput,
   Button,
 } from '../design-system';
-import { getAudioContext, getCurrentBeat } from '../../services/audioContext';
+import { getAudioContext } from '../../services/audioContext';
 
 const PULSE_DECAY_BEATS = 0.24;
 
@@ -17,6 +17,7 @@ const ShinyBox = styled(Box)`
   --bpm-pulse-glow: ${({ theme }) => theme.colors.accentPrimaryGlow};
   --bpm-pulse-outer-glow: 0;
   --bpm-pulse-inner-glow: 0;
+  --bpm-downbeat-fill-opacity: 0;
 
   background: ${({ theme }) => theme.colors.bpmControlBackground};
   box-shadow:
@@ -25,6 +26,20 @@ const ShinyBox = styled(Box)`
   transition:
     border-color 0.2s,
     box-shadow 40ms linear;
+
+  &::before {
+    background: ${({ theme }) => theme.colors.accentPrimaryGlow};
+    border-radius: 0.38rem 0 0 0.38rem;
+    bottom: 0;
+    content: '';
+    left: 0;
+    opacity: var(--bpm-downbeat-fill-opacity);
+    pointer-events: none;
+    position: absolute;
+    right: 2rem;
+    top: 0;
+    transition: opacity 40ms linear;
+  }
 
   &:hover {
     border-color: ${({ theme }) => theme.colors.borderHover};
@@ -38,6 +53,7 @@ const BPMButton = styled(Button)`
 `;
 
 type BPMInputComponentProps = {
+  barLengthInBeats: number;
   bpm: number;
   playing: boolean;
   startTime: number | null;
@@ -47,15 +63,37 @@ type BPMInputComponentProps = {
 const clearTempoPulse = (control: HTMLDivElement): void => {
   control.style.setProperty('--bpm-pulse-outer-glow', '0');
   control.style.setProperty('--bpm-pulse-inner-glow', '0');
+  control.style.setProperty('--bpm-downbeat-fill-opacity', '0');
 };
 
-const getBeatPhase = (
+type TempoPulseState = {
+  downbeat: boolean;
+  pulse: number;
+};
+
+const positiveModulo = (value: number, divisor: number): number => (
+  ((value % divisor) + divisor) % divisor
+);
+
+export const getTempoPulseState = (
   bpm: number,
   startTime: number,
   currentTime: number,
-): number => {
-  const currentBeat = getCurrentBeat(bpm, startTime, currentTime);
-  return (((currentBeat - 1) % 1) + 1) % 1;
+  barLengthInBeats: number,
+): TempoPulseState => {
+  const elapsedBeats = (currentTime - startTime) * (bpm / 60);
+  const beatPhase = positiveModulo(elapsedBeats, 1);
+  const safeBarLength = Number.isFinite(barLengthInBeats) && barLengthInBeats > 0
+    ? barLengthInBeats
+    : 4;
+  const barPhase = positiveModulo(elapsedBeats, safeBarLength);
+  const beatPulse = Math.max(0, 1 - (beatPhase / PULSE_DECAY_BEATS));
+  const downbeatPulse = Math.max(0, 1 - (barPhase / PULSE_DECAY_BEATS));
+
+  return {
+    downbeat: downbeatPulse > 0,
+    pulse: Math.max(beatPulse, downbeatPulse),
+  };
 };
 
 const drawTempoPulse = (
@@ -63,15 +101,27 @@ const drawTempoPulse = (
   bpm: number,
   startTime: number,
   currentTime: number,
+  barLengthInBeats: number,
 ): void => {
-  const phase = getBeatPhase(bpm, startTime, currentTime);
-  const pulse = Math.max(0, 1 - (phase / PULSE_DECAY_BEATS));
+  const { downbeat, pulse } = getTempoPulseState(
+    bpm,
+    startTime,
+    currentTime,
+    barLengthInBeats,
+  );
+  const outerGlow = downbeat ? 6 + pulse * 21 : 3 + pulse * 12;
+  const innerGlow = downbeat ? 3 + pulse * 11 : 1 + pulse * 7;
 
-  control.style.setProperty('--bpm-pulse-outer-glow', `${pulse > 0 ? 3 + pulse * 12 : 0}px`);
-  control.style.setProperty('--bpm-pulse-inner-glow', `${pulse > 0 ? 1 + pulse * 7 : 0}px`);
+  control.style.setProperty('--bpm-pulse-outer-glow', `${pulse > 0 ? outerGlow : 0}px`);
+  control.style.setProperty('--bpm-pulse-inner-glow', `${pulse > 0 ? innerGlow : 0}px`);
+  control.style.setProperty(
+    '--bpm-downbeat-fill-opacity',
+    `${downbeat ? pulse * 0.58 : 0}`,
+  );
 };
 
 export const BPMInputComponent = ({
+  barLengthInBeats,
   bpm,
   playing,
   startTime,
@@ -99,7 +149,7 @@ export const BPMInputComponent = ({
       if (currentTime < startTime) {
         clearTempoPulse(control);
       } else {
-        drawTempoPulse(control, bpm, startTime, currentTime);
+        drawTempoPulse(control, bpm, startTime, currentTime, barLengthInBeats);
       }
 
       animationFrame = window.requestAnimationFrame(draw);
@@ -112,7 +162,7 @@ export const BPMInputComponent = ({
         window.cancelAnimationFrame(animationFrame);
       }
     };
-  }, [bpm, playing, startTime]);
+  }, [barLengthInBeats, bpm, playing, startTime]);
 
   return (
     <ShinyBox

@@ -16,12 +16,14 @@ type PlayButtonComponentProps = {
   startPlaybackAndResume: () => void;
   stopPlayback: () => void;
   playing: boolean;
+  disabled?: boolean;
 };
 
 export const PlayButtonComponent = ({
   startPlaybackAndResume,
   stopPlayback,
   playing,
+  disabled = false,
 }: PlayButtonComponentProps) => (playing
   ? (
     <StyledPlayButton
@@ -42,6 +44,8 @@ export const PlayButtonComponent = ({
     <StyledPlayButton
       onClick={() => startPlaybackAndResume()}
       variant="green"
+      disabled={disabled}
+      aria-disabled={disabled}
     >
       <Text mr={2} fontSize={1}>
         PLAY

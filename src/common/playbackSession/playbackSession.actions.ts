@@ -8,9 +8,28 @@ export const {
   startPlayback,
   stopPlayback,
   setStartTime,
+  setPlaybackMode,
+  setArrangementIndex,
+  setActiveSongBpm,
+  setSongPlaybackPosition,
 } = playbackSessionSlice.actions;
 
-export const startPlaybackAndResume = () => (dispatch: Dispatch): void => {
+type PlaybackRootState = {
+  playbackSession: { mode: string };
+  song: { arrangementPatternIds?: string[][] };
+};
+
+export const startPlaybackAndResume = () => (
+  dispatch: Dispatch,
+  getState: () => PlaybackRootState,
+): void => {
+  const state = getState();
+  if (
+    state.playbackSession.mode === 'song'
+    && !(state.song.arrangementPatternIds || []).some(patternIds => patternIds.length > 0)
+  ) {
+    return;
+  }
   unmute();
   getAudioContext().resume();
   dispatch(startPlayback());

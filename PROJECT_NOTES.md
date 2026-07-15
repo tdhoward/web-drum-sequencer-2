@@ -4,7 +4,7 @@
 
 This project is WDS2, a fork/rework of the original `web-drum-sequencer` web app.
 
-The current goal is not simply to preserve the old app. The goal is to modernize and reorganize the app into a cleaner drum sequencer with clearer separation between drum kits, patterns, and songs.
+The current goal is to modernize and reorganize the app into a full-fledged drum sequencer with separation between drum kits, patterns, and songs.
 
 During this revamp phase, backwards compatibility with old saved app data is not required. It is acceptable to make breaking data-model changes if they simplify the architecture and support the new direction.
 
@@ -32,18 +32,11 @@ The app should be organized around three main workspaces:
 3. Song workspace
 
    * Arrange patterns into a song structure.
+   * A song column may select multiple patterns to start together. The column lasts as long as its longest pattern; shorter patterns play once without looping.
    * Song data should reference patterns and the selected/current kit as appropriate.
    * Song editing should not be responsible for kit design.
 
-The Pattern and Song workspaces may show a compact display of the current kit, but full kit editing belongs on the Kit workspace.
-
-Also, we should be able to swap Kits and still use the same Pattern. Patterns should remain attached to logical lanes, while the selected kit supplies channels/samples for those lanes. Kit channels now carry standardized percussion metadata such as `percussionType`, optional `articulation`, optional `register`, and optional `tags`. This lets the app resolve a pattern made for one kit onto another kit without rewriting the pattern notes.
-
-## Important architectural direction
-
-Kit data, pattern data, and song data should be decoupled.
-
-Historically, the app has had overlap between "kit preset" selection and loading a larger pattern/preset state. That coupling should be removed. A kit preset should mean the drum kit configuration only. A pattern should mean the sequence/pattern data only. A song should mean arrangement data only.
+We should be able to swap Kits and still use the same Pattern. Patterns should remain attached to logical lanes, while the selected kit supplies channels/samples for those lanes. Kit channels now carry standardized percussion metadata such as `percussionType`, optional `articulation`, optional `register`, and optional `tags`. This lets the app resolve a pattern made for one kit onto another kit without rewriting the pattern notes.
 
 Preferred model direction:
 
@@ -90,20 +83,18 @@ Preferred top-level pages/workspaces:
 * Pattern
 * Song
 
-The navigation could use tab-like buttons near the existing top controls, such as the Install button area, as long as it fits the visual style of the app.
-
-The Kit page should become the only place for kit management. The Pattern and Song pages should show only current-kit selection.
+The navigation could use tab-like buttons near the existing top controls, as long as it fits the visual style of the app.
 
 The Pattern workspace should include:
 
 * A pattern-pack dropdown for loading a named pack.
-* The existing numbered pattern buttons for selecting one pattern slot inside the loaded pack.
-* Pattern editing controls only; kit sample/channel editing should stay in the Kit workspace.
+* The numbered pattern buttons for selecting one pattern slot inside the loaded pack.
+* Pattern editing controls only, such as time signature and pattern name; kit sample/channel editing should stay in the Kit workspace.
 
 The Kit workspace should include:
 
 * Kit preset selection.
-* Compact channel editing rows for channel name, percussion type, sample selection, waveform/sample editing, pitch, pan, volume, reverb, mute/solo, and delete.
+* Compact channel editing rows for channel name, percussion type, sample selection, waveform/sample editing, waveform beat alignment, pitch, pan, volume, reverb, mute/solo, and delete.
 * A sample manager for user-created and imported samples. Broad sample-library work should stay here rather than inside Pattern or Song.
 
 Current UI/component naming baseline:
@@ -126,8 +117,6 @@ When kit switching is exposed in the UI, prefer a review/apply flow:
 
 Prefer small, focused, incremental changes.
 
-TypeScript migration is in progress. The project has a `tsconfig.json` and `npm run typecheck`; JavaScript remains supported through `allowJs` while component, test, and remaining service files are migrated. Model/state files, factory preset and pattern-pack data, sample config, common barrel exports, and several small service utilities have already been converted.
-
 Before making changes:
 
 1. Inspect the current repo structure.
@@ -148,36 +137,9 @@ When editing:
 
 ## Known audio context
 
-The app previously had problems where manual sample triggering worked but sequencer playback did not produce sound. That issue has been fixed in the current working state. Avoid refactors that disturb the working playback path unless necessary.
-
 Humanize is part of the working playback path. The current maximum setting uses a 20ms timing standard deviation and a 12% velocity standard deviation, with bounded output and deterministic seeded randomness per note occurrence.
 
 Impulse response assets may exist in the project. We may eventually want to use these to expand the reverb options.
-
-## Suggested Codex tasks
-
-A useful follow-up analysis task is:
-
-```text
-Inspect the edited-sample save flow and propose replace-existing behavior for user samples without risking factory sample mutation.
-```
-
-A useful follow-up editing task is:
-
-```text
-Add a replace-existing option when editing an existing user sample. Keep factory samples save-copy only.
-```
-
-## Current priorities
-
-Near-term priorities:
-
-1. Build a first kit-switching flow that calls the resolver and applies high-confidence mappings.
-2. Add a review dialog for low-confidence or unresolved kit-channel mappings.
-3. Build out kit management UI: create, select, rename, delete, duplicate.
-4. Consider replace-existing behavior for edited user samples, while keeping factory samples save-copy only.
-5. Consider adjustable trim fade length/de-click options if manual trimming needs more control.
-6. Keep Pattern and Song workspaces focused on their own responsibilities.
 
 ## Non-goals for now
 

@@ -5,6 +5,7 @@ import { PlayButton } from '../PlayButton';
 import { BPMInput } from '../BPMInput';
 import { SwingControl } from '../SwingControl';
 import { HumanizeControl } from '../HumanizeControl';
+import { PlaybackModeSwitch } from '../PlaybackModeSwitch';
 
 const MasterControlsLayout = styled.div`
   align-items: stretch;
@@ -17,6 +18,9 @@ export const MasterControls = () => (
     <Box display="flex">
       <Box mr={2} display="flex" alignItems="center">
         <PlayButton />
+      </Box>
+      <Box mr={2} display="flex" alignItems="center">
+        <PlaybackModeSwitch />
       </Box>
       <BPMInput />
       <SwingControl />

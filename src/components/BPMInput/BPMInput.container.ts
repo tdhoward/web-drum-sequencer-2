@@ -1,13 +1,13 @@
 import { connect } from 'react-redux';
 import { BPMInputComponent } from './BPMInput.component';
 import { bpmInputSelectors } from './BPMInput.selectors';
-import { setBPM } from '../../common';
+import { setWorkspaceBPM } from './BPMInput.actions';
 import type { RootState } from '../../reducer';
 
 const mapStateToProps = (state: RootState) => bpmInputSelectors(state);
 
 const mapDispatchToProps = {
-  setBPM,
+  setBPM: setWorkspaceBPM,
 };
 
 export const BPMInput = connect(

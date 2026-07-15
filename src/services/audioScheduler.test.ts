@@ -2,7 +2,9 @@ import {
   isBetween,
   getScheduledNotes,
   scheduleNote,
+  cancelScheduledNotesAfter,
   clearScheduledNotes,
+  scheduleNotes,
 } from './audioScheduler';
 import { MAX_NOTE_VELOCITY } from '../common/sequencerModel';
 import { playNote } from './audioRouter';
@@ -228,5 +230,79 @@ describe('clearScheduledNotes', () => {
     scheduleNote('note-velocity', 1, channel, 0.72);
 
     expect(mockedPlayNote).toHaveBeenCalledWith(1, undefined, 'kick', 0, 0.72);
+  });
+});
+
+describe('cancelScheduledNotesAfter', () => {
+  test('stops and releases only sources that have not started', () => {
+    const futureSource = { stop: jest.fn() };
+    const startedSource = { stop: jest.fn() };
+    mockedPlayNote
+      .mockReturnValueOnce(futureSource)
+      .mockReturnValueOnce(startedSource);
+    const channel = { id: 'kick', sample: 'kick.wav' };
+
+    scheduleNote('future-note', 2, channel);
+    scheduleNote('started-note', 1, channel);
+    cancelScheduledNotesAfter(1);
+
+    expect(futureSource.stop).toHaveBeenCalledTimes(1);
+    expect(startedSource.stop).not.toHaveBeenCalled();
+
+    scheduleNote('future-note', 3, channel);
+    scheduleNote('started-note', 3, channel);
+    expect(mockedPlayNote).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('song occurrence scheduling', () => {
+  test('can schedule the same pattern note in adjacent occurrences', () => {
+    const args = {
+      notes: { kick: [[{ id: 'note-1', beat: 1 }]] },
+      channels: [{ id: 'kick', sample: 'kick.wav' }],
+      tempo: { bpm: 120, humanize: 0 },
+      pattern: 0,
+      patternLengthInBeats: 4,
+      currentBeat: 1,
+      wrap: false,
+    };
+
+    scheduleNotes({ ...args, startTime: 1, occurrenceKey: 'song-0' });
+    scheduleNotes({ ...args, startTime: 3, occurrenceKey: 'song-1' });
+
+    expect(mockedPlayNote).toHaveBeenCalledTimes(2);
+  });
+
+  test('looks ahead far enough to start an aligned sample before its beat', () => {
+    const alignedNotes = getScheduledNotes({
+      channel: {
+        id: 'test-channel',
+        alignmentOffset: 0.2,
+      },
+      channelNotes: [{ beat: 1.2, id: 'early-attack' }],
+      tempo: { bpm: 60, humanize: 0 },
+      startTime: 10,
+      currentBeat: 1,
+    });
+
+    expect(alignedNotes[0].time).not.toBeNull();
+  });
+
+  test('starts playback early by the sample alignment offset', () => {
+    scheduleNote('aligned-note', 2, {
+      id: 'snare',
+      sample: 'snare.wav',
+      alignmentOffset: 0.126,
+    });
+
+    expect(mockedPlayNote).toHaveBeenCalledWith(1.874, undefined, 'snare', 0, 1);
+  });
+
+  test('zero alignment preserves timing and startup never schedules negative audio time', () => {
+    scheduleNote('zero-note', 2, { id: 'kick', alignmentOffset: 0 });
+    scheduleNote('startup-note', 0.08, { id: 'snare', alignmentOffset: 0.2 });
+
+    expect(mockedPlayNote).toHaveBeenNthCalledWith(1, 2, undefined, 'kick', 0, 1);
+    expect(mockedPlayNote).toHaveBeenNthCalledWith(2, 1, undefined, 'snare', 0, 1);
   });
 });

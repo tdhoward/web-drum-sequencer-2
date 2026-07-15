@@ -15,6 +15,7 @@ type PitchInput = {
 type NoteChannel = PitchInput & {
   id: string;
   sample?: string;
+  alignmentOffset?: number;
 };
 
 type ChannelNote = {
@@ -43,6 +44,7 @@ type GetScheduledNotesArgs = {
   tempo: Tempo;
   currentBeat: number;
   patternLengthInBeats?: number;
+  wrap?: boolean;
 };
 
 type ScheduleNotesArgs = {
@@ -53,16 +55,29 @@ type ScheduleNotesArgs = {
   tempo: Tempo;
   currentBeat: number;
   patternLengthInBeats?: number;
+  occurrenceKey?: string;
+  wrap?: boolean;
+};
+
+type ScheduledSource = {
+  source: AudioBufferSourceNode;
+  playbackTime: number;
 };
 
 // schedule is a lookup table of all the notes currently scheduled to be played
-const schedule: Record<string, unknown> = {};
+const schedule: Record<string, ScheduledSource> = {};
 const visualTriggerSchedule: Record<string, ReturnType<typeof globalThis.setTimeout>> = {};
 
 const getSampleBuffer = (noteChannel: NoteChannel): AudioBuffer | undefined => (
   typeof noteChannel.sample === 'undefined'
     ? undefined
     : sampleStore[noteChannel.sample]
+);
+
+const getAlignmentOffset = (noteChannel: NoteChannel): number => (
+  typeof noteChannel.alignmentOffset === 'number' && Number.isFinite(noteChannel.alignmentOffset)
+    ? Math.max(0, noteChannel.alignmentOffset)
+    : 0
 );
 
 export const pitchToCents = ({ pitchCoarse = 0, pitchFine = 0 }: PitchInput): number => Math.round(
@@ -110,15 +125,37 @@ export const scheduleNote = (
 ): void => {
   if (typeof schedule[noteId] === 'undefined') {
     const pitch = pitchToCents(noteChannel);
-    schedule[noteId] = playNote(
-      noteTime,
-      getSampleBuffer(noteChannel),
-      noteChannel.id,
-      pitch,
-      noteVelocity,
+    const alignmentOffset = getAlignmentOffset(noteChannel);
+    const playbackTime = Math.max(
+      getAudioContext().currentTime,
+      noteTime - alignmentOffset,
     );
+    schedule[noteId] = {
+      source: playNote(
+        playbackTime,
+        getSampleBuffer(noteChannel),
+        noteChannel.id,
+        pitch,
+        noteVelocity,
+      ),
+      playbackTime,
+    };
     scheduleChannelTrigger(noteId, noteTime, noteChannel.id);
   }
+};
+
+export const cancelScheduledNotesAfter = (audioTime: number): void => {
+  Object.entries(schedule).forEach(([noteId, scheduled]) => {
+    if (scheduled.playbackTime > audioTime) {
+      try {
+        scheduled.source.stop();
+      } catch {
+        // The source may have started or ended between the time check and stop.
+      }
+      clearScheduledTrigger(noteId);
+      delete schedule[noteId];
+    }
+  });
 };
 
 export const clearScheduledNotes = (): void => {
@@ -182,10 +219,12 @@ export const getScheduledNotes = ({
   tempo,
   currentBeat,
   patternLengthInBeats = 4,
+  wrap = true,
 }: GetScheduledNotesArgs): ScheduledNote[] => channelNotes.map(
   (note) => {
     const lookaheadBeats = LOOKAHEAD * (tempo.bpm / 60);
     const secondsPerBeat = 60 / tempo.bpm;
+    const alignmentBeats = getAlignmentOffset(channel) / secondsPerBeat;
 
     if (!isBeatInPattern(note.beat, patternLengthInBeats)) {
       return getUnscheduledNote(note, channel);
@@ -195,14 +234,16 @@ export const getScheduledNotes = ({
     const swingBeat = swing(note.beat, swingAmount);
 
     const noteTime = startTime + ((swingBeat - 1) * secondsPerBeat);
-    if (isBetween(note.beat, currentBeat, currentBeat + lookaheadBeats)) {
+    if (isBetween(note.beat, currentBeat, currentBeat + lookaheadBeats + alignmentBeats)) {
       return getHumanizedScheduledNote(note, channel, noteTime, tempo, startTime);
     }
     // If nearing the end of the bar, schedule notes at the start of the bar too
-    if (isBetween(
+    if (wrap && isBetween(
       note.beat,
       currentBeat - patternLengthInBeats,
-      currentBeat + lookaheadBeats - patternLengthInBeats,
+      // Alignment extends how far ahead the scheduler must inspect so playback
+      // can begin before the wrapped beat.
+      currentBeat + lookaheadBeats + alignmentBeats - patternLengthInBeats,
     )) {
       const nextPatternStartTime = startTime + (patternLengthInBeats * secondsPerBeat);
       const wrappedNoteTime = startTime
@@ -229,6 +270,8 @@ export const scheduleNotes = ({
   tempo,
   currentBeat,
   patternLengthInBeats = 4,
+  occurrenceKey,
+  wrap = true,
 }: ScheduleNotesArgs): void => {
   // Determine which notes need to be scheduled
   const notesToSchedule = channels.reduce<ScheduledNote[]>(
@@ -241,12 +284,17 @@ export const scheduleNotes = ({
         tempo,
         currentBeat,
         patternLengthInBeats,
+        wrap,
       }),
     ], [],
   );
 
+  const occurrenceNotes = occurrenceKey
+    ? notesToSchedule.map(note => ({ ...note, id: `${occurrenceKey}:${note.id}` }))
+    : notesToSchedule;
+
   // Schedule the notes
-  notesToSchedule.forEach((note) => {
+  occurrenceNotes.forEach((note) => {
     if (note.time !== null) {
       scheduleNote(note.id, note.time, note.channel, note.velocity);
     } else {

@@ -17,6 +17,8 @@ import { SavePatternPackModal } from '../SavePatternPackModal';
 import type { PatternPack } from '../../common/sequencerModel';
 import type { AppDispatch } from '../../store';
 import type { RootState } from '../../reducer';
+import { clearScheduledNotes } from '../../services/audioScheduler';
+import { stopAllNotes } from '../../services/audioRouter';
 
 type AppAction = Parameters<AppDispatch>[0];
 type PatternPackCommand =
@@ -45,6 +47,8 @@ const mapDispatchToProps = (dispatch: AppDispatch): PatternPackSelectorDispatchP
     dispatch(erasePatternPack(patternPackId) as unknown as AppAction);
   },
   loadPatternPack: (patternPack) => {
+    stopAllNotes();
+    clearScheduledNotes();
     dispatch(loadPatternPack(patternPack) as unknown as AppAction);
   },
   setPatternPackPrompt: (isOpen) => {

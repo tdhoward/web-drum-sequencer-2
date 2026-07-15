@@ -131,17 +131,73 @@ export const normalizeAudioBuffer = (
   return nextBuffer;
 };
 
-const getMaxAbsSampleValue = (channels: Float32Array[], sampleIndex: number): number => {
-  let value = 0;
+const DETECTION_WINDOW_MS = 2;
+const NOISE_EDGE_FRACTION = 0.1;
+const NOISE_EDGE_PERCENTILE = 0.25;
+// Open well above the measured background, then close more gently to retain
+// the decay of a one-shot sound without extending it through steady room noise.
+const OPEN_NOISE_RATIO = 10 ** (9 / 20);
+const CLOSE_NOISE_RATIO = 10 ** (4 / 20);
+const OPEN_PEAK_RATIO = 10 ** (-36 / 20);
+const CLOSE_PEAK_RATIO = 10 ** (-46 / 20);
 
-  for (let channelIndex = 0; channelIndex < channels.length; channelIndex += 1) {
-    value = Math.max(
-      value,
-      Math.abs(channels[channelIndex][sampleIndex]),
-    );
+const getPercentile = (values: number[], percentile: number): number => {
+  if (values.length === 0) {
+    return 0;
   }
 
-  return value;
+  const sortedValues = [...values].sort((left, right) => left - right);
+  const percentileIndex = Math.floor((sortedValues.length - 1) * percentile);
+
+  return sortedValues[percentileIndex];
+};
+
+const getBoundaryNoiseFloor = (windowLevels: number[]): number => {
+  const edgeWindowCount = Math.max(
+    1,
+    Math.ceil(windowLevels.length * NOISE_EDGE_FRACTION),
+  );
+  const leadingNoiseFloor = getPercentile(
+    windowLevels.slice(0, edgeWindowCount),
+    NOISE_EDGE_PERCENTILE,
+  );
+  const trailingNoiseFloor = getPercentile(
+    windowLevels.slice(-edgeWindowCount),
+    NOISE_EDGE_PERCENTILE,
+  );
+
+  return Math.min(leadingNoiseFloor, trailingNoiseFloor);
+};
+
+const getWindowRmsLevels = (
+  channels: Float32Array[],
+  windowSampleCount: number,
+  audioLength: number,
+): number[] => {
+  const levels: number[] = [];
+
+  for (let windowStart = 0; windowStart < audioLength; windowStart += windowSampleCount) {
+    const windowEnd = Math.min(windowStart + windowSampleCount, audioLength);
+    let loudestChannelRms = 0;
+
+    for (let channelIndex = 0; channelIndex < channels.length; channelIndex += 1) {
+      let sumOfSquares = 0;
+
+      for (let sampleIndex = windowStart; sampleIndex < windowEnd; sampleIndex += 1) {
+        const sampleValue = channels[channelIndex][sampleIndex];
+        sumOfSquares += sampleValue * sampleValue;
+      }
+
+      loudestChannelRms = Math.max(
+        loudestChannelRms,
+        Math.sqrt(sumOfSquares / (windowEnd - windowStart)),
+      );
+    }
+
+    levels.push(loudestChannelRms);
+  }
+
+  return levels;
 };
 
 export const detectAudibleRange = (
@@ -149,40 +205,73 @@ export const detectAudibleRange = (
   thresholdDb = -45,
   paddingMs = 5,
 ): SampleRange => {
-  const threshold = 10 ** (thresholdDb / 20);
+  const minimumOpenThreshold = 10 ** (thresholdDb / 20);
   const paddingSamples = Math.floor((paddingMs / 1000) * audioBuffer.sampleRate);
+  const windowSampleCount = Math.max(
+    1,
+    Math.floor((DETECTION_WINDOW_MS / 1000) * audioBuffer.sampleRate),
+  );
   const channels = Array.from({ length: audioBuffer.numberOfChannels }, (_, channelIndex) => {
     const channelData = new Float32Array(audioBuffer.length);
     audioBuffer.copyFromChannel(channelData, channelIndex);
     return channelData;
   });
-  let firstAudibleSample = -1;
-  let lastAudibleSample = -1;
+  const windowLevels = getWindowRmsLevels(channels, windowSampleCount, audioBuffer.length);
+  const noiseFloor = getBoundaryNoiseFloor(windowLevels);
+  const peakLevel = windowLevels.reduce((peak, level) => Math.max(peak, level), 0);
+  const openThreshold = Math.max(
+    minimumOpenThreshold,
+    noiseFloor * OPEN_NOISE_RATIO,
+    peakLevel * OPEN_PEAK_RATIO,
+  );
+  const closeThreshold = Math.max(
+    minimumOpenThreshold * 0.5,
+    noiseFloor * CLOSE_NOISE_RATIO,
+    peakLevel * CLOSE_PEAK_RATIO,
+  );
+  const firstOpenWindow = windowLevels.findIndex(level => level >= openThreshold);
+  let lastOpenWindow = -1;
 
-  for (let sampleIndex = 0; sampleIndex < audioBuffer.length; sampleIndex += 1) {
-    if (getMaxAbsSampleValue(channels, sampleIndex) >= threshold) {
-      firstAudibleSample = sampleIndex;
+  for (let windowIndex = windowLevels.length - 1; windowIndex >= 0; windowIndex -= 1) {
+    if (windowLevels[windowIndex] >= openThreshold) {
+      lastOpenWindow = windowIndex;
       break;
     }
   }
 
-  for (let sampleIndex = audioBuffer.length - 1; sampleIndex >= 0; sampleIndex -= 1) {
-    if (getMaxAbsSampleValue(channels, sampleIndex) >= threshold) {
-      lastAudibleSample = sampleIndex;
-      break;
-    }
-  }
-
-  if (firstAudibleSample === -1 || lastAudibleSample === -1) {
+  if (firstOpenWindow === -1 || lastOpenWindow === -1) {
     return {
       startSample: 0,
       endSample: audioBuffer.length,
     };
   }
 
+  let firstAudibleWindow = firstOpenWindow;
+  let lastAudibleWindow = lastOpenWindow;
+
+  while (
+    firstAudibleWindow > 0
+    && windowLevels[firstAudibleWindow - 1] >= closeThreshold
+  ) {
+    firstAudibleWindow -= 1;
+  }
+
+  while (
+    lastAudibleWindow < windowLevels.length - 1
+    && windowLevels[lastAudibleWindow + 1] >= closeThreshold
+  ) {
+    lastAudibleWindow += 1;
+  }
+
+  const firstAudibleSample = firstAudibleWindow * windowSampleCount;
+  const lastAudibleSampleExclusive = Math.min(
+    (lastAudibleWindow + 1) * windowSampleCount,
+    audioBuffer.length,
+  );
+
   return {
     startSample: clamp(firstAudibleSample - paddingSamples, 0, audioBuffer.length - 1),
-    endSample: clamp(lastAudibleSample + paddingSamples + 1, 1, audioBuffer.length),
+    endSample: clamp(lastAudibleSampleExclusive + paddingSamples, 1, audioBuffer.length),
   };
 };
 

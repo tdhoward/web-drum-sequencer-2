@@ -2,7 +2,7 @@ import { connect } from 'react-redux';
 import { WorkspaceNavComponent } from './WorkspaceNav.component';
 import {
   selectedWorkspaceSelector,
-  setSelectedWorkspace,
+  selectWorkspace,
 } from '../../common/workspace';
 import type { RootState } from '../../reducer';
 
@@ -11,7 +11,7 @@ const mapStateToProps = (state: RootState) => ({
 });
 
 const mapDispatchToProps = {
-  setSelectedWorkspace,
+  setSelectedWorkspace: selectWorkspace,
 };
 
 export const WorkspaceNav = connect(

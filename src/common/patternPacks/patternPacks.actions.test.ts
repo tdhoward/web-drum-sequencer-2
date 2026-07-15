@@ -187,6 +187,7 @@ describe('loadPatternPack', () => {
 
     expect(result.unresolved).toEqual([]);
     expect(actions.map(action => action.type)).toEqual([
+      'playbackSession/stopPlayback',
       'tempo/setBPM',
       'tempo/setSwing',
       'patterns/replacePatternLanes',
@@ -197,10 +198,11 @@ describe('loadPatternPack', () => {
       'song/setPattern',
       'master/setSelectedChannel',
       'patternPacks/setSelectedPatternPack',
+      'song/setSongPatternPackId',
     ]);
-    expect(actions[2].payload).toEqual(['hiphop-bd-2']);
-    expect(actions[3].payload).toEqual(['Intro']);
-    expect(actions[4].payload).toEqual(expect.arrayContaining([
+    expect(actions[3].payload).toEqual(['hiphop-bd-2']);
+    expect(actions[4].payload).toEqual(['Intro']);
+    expect(actions[5].payload).toEqual(expect.arrayContaining([
       expect.objectContaining({
         timeSignature: {
           beatsPerBar: 6,
@@ -209,9 +211,9 @@ describe('loadPatternPack', () => {
         stepsPerBeat: 2,
       }),
     ]));
-    const notesPayload = actions[5].payload as { patterns: PatternsState };
+    const notesPayload = actions[6].payload as { patterns: PatternsState };
     expect(notesPayload.patterns.entities['pattern-0'].stepsPerBeat).toBe(2);
-    const assignmentPayload = actions[6].payload as { assignments: unknown[] };
+    const assignmentPayload = actions[7].payload as { assignments: unknown[] };
     expect(assignmentPayload.assignments).toEqual([
       expect.objectContaining({
         id: 'tr808-bd-short',

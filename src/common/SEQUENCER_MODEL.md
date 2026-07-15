@@ -16,7 +16,42 @@ song
   selectedKitId
   selectedPatternId
   patternIds[]
+  patternPackId
+  arrangementPatternIds[][]
+  tempoChanges[]
 ```
+
+`patternIds` lists the pattern slots available to the current project, while
+`arrangementPatternIds` is the ordered Song-workspace playback sequence. Each
+outer-array entry is one song column, and its inner array lists every pattern
+that starts together in that column. Pattern IDs are unique within a column. An
+empty inner array preserves an intentionally empty column and plays back as a
+silent one-bar rest.
+
+When a column contains patterns with different lengths, each pattern plays once
+and the column lasts as long as its longest pattern. A shorter pattern is silent
+for the remainder of the column; it does not loop. The next column starts after
+the longest pattern finishes.
+
+The trailing empty editor column is derived UI and is never stored until it is
+dragged among the arranged columns, at which point it becomes an intentional
+empty column and a new trailing editor column is derived. A saved song stores
+its pattern-pack reference and the nested arrangement, but continues to use the
+currently selected kit so kits remain swappable. Persisted arrangements from
+the earlier single-pattern model migrate from `string | null` columns to
+`[string] | []` columns.
+
+`tempoChanges` is aligned with the stored arrangement columns. Its first entry
+is always a BPM number; later entries are either a BPM change or `null` to keep
+using the most recent tempo. Tempo-marker selection is transient workspace UI
+state and is not part of the saved song.
+
+During Song playback, the transport publishes the active BPM, governing tempo
+marker, and current column start time. The master BPM control uses that live
+state in every workspace. Editing it updates the governing marker, preserves
+the current beat by re-anchoring the column under the new BPM, and selectively
+cancels and reschedules audio sources that have not begun yet. Already sounding
+voices are not interrupted.
 
 ## Patterns and lanes
 
@@ -180,6 +215,7 @@ sample
   url
   sourceType
   fileName
+  alignmentOffset (seconds, defaults to 0)
 
 userSample
   id
@@ -206,6 +242,14 @@ manager. The audio payload for uploaded, edited, and recorded samples is stored 
 IndexedDB and mirrored in the in-memory sample store under `userSample.id`.
 Older persisted user-sample lists may contain bare string ids; reducers should
 continue to normalize those entries when they are renamed or otherwise edited.
+
+Each sample may store an `alignmentOffset` in seconds from its beginning. Zero
+preserves normal playback. The waveform's alignment mode clamps the value to the
+decoded sample duration and offers drag/tap placement, reset, and 10 ms steps.
+For a note whose beat time is `T`, playback begins at `T - alignmentOffset` so
+the marker lands on the beat. The scheduler expands its lookahead by the offset;
+at transport startup it clamps source start times to the current Web Audio time
+instead of passing a negative or already elapsed scheduling time.
 
 Sample editing is non-destructive. Trimming or normalizing a factory sample
 creates a new `userSample` and a corresponding `sample` entity rather than

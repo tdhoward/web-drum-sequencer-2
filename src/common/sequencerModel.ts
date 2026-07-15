@@ -38,7 +38,75 @@ export type SongState = {
   selectedKitId: string;
   selectedPatternId: string;
   patternIds: string[];
+  patternPackId?: string;
+  arrangementPatternIds?: string[][];
+  tempoChanges?: Array<number | null>;
 };
+
+export type SavedSong = {
+  id: string;
+  name: string;
+  patternPackId: string;
+  arrangementPatternIds: string[][];
+  tempoChanges?: Array<number | null>;
+};
+
+const isValidBpm = (value: unknown): value is number => (
+  typeof value === 'number' && Number.isFinite(value) && value > 0
+);
+
+export const normalizeTempoChanges = (
+  value: unknown,
+  columnCount: number,
+  fallbackBpm: number,
+): Array<number | null> => {
+  const normalized = Array.from({ length: columnCount }, (_, index) => {
+    if (!Array.isArray(value)) return null;
+    return isValidBpm(value[index]) ? value[index] : null;
+  });
+
+  if (normalized.length > 0 && normalized[0] === null) {
+    normalized[0] = isValidBpm(fallbackBpm) ? fallbackBpm : 120;
+  }
+
+  return normalized;
+};
+
+export const getEffectiveSongBpm = (
+  tempoChanges: Array<number | null> | undefined,
+  columnIndex: number,
+  fallbackBpm: number,
+): number => {
+  for (let index = Math.min(columnIndex, (tempoChanges?.length || 0) - 1); index >= 0; index -= 1) {
+    const bpm = tempoChanges?.[index];
+    if (isValidBpm(bpm)) return bpm;
+  }
+  return isValidBpm(fallbackBpm) ? fallbackBpm : 120;
+};
+
+export const getEffectiveSongTempoColumn = (
+  tempoChanges: Array<number | null> | undefined,
+  columnIndex: number,
+): number => {
+  for (let index = Math.min(columnIndex, (tempoChanges?.length || 0) - 1); index >= 0; index -= 1) {
+    if (isValidBpm(tempoChanges?.[index])) return index;
+  }
+  return 0;
+};
+
+export const normalizeArrangementPatternIds = (value: unknown): string[][] => (
+  Array.isArray(value)
+    ? value.map((column) => {
+      const patternIds = Array.isArray(column) ? column : [column];
+      return patternIds.reduce<string[]>((normalized, patternId) => {
+        if (typeof patternId === 'string' && !normalized.includes(patternId)) {
+          normalized.push(patternId);
+        }
+        return normalized;
+      }, []);
+    })
+    : []
+);
 
 export type Kit = {
   id: string;
@@ -88,6 +156,7 @@ export type Sample = {
   url?: string;
   sourceType: string;
   fileName?: string;
+  alignmentOffset?: number;
 };
 
 export type SamplesState = EntityState<Sample>;
@@ -250,6 +319,8 @@ export const createSongState = ({
   selectedKitId,
   selectedPatternId: patternIndexToId(selectedPatternIndex),
   patternIds: createPatternIds(patternCount),
+  arrangementPatternIds: [],
+  tempoChanges: [],
 });
 
 const channelToLaneId = (channel: { id: string; laneId?: string }): string => (
@@ -311,6 +382,10 @@ export const createSamplesState = (channels: KitChannelInput[] = []): SamplesSta
       url: sampleUrl,
       sourceType: channel.sourceType || 'factory',
       fileName: channel.fileName || undefined,
+      alignmentOffset: typeof channel.alignmentOffset === 'number'
+        && Number.isFinite(channel.alignmentOffset)
+        ? Math.max(0, channel.alignmentOffset)
+        : 0,
     };
     return state;
   }, { ids: [], entities: {} })
@@ -361,6 +436,13 @@ export const getPatternLengthInQuarterBeats = (
 ): number => {
   const { timeSignature, bars } = normalizePatternSettings(settings);
   return timeSignature.beatsPerBar * bars * (4 / timeSignature.beatUnit);
+};
+
+export const getBarLengthInQuarterBeats = (
+  settings: PatternSettingsInput = DEFAULT_PATTERN_SETTINGS,
+): number => {
+  const { timeSignature } = normalizePatternSettings(settings);
+  return timeSignature.beatsPerBar * (4 / timeSignature.beatUnit);
 };
 
 export const getPatternTotalSteps = (
@@ -547,7 +629,13 @@ export const migrateToNormalizedSequencerState = (
     DEFAULT_PATTERN_COUNT,
     ...Object.values(legacyNotes || {}).map(channelNotes => channelNotes.length),
   );
-  const song = state.song || createSongState({ selectedPatternIndex, patternCount });
+  const existingSong = state.song;
+  const song = existingSong
+    ? {
+      ...existingSong,
+      arrangementPatternIds: normalizeArrangementPatternIds(existingSong.arrangementPatternIds),
+    }
+    : createSongState({ selectedPatternIndex, patternCount });
   const patterns = isPatternsState(state.patterns)
     ? migratePatternsToLanes(state.patterns, laneIds)
     : createPatternsState({ patternCount, laneIds });

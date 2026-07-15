@@ -1,6 +1,9 @@
 import {
   getWaveformPeaks,
   getWaveformTracePoints,
+  alignmentOffsetFromPointer,
+  clampAlignmentOffset,
+  formatAlignmentOffset,
 } from './SampleWaveform.component';
 
 class TestAudioBuffer {
@@ -87,5 +90,24 @@ describe('getWaveformTracePoints', () => {
       { value: 0.125, x: 0 },
       { value: 0.25, x: 4 },
     ]);
+  });
+});
+
+describe('sample beat alignment interaction helpers', () => {
+  test('maps touch or pointer positions to seconds and clamps them to the sample', () => {
+    expect(alignmentOffsetFromPointer(150, 100, 200, 2)).toBe(0.5);
+    expect(alignmentOffsetFromPointer(50, 100, 200, 2)).toBe(0);
+    expect(alignmentOffsetFromPointer(350, 100, 200, 2)).toBe(2);
+  });
+
+  test('reset and step values remain within sample boundaries', () => {
+    expect(clampAlignmentOffset(0, 1.5)).toBe(0);
+    expect(clampAlignmentOffset(-0.01, 1.5)).toBe(0);
+    expect(clampAlignmentOffset(1.51, 1.5)).toBe(1.5);
+  });
+
+  test('formats the editing value in user-friendly milliseconds', () => {
+    expect(formatAlignmentOffset(0)).toBe('On sample start');
+    expect(formatAlignmentOffset(0.126)).toBe('Start 126 ms early');
   });
 });

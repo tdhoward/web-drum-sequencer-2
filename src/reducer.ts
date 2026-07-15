@@ -16,10 +16,12 @@ import {
   patternPacksReducer,
   workspaceReducer,
   uiPreferencesReducer,
+  songLibraryReducer,
 } from './common';
 
 const rootReducer = combineReducers({
   song: songReducer,
+  songLibrary: songLibraryReducer,
   kits: kitsReducer,
   kitChannels: channelsReducer,
   kitChannelAssignments: kitChannelAssignmentsReducer,

@@ -14,6 +14,8 @@ type WaveformTracePoint = {
 };
 
 type SampleWaveformProps = {
+  alignmentOffset?: number;
+  onAlignmentChange?: (alignmentOffset: number) => void;
   sampleUrl?: string;
   onClick?: () => void;
   title?: string;
@@ -33,25 +35,33 @@ const waveformFrameStyles = css`
   border-radius: 0.3rem;
   height: 2.5rem;
   min-width: 0;
-  overflow: hidden;
   position: relative;
   width: 100%;
 `;
 
-const WaveformFrame = styled.div`
+const WaveformFrame = styled.div<{ $isAligning: boolean }>`
   ${waveformFrameStyles}
+  height: ${({ $isAligning }) => ($isAligning ? '5.15rem' : '2.5rem')};
+  transition: height 0.12s ease;
 `;
 
-const WaveformButton = styled.button`
-  ${waveformFrameStyles}
+const WaveformSurface = styled.button`
   appearance: none;
+  background: transparent;
+  border: 0;
   cursor: pointer;
+  height: 2.5rem;
+  left: 0;
   padding: 0;
+  position: absolute;
   text-align: left;
+  top: 0;
+  touch-action: none;
+  width: 100%;
 
   &:focus-visible {
-    border-color: ${({ theme }) => theme.colors.borderHover};
-    outline: 0;
+    outline: 2px solid ${({ theme }) => theme.colors.borderHover};
+    outline-offset: -2px;
   }
 `;
 
@@ -73,6 +83,107 @@ const DurationLabel = styled.span`
   pointer-events: none;
   position: absolute;
   right: 0.2rem;
+`;
+
+const AlignmentGuide = styled.span<{ $position: number }>`
+  background: ${({ theme }) => theme.colors.accentPrimary};
+  bottom: 0;
+  left: ${({ $position }) => `${$position}%`};
+  opacity: 0.3;
+  pointer-events: none;
+  position: absolute;
+  top: 0.45rem;
+  transform: translateX(-0.5px);
+  width: 1px;
+`;
+
+const AlignmentMarker = styled.span<{ $position: number }>`
+  border-left: 0.28rem solid transparent;
+  border-right: 0.28rem solid transparent;
+  border-top: 0.42rem solid ${({ theme }) => theme.colors.accentPrimary};
+  left: ${({ $position }) => `clamp(0.28rem, ${$position}%, calc(100% - 0.28rem))`};
+  pointer-events: none;
+  position: absolute;
+  top: 0.08rem;
+  transform: translateX(-50%);
+`;
+
+const AlignmentModeLabel = styled.span`
+  background: rgba(0, 0, 0, 0.42);
+  border: 1px solid ${({ theme }) => theme.colors.waveformDurationBorder};
+  border-radius: 0.2rem;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: 0.61rem;
+  line-height: 1;
+  opacity: 0.78;
+  padding: 0.13rem 0.24rem;
+  pointer-events: none;
+`;
+
+const AlignmentModeButton = styled.button`
+  align-items: flex-start;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  height: 2.5rem;
+  justify-content: flex-end;
+  min-width: 3.5rem;
+  padding: 0.15rem 0.2rem;
+  position: absolute;
+  right: 0;
+  top: 0;
+  touch-action: manipulation;
+  z-index: 3;
+
+  &:focus-visible {
+    outline: 0;
+  }
+
+  &:focus-visible ${AlignmentModeLabel} {
+    outline: 2px solid ${({ theme }) => theme.colors.accentPrimary};
+    outline-offset: 1px;
+  }
+`;
+
+const AlignmentControls = styled.div`
+  align-items: center;
+  bottom: 0.2rem;
+  display: flex;
+  gap: 0.25rem;
+  left: 0.25rem;
+  position: absolute;
+  right: 0.25rem;
+  top: 2.65rem;
+`;
+
+const AlignmentValue = styled.span`
+  color: ${({ theme }) => theme.colors.textSecondary};
+  flex: 1 1 auto;
+  font-size: 0.66rem;
+  line-height: 1.1;
+  min-width: 4.5rem;
+`;
+
+const AlignmentStepButton = styled.button`
+  appearance: none;
+  background: ${({ theme }) => theme.colors.borderSubtle};
+  border: 1px solid ${({ theme }) => theme.colors.borderDefault};
+  border-radius: 999px;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.62rem;
+  height: 2rem;
+  padding: 0 0.48rem;
+  touch-action: manipulation;
+  white-space: nowrap;
+
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.accentPrimary};
+  }
 `;
 
 const getMonoSampleValue = (channels: Float32Array[], sampleIndex: number): number => {
@@ -284,12 +395,37 @@ export const drawWaveform = (
 
 const formatDuration = (duration: number): string => `${duration.toFixed(2)} s`;
 
-export const SampleWaveform = ({ sampleUrl, onClick, title }: SampleWaveformProps) => {
+export const clampAlignmentOffset = (offset: number, duration: number): number => (
+  Number.isFinite(offset) && Number.isFinite(duration)
+    ? Math.min(Math.max(0, offset), Math.max(0, duration))
+    : 0
+);
+
+export const alignmentOffsetFromPointer = (
+  clientX: number,
+  left: number,
+  width: number,
+  duration: number,
+): number => clampAlignmentOffset(((clientX - left) / Math.max(1, width)) * duration, duration);
+
+export const formatAlignmentOffset = (offset: number): string => (
+  offset <= 0.0005 ? 'On sample start' : `Start ${Math.round(offset * 1000)} ms early`
+);
+
+export const SampleWaveform = ({
+  alignmentOffset = 0,
+  onAlignmentChange,
+  sampleUrl,
+  onClick,
+  title,
+}: SampleWaveformProps) => {
   const theme = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<HTMLElement | null>(null);
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
+  const [isAligning, setIsAligning] = useState(false);
+  const activePointerId = useRef<number | null>(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -369,34 +505,84 @@ export const SampleWaveform = ({ sampleUrl, onClick, title }: SampleWaveformProp
     }
   }, [audioBuffer, canvasSize.width, canvasSize.height, theme]);
 
-  const waveformContent = (
-    <>
-      <WaveformCanvas ref={canvasRef} aria-label="Sample waveform" />
-      {audioBuffer && (
-        <DurationLabel>
-          {formatDuration(audioBuffer.duration)}
-        </DurationLabel>
-      )}
-    </>
-  );
+  useEffect(() => {
+    if (audioBuffer && onAlignmentChange) {
+      const clampedOffset = clampAlignmentOffset(alignmentOffset, audioBuffer.duration);
+      if (clampedOffset !== alignmentOffset) onAlignmentChange(clampedOffset);
+    }
+  }, [alignmentOffset, audioBuffer, onAlignmentChange]);
 
-  if (onClick) {
-    return (
-      <WaveformButton
-        ref={(element) => { frameRef.current = element; }}
-        aria-label="Edit sample waveform"
-        onClick={onClick}
-        title={title}
-        type="button"
-      >
-        {waveformContent}
-      </WaveformButton>
-    );
-  }
+  const duration = audioBuffer?.duration || 0;
+  const safeAlignmentOffset = clampAlignmentOffset(alignmentOffset, duration);
+  const markerPosition = duration > 0 ? (safeAlignmentOffset / duration) * 100 : 0;
+  const updateAlignmentFromPointer = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (!isAligning || !audioBuffer || !onAlignmentChange) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    onAlignmentChange(alignmentOffsetFromPointer(
+      event.clientX,
+      rect.left,
+      rect.width,
+      audioBuffer.duration,
+    ));
+  };
+  const setOffset = (offset: number) => {
+    if (audioBuffer && onAlignmentChange) {
+      onAlignmentChange(clampAlignmentOffset(offset, audioBuffer.duration));
+    }
+  };
 
   return (
-    <WaveformFrame ref={(element) => { frameRef.current = element; }} title={title}>
-      {waveformContent}
+    <WaveformFrame
+      ref={(element) => { frameRef.current = element; }}
+      $isAligning={isAligning}
+      title={title}
+    >
+      <WaveformSurface
+        aria-label={isAligning ? 'Set sample beat alignment' : 'Edit sample waveform'}
+        onClick={() => { if (!isAligning) onClick?.(); }}
+        onPointerDown={(event) => {
+          if (!isAligning) return;
+          activePointerId.current = event.pointerId;
+          event.currentTarget.setPointerCapture?.(event.pointerId);
+          updateAlignmentFromPointer(event);
+        }}
+        onPointerMove={(event) => {
+          if (activePointerId.current === event.pointerId) updateAlignmentFromPointer(event);
+        }}
+        onPointerUp={(event) => {
+          if (activePointerId.current === event.pointerId) activePointerId.current = null;
+        }}
+        onPointerCancel={() => { activePointerId.current = null; }}
+        type="button"
+      >
+        <WaveformCanvas ref={canvasRef} aria-label="Sample waveform" />
+        {audioBuffer && <DurationLabel>{formatDuration(audioBuffer.duration)}</DurationLabel>}
+        {audioBuffer && <AlignmentGuide $position={markerPosition} />}
+        {audioBuffer && <AlignmentMarker $position={markerPosition} />}
+      </WaveformSurface>
+      {audioBuffer && onAlignmentChange && (
+        <AlignmentModeButton
+          aria-pressed={isAligning}
+          onClick={() => setIsAligning(value => !value)}
+          type="button"
+        >
+          <AlignmentModeLabel>{isAligning ? 'Done' : 'Align'}</AlignmentModeLabel>
+        </AlignmentModeButton>
+      )}
+      {isAligning && (
+        <AlignmentControls aria-label="Beat alignment controls">
+          <AlignmentValue aria-live="polite">
+            {formatAlignmentOffset(safeAlignmentOffset)}
+          </AlignmentValue>
+          <AlignmentStepButton onClick={() => setOffset(0)} type="button">Reset</AlignmentStepButton>
+          <AlignmentStepButton onClick={() => setOffset(safeAlignmentOffset - 0.01)} type="button">
+            -10 ms
+          </AlignmentStepButton>
+          <AlignmentStepButton onClick={() => setOffset(safeAlignmentOffset + 0.01)} type="button">
+            +10 ms
+          </AlignmentStepButton>
+        </AlignmentControls>
+      )}
     </WaveformFrame>
   );
 };

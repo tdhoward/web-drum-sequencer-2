@@ -20,6 +20,7 @@ export type LegacyChannel = KitChannel & {
   id: string;
   kitChannelId: string;
   sample?: string;
+  alignmentOffset?: number;
 };
 
 export const channelsStateSelector = (state: ChannelsRootState): KitChannelsState => (
@@ -50,6 +51,7 @@ export const channelsSelector = createSelector(
           id: assignment?.laneId || channel.laneId || channel.id,
           kitChannelId: channel.id,
           sample: sample?.url || channel.sample,
+          alignmentOffset: sample?.alignmentOffset || 0,
         };
       });
   },

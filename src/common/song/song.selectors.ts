@@ -22,3 +22,23 @@ export const patternSelector = createSelector(
   selectedPatternIdSelector,
   selectedPatternId => patternIdToIndex(selectedPatternId),
 );
+
+export const arrangementPatternIdsSelector = createSelector(
+  songSelector,
+  song => song.arrangementPatternIds || [],
+);
+
+export const songTempoChangesSelector = createSelector(
+  songSelector,
+  song => song.tempoChanges || [],
+);
+
+export const songPatternPackIdSelector = createSelector(
+  songSelector,
+  song => song.patternPackId,
+);
+
+export const hasPlayableArrangementSelector = createSelector(
+  arrangementPatternIdsSelector,
+  arrangementPatternIds => arrangementPatternIds.some(patternIds => patternIds.length > 0),
+);
