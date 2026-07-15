@@ -167,6 +167,61 @@ describe('sample editing helpers', () => {
     });
   });
 
+  test('detects a sound above a steady background noise floor', () => {
+    const samples = Array.from({ length: 100 }, (_, sampleIndex) => (
+      (sampleIndex % 2 === 0 ? 0.01 : -0.01)
+      + (sampleIndex >= 30 && sampleIndex < 60
+        ? (sampleIndex % 2 === 0 ? 0.2 : -0.2)
+        : 0)
+    ));
+    const audioBuffer = createBuffer([samples]);
+
+    expect(detectAudibleRange(audioBuffer)).toEqual({
+      startSample: 25,
+      endSample: 65,
+    });
+  });
+
+  test('uses a lower closing threshold to preserve a quiet sound decay', () => {
+    const audioBuffer = createBuffer([[
+      0, 0, 0, 0,
+      0.2, -0.2, 0.2, -0.2,
+      0.06, -0.06, 0.06, -0.06,
+      0, 0, 0, 0,
+    ]]);
+
+    expect(detectAudibleRange(audioBuffer, -20, 0)).toEqual({
+      startSample: 4,
+      endSample: 12,
+    });
+  });
+
+  test('returns the full range when no sound rises above the noise floor', () => {
+    const backgroundNoise = Array.from({ length: 20 }, (_, sampleIndex) => (
+      sampleIndex % 2 === 0 ? 0.01 : -0.01
+    ));
+    const audioBuffer = createBuffer([backgroundNoise]);
+
+    expect(detectAudibleRange(audioBuffer)).toEqual({
+      startSample: 0,
+      endSample: audioBuffer.length,
+    });
+  });
+
+  test('detects narrow quiet boundaries around a long sound', () => {
+    const samples = Array.from({ length: 100 }, (_, sampleIndex) => (
+      sampleIndex >= 6 && sampleIndex < 94
+        ? (sampleIndex % 2 === 0 ? 0.2 : -0.2)
+        : 0
+    ));
+    const audioBuffer = createBuffer([samples]);
+
+    expect(detectAudibleRange(audioBuffer, -45, 0)).toEqual({
+      startSample: 6,
+      endSample: 94,
+    });
+  });
+
   test('renders full-selection edits without boundary fades', () => {
     const audioBuffer = createBuffer([[1, 1, 1]]);
 
