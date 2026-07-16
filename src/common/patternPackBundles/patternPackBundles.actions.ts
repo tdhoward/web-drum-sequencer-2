@@ -20,6 +20,7 @@ import {
   savePatternPackAs,
   selectedPatternPackSelector,
 } from '../patternPacks';
+import { channelsSelector } from '../channels';
 import { FLASH_MESSAGES, showFlashMessage } from '../window';
 import {
   createPatternPackExportBundle,
@@ -31,7 +32,8 @@ import {
 type PatternPackTransferState = SequencerRootState
   & Parameters<typeof allPatternPacksSelector>[0]
   & Parameters<typeof currentPatternPackStateSelector>[0]
-  & Parameters<typeof selectedPatternPackSelector>[0];
+  & Parameters<typeof selectedPatternPackSelector>[0]
+  & Parameters<typeof channelsSelector>[0];
 
 type Dispatch = (action: unknown) => unknown;
 type GetState = () => PatternPackTransferState;
@@ -84,7 +86,8 @@ export const exportSelectedPatternPack = () => async (
       id: selectedPatternPack.id,
       name: selectedPatternPack.name,
     };
-    const bundle = await createPatternPackExportBundle(patternPack);
+    const includedLaneIds = channelsSelector(state).map(channel => channel.id);
+    const bundle = await createPatternPackExportBundle(patternPack, includedLaneIds);
     await downloadPatternPackFile(
       serializePatternPackExportBundle(bundle),
       patternPackFileName(patternPack.name),

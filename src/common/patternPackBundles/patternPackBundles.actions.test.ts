@@ -57,7 +57,7 @@ const createState = (userPatternPacks: PatternPack[] = []) => {
         id: 'pattern-0',
         name: 'Edited Main',
         ...DEFAULT_PATTERN_SETTINGS,
-        laneIds: ['kick'],
+        laneIds: ['kick', 'orphan'],
       },
     },
   };
@@ -92,6 +92,7 @@ const createState = (userPatternPacks: PatternPack[] = []) => {
     patterns,
     notes: normalizeNotesState({
       kick: [[{ id: 'local-note', beat: 2, velocity: 0.8 }]],
+      orphan: [[{ id: 'orphan-note', beat: 1 }]],
     }, patterns.ids, patterns),
     kits: {
       ids: [DEFAULT_KIT_ID],
@@ -155,6 +156,8 @@ describe('pattern pack bundle actions', () => {
     }));
     expect(exported.notes.kick[0][0]).toEqual(expect.objectContaining({ velocity: 0.8 }));
     expect(exported.notes.kick[0][0].id).toBeUndefined();
+    expect(exported.lanes.map(lane => lane.laneId)).toEqual(['kick']);
+    expect(exported.notes.orphan).toBeUndefined();
     expect(actions[actions.length - 1]?.payload).toBe('PATTERN_PACK_EXPORTED');
   });
 

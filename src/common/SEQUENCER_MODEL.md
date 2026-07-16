@@ -109,7 +109,9 @@ visible grid. Those notes remain in state so they can be restored if the pattern
 returns to a longer signature, but compatibility selectors, rendering code, and
 the audio scheduler must treat notes outside the active pattern length as
 inactive. For example, when a one-bar pattern changes from 4/4 to 3/4, notes on
-beat 4 are preserved but must not be shown or played.
+beat 4 are preserved but must not be shown or played. These inactive notes are
+also excluded from standalone pattern-pack exports rather than becoming hidden
+portable data.
 
 ## Notes
 
@@ -209,9 +211,12 @@ note model.
 
 Standalone `.wds-pattern-pack` exports contain musical note properties such as
 beat, pitch, and non-default velocity, but not normalized `note.id` values.
-Import verifies the pack's musical-content hash first and then generates local
-note entity IDs as the notes are normalized. No exported relationship refers to
-an individual note by ID.
+Export retains only lanes currently represented by the selected kit and filters
+each pattern slot's events to its active time-signature, bar, and step length.
+Notes on unresolved lanes and notes beyond the active pattern length remain in
+the live editing state but are not portable. Import verifies the pack's
+musical-content hash first and then generates local note entity IDs as the notes
+are normalized. No exported relationship refers to an individual note by ID.
 
 ## Global kit library
 

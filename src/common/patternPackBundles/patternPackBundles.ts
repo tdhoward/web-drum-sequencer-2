@@ -7,6 +7,11 @@ import type {
   PatternPack,
   PatternSettings,
 } from '../sequencerModel';
+import {
+  beatToStep,
+  getPatternTotalSteps,
+} from '../sequencerModel';
+import { getPatternPackPatternSettings } from '../patternPacks/patternPacks.utils';
 
 export const PATTERN_PACK_BUNDLE_FORMAT = 'wds-pattern-pack-bundle' as const;
 export const PATTERN_PACK_BUNDLE_VERSION = 1;
@@ -50,20 +55,42 @@ const isPatternPackNote = (value: unknown): boolean => (
   && (typeof value.velocity === 'undefined' || isFiniteNumber(value.velocity))
 );
 
-const withoutLocalNoteIds = (patternPack: PatternPack): PatternPack => ({
-  ...patternPack,
-  notes: Object.entries(patternPack.notes).reduce<PatternPack['notes']>(
-    (portableNotes, [laneId, lanePatterns]) => {
-      portableNotes[laneId] = lanePatterns.map(patternNotes => patternNotes.map((note) => {
-        const portableNote = { ...note };
-        delete portableNote.id;
-        return portableNote;
-      }));
-      return portableNotes;
-    },
-    {},
-  ),
-});
+const portableNoteIsWithinPattern = (
+  note: PatternPack['notes'][string][number][number],
+  settings: PatternSettings,
+): boolean => {
+  const step = typeof note.step === 'number' ? note.step : beatToStep(note.beat, settings);
+  return step >= 0 && step < getPatternTotalSteps(settings);
+};
+
+export const preparePatternPackForExport = (
+  patternPack: PatternPack,
+  includedLaneIds?: string[],
+): PatternPack => {
+  const includedLanes = new Set(
+    includedLaneIds || patternPack.lanes.map(lane => lane.laneId || lane.id),
+  );
+  const patternSettings = getPatternPackPatternSettings(patternPack);
+  const lanes = patternPack.lanes.filter(
+    lane => includedLanes.has(lane.laneId || lane.id),
+  );
+  const notes = lanes.reduce<PatternPack['notes']>((portableNotes, lane) => {
+    const laneId = lane.laneId || lane.id;
+    const lanePatterns = patternPack.notes[laneId] || [];
+    portableNotes[laneId] = lanePatterns.map((patternNotes, patternIndex) => (
+      patternNotes
+        .filter(note => portableNoteIsWithinPattern(note, patternSettings[patternIndex]))
+        .map((note) => {
+          const portableNote = { ...note };
+          delete portableNote.id;
+          return portableNote;
+        })
+    ));
+    return portableNotes;
+  }, {});
+
+  return { ...patternPack, lanes, notes };
+};
 
 const isPatternPackNotes = (value: unknown): boolean => (
   isRecord(value)
@@ -114,8 +141,9 @@ const assertManifestShape: (
 
 export const createPatternPackExportBundle = async (
   patternPack: PatternPack,
+  includedLaneIds?: string[],
 ): Promise<PatternPackExportBundle> => {
-  const portablePatternPack = withoutLocalNoteIds(patternPack);
+  const portablePatternPack = preparePatternPackForExport(patternPack, includedLaneIds);
   const contentHash = await calculatePatternPackContentHash(portablePatternPack);
   return {
     manifest: {

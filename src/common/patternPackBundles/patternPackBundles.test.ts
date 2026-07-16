@@ -24,7 +24,10 @@ const patternPack: PatternPack = {
     percussionType: 'bass_drum',
   }],
   notes: {
-    kick: [[{ id: 'kick-1', beat: 1, velocity: 1.2 }]],
+    kick: [[
+      { id: 'kick-1', beat: 1, velocity: 1.2 },
+      { id: 'hidden-kick', beat: 5 },
+    ]],
   },
 };
 
@@ -35,8 +38,31 @@ describe('pattern pack export bundles', () => {
     const verified = await verifyPatternPackExportBundle(parsed);
 
     expect(parsed.manifest.patternPack).toEqual(bundle.manifest.patternPack);
+    expect(parsed.manifest.patternPack.notes.kick[0]).toHaveLength(1);
     expect(parsed.manifest.patternPack.notes.kick[0][0].id).toBeUndefined();
     expect(verified.contentHash).toBe(bundle.manifest.patternPack.contentHash);
+  });
+
+  test('exports only lanes represented by the selected kit', async () => {
+    const bundle = await createPatternPackExportBundle({
+      ...patternPack,
+      lanes: [
+        ...patternPack.lanes,
+        {
+          id: 'orphan',
+          laneId: 'orphan',
+          name: 'Orphan Lane',
+          percussionType: 'clap',
+        },
+      ],
+      notes: {
+        ...patternPack.notes,
+        orphan: [[{ id: 'orphan-note', beat: 1 }]],
+      },
+    }, ['kick']);
+
+    expect(bundle.manifest.patternPack.lanes.map(lane => lane.laneId)).toEqual(['kick']);
+    expect(bundle.manifest.patternPack.notes.orphan).toBeUndefined();
   });
 
   test('rejects pattern content changed after export', async () => {
