@@ -135,6 +135,11 @@ to `0` through `2`.
 Pattern data may omit `velocity` when it is `1`. The normalized in-memory note
 state keeps `velocity: 1` so reducers and selectors can use a simple shape.
 
+`note.id` is local normalized-state identity used by reducers, rendering, and
+audio scheduling. It is not musical content and is not portable. Serialized
+pattern-pack notes omit it; normalization generates a stable local ID from the
+note's lane, pattern, and event position before the note enters entity state.
+
 ## Tempo and playback feel
 
 Tempo and playback feel are stored separately from pattern note data.
@@ -201,6 +206,12 @@ The Pattern workspace pack dropdown selects the whole pack, such as `Hip Hop
 Swing`; the existing pattern buttons select a pattern slot inside that pack.
 Individual pattern import/export can be added later on top of the same lane and
 note model.
+
+Standalone `.wds-pattern-pack` exports contain musical note properties such as
+beat, pitch, and non-default velocity, but not normalized `note.id` values.
+Import verifies the pack's musical-content hash first and then generates local
+note entity IDs as the notes are normalized. No exported relationship refers to
+an individual note by ID.
 
 ## Global kit library
 

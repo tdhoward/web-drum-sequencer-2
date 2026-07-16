@@ -21,3 +21,4 @@ export * from './timeSignatures';
 export * from './contentHash';
 export * from './songBundles';
 export * from './kitBundles';
+export * from './patternPackBundles';

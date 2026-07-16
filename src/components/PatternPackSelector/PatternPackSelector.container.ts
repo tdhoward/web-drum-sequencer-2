@@ -4,13 +4,14 @@ import patternPacks from '../../patternPacks';
 import {
   doSavePatternPack,
   erasePatternPack,
+  exportSelectedPatternPack,
+  importPatternPackFile,
   loadPatternPack,
   setPatternPackPrompt,
 } from '../../common';
 import { patternPackSelectorSelectors } from './PatternPackSelector.selectors';
 import {
   PresetSelectorComponent,
-  type PresetSelectorCommand,
   type PresetSelectorOption,
 } from '../PresetSelector/PresetSelector.component';
 import { SavePatternPackModal } from '../SavePatternPackModal';
@@ -19,16 +20,21 @@ import type { AppDispatch } from '../../store';
 import type { RootState } from '../../reducer';
 import { clearScheduledNotes } from '../../services/audioScheduler';
 import { stopAllNotes } from '../../services/audioRouter';
+import { openPatternPackFilePicker } from '../../services/patternPackFiles';
+import {
+  createPatternPackMemoryOptions,
+  type PatternPackCommand,
+} from './PatternPackSelector.commands';
 
 type AppAction = Parameters<AppDispatch>[0];
-type PatternPackCommand =
-  'SAVE_PATTERN_PACK_AS' | 'SAVE_PATTERN_PACK' | 'DELETE_PATTERN_PACK';
 const PatternPackSelectorComponent =
   PresetSelectorComponent<PatternPack, PatternPackCommand>;
 
 type PatternPackSelectorDispatchProps = {
   doSavePatternPack: (patternPackId: string) => void;
   erasePatternPack: (patternPackId: string) => void;
+  exportPatternPack: () => void;
+  importPatternPack: (file: File) => void;
   loadPatternPack: (patternPack: PatternPack) => void;
   setPatternPackPrompt: (isOpen: boolean) => void;
 };
@@ -45,6 +51,12 @@ const mapDispatchToProps = (dispatch: AppDispatch): PatternPackSelectorDispatchP
   },
   erasePatternPack: (patternPackId) => {
     dispatch(erasePatternPack(patternPackId) as unknown as AppAction);
+  },
+  exportPatternPack: () => {
+    dispatch(exportSelectedPatternPack() as unknown as AppAction);
+  },
+  importPatternPack: (file) => {
+    dispatch(importPatternPackFile(file) as unknown as AppAction);
   },
   loadPatternPack: (patternPack) => {
     stopAllNotes();
@@ -86,6 +98,12 @@ const mergeProps = (
       case 'SAVE_PATTERN_PACK_AS':
         dispatchProps.setPatternPackPrompt(true);
         break;
+      case 'EXPORT_PATTERN_PACK':
+        dispatchProps.exportPatternPack();
+        break;
+      case 'IMPORT_PATTERN_PACK':
+        openPatternPackFilePicker(dispatchProps.importPatternPack);
+        break;
       default:
         if (typeof value !== 'string') {
           dispatchProps.loadPatternPack(value);
@@ -97,7 +115,7 @@ const mergeProps = (
 
 const createMemoryOptions = (
   stateProps: PatternPackSelectorStateProps,
-): PresetSelectorCommand<PatternPackCommand>[] => {
+) => {
   const selectedPatternPack = stateProps.currentPatternPack || patternPacks[0];
   const selectedPatternPackName = selectedPatternPack?.name || 'Unknown';
   const selectedPatternPackId = selectedPatternPack?.id;
@@ -105,22 +123,11 @@ const createMemoryOptions = (
     patternPack => patternPack.id === selectedPatternPackId,
   );
 
-  return [
-    {
-      label: 'Save Pattern Pack As...',
-      value: 'SAVE_PATTERN_PACK_AS',
-    },
-    {
-      label: `Save "${selectedPatternPackName}"`,
-      value: 'SAVE_PATTERN_PACK',
-      disabled: !stateProps.isEdited || defaultPatternPackSelected,
-    },
-    {
-      label: `Delete "${selectedPatternPackName}"`,
-      value: 'DELETE_PATTERN_PACK',
-      disabled: defaultPatternPackSelected,
-    },
-  ];
+  return createPatternPackMemoryOptions(
+    selectedPatternPackName,
+    stateProps.isEdited,
+    defaultPatternPackSelected,
+  );
 };
 
 export const PatternPackSelector = connect(

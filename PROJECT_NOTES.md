@@ -61,7 +61,7 @@ Current model baseline:
 * `src/patternPacks/index.ts` exposes factory pattern packs with human-readable names. The Pattern workspace dropdown loads a pack; the existing 1-8 pattern buttons select slots within that pack.
 * Bundled factory presets use semantic channel IDs and explicit channel names/percussion metadata; `empty_channel` has been removed from factory preset data.
 * The compatibility UI/audio path now exposes assignment lane IDs through `channelsSelector`, so loaded pack notes can play through the current kit without changing kit samples.
-* Kit preset loading changes kit channels/samples/name and rebuilds assignments, but no longer replaces notes, pattern lanes, tempo, or swing.
+* Kit preset loading changes kit channels/samples/name and rebuilds assignments from the selected factory or user pattern pack's lane metadata, but does not replace notes, pattern lanes, tempo, or swing.
 * The master header includes BPM, Swing, and Humanize controls. `humanize` lives in tempo state as a playback-feel setting rather than authored pattern data.
 * Humanize applies deterministic Gaussian timing offsets and per-note velocity variation during scheduling. The pattern grid remains exact, and `humanize: 0` is an exact bypass.
 * Notes carry an authored `velocity` multiplier for per-note emphasis. `velocity: 1` means 100% of the selected kit channel's level and is the normalized in-memory default; serialized pattern-style data may omit default velocity values. The authored range is currently clamped to `0` through `2`, and the scheduler applies this authored value before humanize velocity variation.
@@ -73,6 +73,7 @@ Current model baseline:
 * `userSamples` now stores user-facing sample metadata records, while older persisted string entries are still normalized when edited. The audio data itself is stored in IndexedDB and mirrored in the in-memory sample store by sample id.
 * The Kit workspace sample manager lists user samples, shows whether each sample is assigned to a channel, lets the user rename samples, previews samples through a dedicated preview channel, and only deletes samples that are not currently in use.
 * The Kit preset dropdown's Memory group can export the selected kit as a self-contained, GZIP-compressed `.wds-kit` file and import one as a selected user kit. The versioned bundle includes channel settings and every referenced sample payload; import requires GZIP, verifies sample and kit hashes before changing state, reuses matching user content, and remaps portable IDs to collision-safe local IDs.
+* The Pattern Pack dropdown's Memory group can export the live authored pattern state as a GZIP-compressed `.wds-pattern-pack` file and import one as a selected user pattern pack. The versioned bundle contains BPM, swing, pattern names/settings, lane metadata, and musical note values, but excludes normalized note entity IDs. Import verifies the musical-content hash before changing state, reuses matching factory or user content, assigns collision-safe local pack names and IDs to new content, and generates local note IDs while normalizing the imported notes.
 
 ## UI direction
 

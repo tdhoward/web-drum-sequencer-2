@@ -81,6 +81,29 @@ describe('note velocity helpers', () => {
   });
 });
 
+describe('portable note normalization', () => {
+  test('generates stable local entity IDs when serialized notes omit them', () => {
+    const patterns = createPatternsState({ patternCount: 1, laneIds: ['kick'] });
+    const notes = normalizeNotesState({
+      kick: [[
+        { beat: 1 },
+        { beat: 2, velocity: 0.5 },
+      ]],
+    }, patterns.ids, patterns);
+
+    expect(notes.ids).toEqual([
+      'pattern-note:kick:pattern-0:0',
+      'pattern-note:kick:pattern-0:1',
+    ]);
+    expect(notes.entities[notes.ids[1]]).toEqual(expect.objectContaining({
+      id: 'pattern-note:kick:pattern-0:1',
+      laneId: 'kick',
+      patternId: 'pattern-0',
+      velocity: 0.5,
+    }));
+  });
+});
+
 describe('song arrangement migration', () => {
   test('normalizes legacy columns and removes duplicate pattern selections', () => {
     expect(normalizeArrangementPatternIds([

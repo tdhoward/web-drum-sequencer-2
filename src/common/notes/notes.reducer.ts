@@ -8,7 +8,13 @@ import {
   DEFAULT_NOTE_VELOCITY,
   normalizeNoteVelocity,
 } from '../sequencerModel';
-import type { LegacyNotes, Note, NotesState, PatternsState } from '../sequencerModel';
+import type {
+  LegacyNotes,
+  Note,
+  NotesState,
+  PatternPackNotes,
+  PatternsState,
+} from '../sequencerModel';
 import { createDefaultNotesState } from '../defaultSequencerState';
 
 export const notesInitialState = createDefaultNotesState();
@@ -33,14 +39,14 @@ type SetNoteVelocityPayload = {
   velocity: number;
 };
 
-type SetNotesPayload = LegacyNotes | {
-  notes: LegacyNotes;
+type SetNotesPayload = PatternPackNotes | {
+  notes: PatternPackNotes;
   patterns: PatternsState;
 };
 
 const isSetNotesPayloadWithPatterns = (
   payload: SetNotesPayload,
-): payload is { notes: LegacyNotes; patterns: PatternsState } => (
+): payload is { notes: PatternPackNotes; patterns: PatternsState } => (
   Boolean(
     payload
       && typeof payload === 'object'
