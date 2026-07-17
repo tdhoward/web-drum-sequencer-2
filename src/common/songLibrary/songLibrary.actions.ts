@@ -141,7 +141,9 @@ export const loadSavedSong = (song: SavedSong) => (
   stopForSongChange(dispatch);
   dispatch(setSelectedKitId(song.selectedKitId));
   const kitPreset = [...kitPresets, ...(userPresetsSelector(getState()) || [])].find(
-    preset => kitIdFromPresetName(preset.name) === song.selectedKitId,
+    preset => (
+      ('kitId' in preset && preset.kitId) || kitIdFromPresetName(preset.name)
+    ) === song.selectedKitId,
   );
   if (kitPreset) {
     dispatch(loadPreset(kitPreset as Parameters<typeof loadPreset>[0]));

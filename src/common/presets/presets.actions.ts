@@ -8,7 +8,6 @@ import {
   replaceKitChannelAssignments,
 } from '../kitChannelAssignments';
 import presets from '../../presets';
-import patternPacks from '../../patternPacks';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import type {
   FactoryPresetChannel,
@@ -20,6 +19,7 @@ import type {
 import { currentKitPresetStateSelector } from './presets.selectors';
 import { presetsSlice, type UserPreset } from './presets.reducer';
 import { calculateKitPresetContentHash } from '../../services/libraryContentHash';
+import { selectedPatternPackSelector } from '../patternPacks/patternPacks.selectors';
 
 export const {
   setPreset,
@@ -32,6 +32,7 @@ type Dispatch = (action: unknown) => unknown;
 
 type KitPreset = {
   name: string;
+  kitId?: string;
   channels: FactoryPresetChannel[];
   bpm?: number;
   swing?: number;
@@ -54,10 +55,7 @@ const channelForKit = (
 });
 
 const getCurrentPatternLanes = (state: PresetRootState): PatternPackLane[] => {
-  const selectedPatternPackId = state.patternPacks?.selectedPatternPackId;
-  const selectedPatternPack = patternPacks.find(
-    patternPack => patternPack.id === selectedPatternPackId,
-  );
+  const selectedPatternPack = selectedPatternPackSelector(state);
   if (selectedPatternPack) {
     return selectedPatternPack.lanes;
   }
@@ -94,7 +92,7 @@ export const loadPreset = (preset: KitPreset) => (
   getState: () => PresetRootState,
 ) => {
   const state = getState();
-  const kitId = kitIdFromPresetName(preset.name);
+  const kitId = preset.kitId || kitIdFromPresetName(preset.name);
   const { mappingResult, assignments } = resolveAssignmentsForPreset(preset, kitId, state);
   dispatch(setSelectedKitId(kitId));
   dispatch(loadChannels(preset.channels, kitId));

@@ -109,7 +109,9 @@ visible grid. Those notes remain in state so they can be restored if the pattern
 returns to a longer signature, but compatibility selectors, rendering code, and
 the audio scheduler must treat notes outside the active pattern length as
 inactive. For example, when a one-bar pattern changes from 4/4 to 3/4, notes on
-beat 4 are preserved but must not be shown or played.
+beat 4 are preserved but must not be shown or played. These inactive notes are
+also excluded from standalone pattern-pack exports rather than becoming hidden
+portable data.
 
 ## Notes
 
@@ -134,6 +136,11 @@ to `0` through `2`.
 
 Pattern data may omit `velocity` when it is `1`. The normalized in-memory note
 state keeps `velocity: 1` so reducers and selectors can use a simple shape.
+
+`note.id` is local normalized-state identity used by reducers, rendering, and
+audio scheduling. It is not musical content and is not portable. Serialized
+pattern-pack notes omit it; normalization generates a stable local ID from the
+note's lane, pattern, and event position before the note enters entity state.
 
 ## Tempo and playback feel
 
@@ -202,6 +209,15 @@ Swing`; the existing pattern buttons select a pattern slot inside that pack.
 Individual pattern import/export can be added later on top of the same lane and
 note model.
 
+Standalone `.wds-pattern-pack` exports contain musical note properties such as
+beat, pitch, and non-default velocity, but not normalized `note.id` values.
+Export retains only lanes currently represented by the selected kit and filters
+each pattern slot's events to its active time-signature, bar, and step length.
+Notes on unresolved lanes and notes beyond the active pattern length remain in
+the live editing state but are not portable. Import verifies the pack's
+musical-content hash first and then generates local note entity IDs as the notes
+are normalized. No exported relationship refers to an individual note by ID.
+
 ## Global kit library
 
 Kits are global library objects. Songs reference a selected kit, but the same kit
@@ -210,6 +226,15 @@ selected kit and its pattern pack. The kit snapshot includes its referenced
 sample payloads. These snapshots make the exported song self-contained without
 changing the normalized live in-app state model; import resolves the snapshots
 to global library objects and then makes the saved song reference those objects.
+
+Portable Songs use the `.wds-song` extension and GZIP-compressed JSON. Export
+captures the live arrangement, tempo markers, Kit, referenced sample bytes, and
+active Pattern pack, including unsaved authored Pattern changes. Pattern data
+uses the same portability boundary as `.wds-pattern-pack`: runtime note IDs,
+unresolved lanes, and notes beyond active Pattern lengths are omitted. Import
+verifies the complete dependency hash chain before changing Redux content,
+resolves matching Kit, Pattern pack, and Song content by hash, and remaps the
+saved Song to collision-safe local dependency IDs when new objects are needed.
 
 ```text
 kit
@@ -399,6 +424,22 @@ raw sample bytes -> sample hash -> drumkit hash
 pattern content ----------------> pattern-pack hash
 drumkit hash + pattern-pack hash + arrangement/tempo -> song hash
 ```
+
+### Standalone kit bundles
+
+The Kit workspace exports the selected kit as a versioned, GZIP-compressed
+`.wds-kit` bundle. The decompressed content contains a JSON manifest for the kit,
+its ordered channel snapshot, and its referenced sample metadata, together with
+base64-encoded copies of the raw sample payloads. Payload keys are sample
+content hashes, so a sample referenced more than once is stored only once.
+Import requires the GZIP wrapper; uncompressed `.wds-kit` files are invalid.
+
+Import parses the complete file and verifies every raw sample payload and the
+canonical kit hash before changing Redux state. Matching user samples and saved
+kit presets are reused by content hash. New imports receive collision-safe local
+kit, channel, and sample IDs, their sample payloads are stored in IndexedDB, and
+the imported kit is then saved as a user preset and selected. Portable IDs from
+the bundle are never treated as authoritative local IDs.
 
 ### Import and export plan
 

@@ -10,8 +10,23 @@ import { PresetSaved } from '../PresetSaved.component';
 import { PresetDeleted } from '../PresetDeleted.component';
 import { PatternPackSaved } from '../PatternPackSaved.component';
 import { PatternPackDeleted } from '../PatternPackDeleted.component';
+import {
+  PatternPackExported,
+  PatternPackImported,
+  PatternPackTransferError,
+} from '../PatternPackTransferMessage.component';
 import { SongSaved } from '../SongSaved.component';
 import { SongDeleted } from '../SongDeleted.component';
+import {
+  SongExported,
+  SongImported,
+  SongTransferError,
+} from '../SongTransferMessage.component';
+import {
+  KitExported,
+  KitImported,
+  KitTransferError,
+} from '../KitTransferMessage.component';
 
 type FlashMessageComponentProps = {
   messageKey?: string | null;
@@ -37,10 +52,28 @@ const getMessageComponent = (messageKey: string | null | undefined): FlashMessag
       return PatternPackSaved;
     case FLASH_MESSAGES.PATTERN_PACK_DELETED:
       return PatternPackDeleted;
+    case FLASH_MESSAGES.PATTERN_PACK_EXPORTED:
+      return PatternPackExported;
+    case FLASH_MESSAGES.PATTERN_PACK_IMPORTED:
+      return PatternPackImported;
+    case FLASH_MESSAGES.PATTERN_PACK_TRANSFER_ERROR:
+      return PatternPackTransferError;
     case FLASH_MESSAGES.SONG_SAVED:
       return SongSaved;
     case FLASH_MESSAGES.SONG_DELETED:
       return SongDeleted;
+    case FLASH_MESSAGES.SONG_EXPORTED:
+      return SongExported;
+    case FLASH_MESSAGES.SONG_IMPORTED:
+      return SongImported;
+    case FLASH_MESSAGES.SONG_TRANSFER_ERROR:
+      return SongTransferError;
+    case FLASH_MESSAGES.KIT_EXPORTED:
+      return KitExported;
+    case FLASH_MESSAGES.KIT_IMPORTED:
+      return KitImported;
+    case FLASH_MESSAGES.KIT_TRANSFER_ERROR:
+      return KitTransferError;
     default:
       return undefined;
   }

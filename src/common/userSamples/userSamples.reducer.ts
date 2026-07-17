@@ -7,7 +7,7 @@ export type UserSampleRecord = {
   name: string;
   createdAt?: number;
   sourceName?: string;
-  sourceType?: 'uploaded' | 'edited' | 'recorded';
+  sourceType?: 'uploaded' | 'edited' | 'recorded' | 'imported';
   byteLength?: number;
   [key: string]: unknown;
 } & Partial<ContentHashMetadata>;
@@ -49,7 +49,7 @@ type AddUserSamplePayload = {
   name?: string;
   createdAt?: number;
   sourceName?: string;
-  sourceType?: 'uploaded' | 'edited' | 'recorded';
+  sourceType?: 'uploaded' | 'edited' | 'recorded' | 'imported';
   byteLength?: number;
 } & Partial<ContentHashMetadata>;
 

@@ -192,6 +192,12 @@ export type LegacyNote = {
 
 export type LegacyNotes = Record<string, LegacyNote[][]>;
 
+export type PatternPackNote = Omit<LegacyNote, 'id'> & {
+  id?: string;
+};
+
+export type PatternPackNotes = Record<string, PatternPackNote[][]>;
+
 export type PatternPackLane = KitChannelInput & {
   id: string;
   laneId?: string;
@@ -205,7 +211,7 @@ export type PatternPack = {
   patternNames?: string[];
   patternSettings?: PatternSettings[];
   lanes: PatternPackLane[];
-  notes: LegacyNotes;
+  notes: PatternPackNotes;
 } & Partial<ContentHashMetadata>;
 
 export type SequencerModelState = {
@@ -503,7 +509,7 @@ const getPatternLaneIds = (patternsState: PatternsState): string[] => (
 );
 
 export const normalizeNotesState = (
-  legacyNotes: LegacyNotes = {},
+  legacyNotes: PatternPackNotes = {},
   patternIds: string[] = createPatternIds(),
   patterns: PatternsState = createPatternsState({ patternCount: patternIds.length }),
 ): NotesState => (
@@ -511,10 +517,22 @@ export const normalizeNotesState = (
     lanePatterns.forEach((patternNotes, patternIndex) => {
       const patternId = patternIds[patternIndex] || patternIndexToId(patternIndex);
       const pattern = patterns.entities[patternId] || DEFAULT_PATTERN_SETTINGS;
-      patternNotes.forEach((note) => {
-        state.ids.push(note.id);
-        state.entities[note.id] = {
-          id: note.id,
+      patternNotes.forEach((note, noteIndex) => {
+        const baseId = note.id || [
+          'pattern-note',
+          encodeURIComponent(laneId),
+          encodeURIComponent(patternId),
+          noteIndex,
+        ].join(':');
+        let noteId = baseId;
+        let suffix = 2;
+        while (state.entities[noteId]) {
+          noteId = `${baseId}:${suffix}`;
+          suffix += 1;
+        }
+        state.ids.push(noteId);
+        state.entities[noteId] = {
+          id: noteId,
           laneId,
           patternId,
           step: typeof note.step === 'undefined' ? beatToStep(note.beat, pattern) : note.step,

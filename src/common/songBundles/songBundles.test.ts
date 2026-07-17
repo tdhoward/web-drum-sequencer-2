@@ -1,6 +1,8 @@
 import {
   createSongExportBundle,
+  parseSongExportBundle,
   resolveSongBundleImport,
+  serializeSongExportBundle,
   verifySongExportBundle,
 } from './songBundles';
 import { normalizeKitChannelsState } from '../sequencerModel';
@@ -57,6 +59,61 @@ describe('song export bundles', () => {
     expect(verified.patternPackHash.contentHash).toBe(bundle.manifest.patternPack.contentHash);
     expect(verified.songHash.contentHash).toBe(bundle.manifest.song.contentHash);
     expect(bundle.manifest.song.kitContentHash).toBe(verified.kitHash.contentHash);
+  });
+
+  test('serializes and restores embedded sample payloads', async () => {
+    const bundle = await createBundle();
+    const restored = parseSongExportBundle(serializeSongExportBundle(bundle));
+
+    await expect(verifySongExportBundle(restored)).resolves.toEqual(expect.objectContaining({
+      songHash: expect.objectContaining({ contentHash: bundle.manifest.song.contentHash }),
+    }));
+    expect(Array.from(new Uint8Array(Object.values(restored.samplePayloads)[0])))
+      .toEqual([10, 20, 30]);
+  });
+
+  test('rejects malformed serialized manifests', async () => {
+    expect(() => parseSongExportBundle('{"manifest":{}}')).toThrow(
+      'Unsupported song bundle format or version',
+    );
+  });
+
+  test('exports only represented lanes and active notes without note IDs', async () => {
+    const source = await createBundle();
+    const channel = source.manifest.drumkit.channels[0];
+    const sample = source.manifest.drumkit.samples[0];
+    const patternPack: PatternPack = {
+      ...source.manifest.patternPack,
+      patternSettings: [{
+        timeSignature: { beatsPerBar: 4, beatUnit: 4 },
+        bars: 1,
+        stepsPerBeat: 4,
+      }],
+      lanes: [
+        ...source.manifest.patternPack.lanes,
+        { id: 'orphan', laneId: 'orphan', percussionType: 'snare_drum' },
+      ],
+      notes: {
+        kick: [[
+          { id: 'portable-id', beat: 1 },
+          { id: 'hidden-id', beat: 5 },
+        ]],
+        orphan: [[{ id: 'orphan-id', beat: 1 }]],
+      },
+    };
+    const bundle = await createSongExportBundle({
+      song: source.manifest.song,
+      kit: source.manifest.drumkit.kit,
+      channels: [channel],
+      samples: { [sample.id]: sample },
+      patternPack,
+      includedLaneIds: ['kick'],
+      getSampleBytes: async () => Uint8Array.from([10, 20, 30]).buffer,
+    });
+
+    expect(bundle.manifest.patternPack.lanes.map(lane => lane.laneId)).toEqual(['kick']);
+    expect(bundle.manifest.patternPack.notes.orphan).toBeUndefined();
+    expect(bundle.manifest.patternPack.notes.kick[0]).toEqual([{ beat: 1 }]);
   });
 
   test('rejects a sample payload changed after export', async () => {

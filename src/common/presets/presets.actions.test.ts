@@ -1,6 +1,11 @@
 import { loadPreset } from './presets.actions';
 import { DEFAULT_KIT_ID, normalizeKitChannelsState } from '../sequencerModel';
+import type { PatternPack } from '../sequencerModel';
 import { PERCUSSION_TYPES } from '../percussion';
+import rootReducer from '../../reducer';
+import { channelsSelector } from '../channels';
+import { notesSelector } from '../notes';
+import { loadPatternPack, savePatternPackAs } from '../patternPacks';
 
 jest.mock('../../services/featureChecks');
 jest.mock('../../services/sampleStore', () => ({
@@ -125,5 +130,75 @@ describe('loadPreset', () => {
         confidence: 'high',
       }),
     ]);
+  });
+
+  test('preserves imported pattern lanes and notes when switching kits', () => {
+    const importedPatternPack: PatternPack = {
+      id: 'user-imported-beats',
+      name: 'Imported Beats',
+      bpm: 105,
+      swing: 0.1,
+      lanes: [
+        {
+          id: 'portable-kick',
+          laneId: 'portable-kick',
+          name: 'Portable Kick',
+          percussionType: PERCUSSION_TYPES.BASS_DRUM,
+        },
+        {
+          id: 'portable-snare',
+          laneId: 'portable-snare',
+          name: 'Portable Snare',
+          percussionType: PERCUSSION_TYPES.SNARE_DRUM,
+        },
+      ],
+      notes: {
+        'portable-kick': [[{ beat: 1 }]],
+        'portable-snare': [[{ beat: 2 }]],
+      },
+    };
+    const secondKit = {
+      name: 'Second Kit',
+      channels: [
+        {
+          id: 'second-kit-kick',
+          name: 'Second Kick',
+          sample: 'second-kick.wav',
+          percussionType: PERCUSSION_TYPES.BASS_DRUM,
+        },
+        {
+          id: 'second-kit-snare',
+          name: 'Second Snare',
+          sample: 'second-snare.wav',
+          percussionType: PERCUSSION_TYPES.SNARE_DRUM,
+        },
+      ],
+    };
+    let state = rootReducer(undefined, { type: '@@INIT' });
+    const getState = () => state;
+    const dispatch = (action: unknown): unknown => {
+      if (typeof action === 'function') {
+        return (action as (
+          nestedDispatch: typeof dispatch,
+          nestedGetState: typeof getState,
+        ) => unknown)(dispatch, getState);
+      }
+      state = rootReducer(state, action as Parameters<typeof rootReducer>[1]);
+      return action;
+    };
+
+    dispatch(savePatternPackAs(importedPatternPack));
+    dispatch(loadPatternPack(importedPatternPack));
+    expect(notesSelector(state)['portable-kick'][0]).toHaveLength(1);
+    expect(notesSelector(state)['portable-snare'][0]).toHaveLength(1);
+
+    dispatch(loadPreset(secondKit));
+
+    expect(channelsSelector(state).map(channel => channel.id)).toEqual([
+      'portable-kick',
+      'portable-snare',
+    ]);
+    expect(notesSelector(state)['portable-kick'][0]).toHaveLength(1);
+    expect(notesSelector(state)['portable-snare'][0]).toHaveLength(1);
   });
 });

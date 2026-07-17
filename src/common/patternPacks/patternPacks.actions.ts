@@ -57,7 +57,7 @@ const slugify = (value: string): string => String(value)
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-|-$/g, '');
 
-const createPatternPackId = (name: string, existingPatternPacks: PatternPack[]): string => {
+export const createPatternPackId = (name: string, existingPatternPacks: PatternPack[]): string => {
   const baseId = `user-${slugify(name) || 'pattern-pack'}`;
   const existingIds = new Set(existingPatternPacks.map(patternPack => patternPack.id));
   let id = baseId;

@@ -1,12 +1,16 @@
 import {
-  calculateKitContentHash,
   calculatePatternPackContentHash,
-  calculateSampleFingerprint,
   calculateSongContentHash,
   contentHashIndexKey,
   createContentHashIndex,
   hasCurrentContentHash,
 } from '../contentHash';
+import {
+  assertDrumkitSnapshotShape,
+  createDrumkitSnapshot,
+  verifyDrumkitSnapshot,
+} from '../kitBundles';
+import type { DrumkitSnapshot } from '../kitBundles';
 import type {
   ContentHashMetadata,
   Kit,
@@ -15,20 +19,19 @@ import type {
   Sample,
   SavedSong,
 } from '../sequencerModel';
+import {
+  assertPatternPackShape,
+  preparePatternPackForExport,
+} from '../patternPackBundles';
+import {
+  parseBinaryPayloads,
+  serializeBinaryPayloads,
+} from '../bundlePayloads';
 
 export const SONG_BUNDLE_FORMAT = 'wds-song-bundle' as const;
 export const SONG_BUNDLE_VERSION = 1;
 
-export type ExportedSample = Sample & Required<ContentHashMetadata> & {
-  byteLength: number;
-  payloadKey: string;
-};
-
-export type DrumkitSnapshot = {
-  kit: Kit & Required<ContentHashMetadata>;
-  channels: KitChannel[];
-  samples: ExportedSample[];
-};
+export type { DrumkitSnapshot, ExportedSample } from '../kitBundles';
 
 export type SongBundleManifest = {
   format: typeof SONG_BUNDLE_FORMAT;
@@ -49,39 +52,8 @@ export type CreateSongExportBundleInput = {
   channels: KitChannel[];
   samples: Record<string, Sample>;
   patternPack: PatternPack;
+  includedLaneIds?: string[];
   getSampleBytes: (sample: Sample) => Promise<ArrayBuffer>;
-};
-
-const sampleMetadataMatches = (
-  sample: Sample,
-  fingerprint: ContentHashMetadata & { byteLength: number },
-): boolean => (
-  (!sample.contentHash || sample.contentHash === fingerprint.contentHash)
-    && (!sample.contentHashAlgorithm
-      || sample.contentHashAlgorithm === fingerprint.contentHashAlgorithm)
-    && (!sample.contentHashVersion
-      || sample.contentHashVersion === fingerprint.contentHashVersion)
-    && (typeof sample.byteLength === 'undefined' || sample.byteLength === fingerprint.byteLength)
-);
-
-const referencedSamples = (
-  kit: Kit,
-  channels: KitChannel[],
-  samples: Record<string, Sample>,
-): Sample[] => {
-  const channelsById = channels.reduce<Record<string, KitChannel>>((result, channel) => {
-    result[channel.id] = channel;
-    return result;
-  }, {});
-
-  return kit.channelIds.reduce<Sample[]>((result, channelId) => {
-    const channel = channelsById[channelId];
-    if (!channel) throw new Error(`Cannot export missing kit channel: ${channelId}`);
-    const sample = samples[channel.sampleId];
-    if (!sample) throw new Error(`Cannot export missing sample: ${channel.sampleId}`);
-    if (!result.some(existing => existing.id === sample.id)) result.push(sample);
-    return result;
-  }, []);
 };
 
 export const createSongExportBundle = async ({
@@ -90,33 +62,18 @@ export const createSongExportBundle = async ({
   channels,
   samples,
   patternPack,
+  includedLaneIds,
   getSampleBytes,
 }: CreateSongExportBundleInput): Promise<SongExportBundle> => {
-  const samplePayloads: Record<string, ArrayBuffer> = {};
-  const exportedSamples: ExportedSample[] = [];
-  const hashedSamples = { ...samples };
-
-  for (const sample of referencedSamples(kit, channels, samples)) {
-    const bytes = await getSampleBytes(sample);
-    const fingerprint = await calculateSampleFingerprint(bytes);
-    if (!sampleMetadataMatches(sample, fingerprint)) {
-      throw new Error(`Stored sample fingerprint does not match payload: ${sample.id}`);
-    }
-    const payloadKey = fingerprint.contentHash;
-    samplePayloads[payloadKey] = bytes;
-    const exportedSample: ExportedSample = {
-      ...sample,
-      ...fingerprint,
-      payloadKey,
-    };
-    exportedSamples.push(exportedSample);
-    hashedSamples[sample.id] = exportedSample;
-  }
-
-  const kitHash = await calculateKitContentHash({ kit, channels, samples: hashedSamples });
-  const exportedKit = { ...kit, ...kitHash };
-  const patternPackHash = await calculatePatternPackContentHash(patternPack);
-  const exportedPatternPack = { ...patternPack, ...patternPackHash };
+  const { drumkit, samplePayloads, kitHash } = await createDrumkitSnapshot({
+    kit,
+    channels,
+    samples,
+    getSampleBytes,
+  });
+  const portablePatternPack = preparePatternPackForExport(patternPack, includedLaneIds);
+  const patternPackHash = await calculatePatternPackContentHash(portablePatternPack);
+  const exportedPatternPack = { ...portablePatternPack, ...patternPackHash };
   const songForExport: SavedSong = {
     ...song,
     selectedKitId: kit.id,
@@ -136,15 +93,7 @@ export const createSongExportBundle = async ({
       format: SONG_BUNDLE_FORMAT,
       version: SONG_BUNDLE_VERSION,
       song: { ...songForExport, ...songHash },
-      drumkit: {
-        kit: exportedKit,
-        channels: kit.channelIds.map((channelId) => {
-          const channel = channels.find(candidate => candidate.id === channelId);
-          if (!channel) throw new Error(`Cannot export missing kit channel: ${channelId}`);
-          return { ...channel };
-        }),
-        samples: exportedSamples,
-      },
+      drumkit,
       patternPack: exportedPatternPack,
     },
     samplePayloads,
@@ -176,28 +125,10 @@ export const verifySongExportBundle = async (
     throw new Error('Unsupported song bundle format or version');
   }
 
-  const samplesById: Record<string, Sample> = {};
-  const sampleHashes: Record<string, ContentHashMetadata & { byteLength: number }> = {};
-  for (const sample of manifest.drumkit.samples) {
-    const payload = bundle.samplePayloads[sample.payloadKey];
-    if (!(payload instanceof ArrayBuffer)) {
-      throw new Error(`Sample payload is missing: ${sample.payloadKey}`);
-    }
-    const fingerprint = await calculateSampleFingerprint(payload);
-    assertMatchingHash(`Sample ${sample.id}`, sample, fingerprint);
-    if (sample.byteLength !== fingerprint.byteLength) {
-      throw new Error(`Sample ${sample.id} byte length verification failed`);
-    }
-    samplesById[sample.id] = { ...sample, ...fingerprint };
-    sampleHashes[sample.id] = fingerprint;
-  }
-
-  const kitHash = await calculateKitContentHash({
-    kit: manifest.drumkit.kit,
-    channels: manifest.drumkit.channels,
-    samples: samplesById,
-  });
-  assertMatchingHash('Drumkit', manifest.drumkit.kit, kitHash);
+  const { sampleHashes, kitHash } = await verifyDrumkitSnapshot(
+    manifest.drumkit,
+    bundle.samplePayloads,
+  );
 
   const patternPackHash = await calculatePatternPackContentHash(manifest.patternPack);
   assertMatchingHash('Pattern pack', manifest.patternPack, patternPackHash);
@@ -263,5 +194,83 @@ export const resolveSongBundleImport = async (
       selectedKitId,
       patternPackId,
     },
+  };
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+);
+
+const isStringArray = (value: unknown): value is string[] => (
+  Array.isArray(value) && value.every(item => typeof item === 'string')
+);
+
+const assertSavedSongShape: (value: unknown) => asserts value is SavedSong = (value) => {
+  if (
+    !isRecord(value)
+    || typeof value.id !== 'string'
+    || typeof value.name !== 'string'
+    || typeof value.selectedKitId !== 'string'
+    || typeof value.patternPackId !== 'string'
+    || !Array.isArray(value.arrangementPatternIds)
+    || !value.arrangementPatternIds.every(isStringArray)
+    || (typeof value.tempoChanges !== 'undefined'
+      && (!Array.isArray(value.tempoChanges)
+        || !value.tempoChanges.every(item => item === null
+          || (typeof item === 'number' && Number.isFinite(item) && item > 0))))
+    || !hasCurrentContentHash(value)
+    || typeof value.kitContentHash !== 'string'
+    || typeof value.patternPackContentHash !== 'string'
+  ) {
+    throw new Error('Song bundle manifest is invalid');
+  }
+};
+
+const assertSongManifestShape: (
+  value: unknown,
+) => asserts value is SongBundleManifest = (value) => {
+  if (
+    !isRecord(value)
+    || value.format !== SONG_BUNDLE_FORMAT
+    || value.version !== SONG_BUNDLE_VERSION
+  ) {
+    throw new Error('Unsupported song bundle format or version');
+  }
+  assertSavedSongShape(value.song);
+  assertDrumkitSnapshotShape(value.drumkit);
+  assertPatternPackShape(value.patternPack);
+  if (!hasCurrentContentHash(value.patternPack)) {
+    throw new Error('Song bundle pattern-pack content hash is missing or unsupported');
+  }
+};
+
+type SerializedSongBundle = {
+  manifest: SongBundleManifest;
+  samplePayloads: Record<string, string>;
+};
+
+export const serializeSongExportBundle = (bundle: SongExportBundle): string => JSON.stringify({
+  manifest: bundle.manifest,
+  samplePayloads: serializeBinaryPayloads(bundle.samplePayloads),
+} satisfies SerializedSongBundle);
+
+export const parseSongExportBundle = (value: string): SongExportBundle => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new Error('Song bundle file is not valid JSON');
+  }
+  if (!isRecord(parsed)) throw new Error('Song bundle file is invalid');
+  assertSongManifestShape(parsed.manifest);
+  if (!isRecord(parsed.samplePayloads)) {
+    throw new Error('Song bundle sample payloads are invalid');
+  }
+  return {
+    manifest: parsed.manifest,
+    samplePayloads: parseBinaryPayloads(
+      parsed.samplePayloads,
+      'Song bundle sample payloads are invalid',
+    ),
   };
 };

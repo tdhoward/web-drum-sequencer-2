@@ -93,7 +93,7 @@ export const loadChannels = (
 ): Thunk => (dispatch, getState) => {
   const kitId = targetKitId || getSelectedKitId(getState());
   channels.forEach((channel) => {
-    dispatch(addSampleFromUrl(channel.sample, 'factory'));
+    dispatch(addSampleFromUrl(channel.sample, channel.sourceType || 'factory'));
     loadSampleStatefully(dispatch, channel);
   });
   dispatch(replaceKitChannels(channels, kitId));

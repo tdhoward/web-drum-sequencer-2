@@ -33,7 +33,9 @@ const fingerprintAndDecode = async (
   fingerprint?: SampleFingerprint,
 ): Promise<AudioBuffer> => {
   const resolvedFingerprint = fingerprint || await calculateSampleFingerprint(audioData);
-  const drumBuffer = await decodeAudio(audioData);
+  // Web Audio implementations may detach the buffer passed to decodeAudioData.
+  // Decode a copy so the verified payload remains intact for IndexedDB.
+  const drumBuffer = await decodeAudio(audioData.slice(0));
   sampleFingerprintStore[url] = resolvedFingerprint;
   sampleStore[url] = drumBuffer;
   return drumBuffer;
@@ -84,12 +86,40 @@ export const ensureSampleFingerprint = async (url: string): Promise<SampleFinger
   }
 };
 
+export const getSampleBytes = async (url: string): Promise<ArrayBuffer> => {
+  try {
+    const record = await getSampleRecordFromDB(url);
+    return record.audioData;
+  } catch {
+    return fetchFile(url).then(decodeFile);
+  }
+};
+
+export const saveImportedSampleBytes = async (
+  id: string,
+  audioData: ArrayBuffer,
+  fingerprint: SampleFingerprint,
+): Promise<StoredSample> => {
+  const calculatedFingerprint = await calculateSampleFingerprint(audioData);
+  if (
+    calculatedFingerprint.contentHash !== fingerprint.contentHash
+    || calculatedFingerprint.byteLength !== fingerprint.byteLength
+  ) {
+    throw new Error(`Imported sample fingerprint does not match payload: ${id}`);
+  }
+  const drumBuffer = await decodeAudio(audioData.slice(0));
+  await saveToDB(audioData, id, calculatedFingerprint);
+  sampleStore[id] = drumBuffer;
+  sampleFingerprintStore[id] = calculatedFingerprint;
+  return { id, fingerprint: calculatedFingerprint };
+};
+
 export const saveToSampleStore = (file: File): Promise<StoredSample> => {
   const id = file.name;
   return decodeFile(file)
     .then(async (myArrayBuffer) => {
       const fingerprint = await calculateSampleFingerprint(myArrayBuffer);
-      const drumBuffer = await decodeAudio(myArrayBuffer);
+      const drumBuffer = await decodeAudio(myArrayBuffer.slice(0));
       await saveToDB(myArrayBuffer, id, fingerprint);
       sampleStore[id] = drumBuffer;
       sampleFingerprintStore[id] = fingerprint;

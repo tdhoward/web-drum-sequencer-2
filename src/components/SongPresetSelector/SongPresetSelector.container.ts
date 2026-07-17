@@ -4,6 +4,8 @@ import {
   currentSavedSongStateSelector,
   doSaveSong,
   eraseSong,
+  exportCurrentSong,
+  importSongFile,
   loadSavedSong,
   isCurrentPatternPackEditedSelector,
   selectedSavedSongSelector,
@@ -17,16 +19,19 @@ import type { AppDispatch } from '../../store';
 import type { RootState } from '../../reducer';
 import {
   PresetSelectorComponent,
-  type PresetSelectorCommand,
   type PresetSelectorOption,
 } from '../PresetSelector/PresetSelector.component';
 import { SaveSongModal } from '../SaveSongModal';
 import { clearScheduledNotes } from '../../services/audioScheduler';
 import { stopAllNotes } from '../../services/audioRouter';
+import { openSongFilePicker } from '../../services/songFiles';
+import {
+  createSongMemoryOptions,
+  type SongPresetCommand,
+} from './SongPresetSelector.commands';
 
-type Command = 'SAVE_SONG_AS' | 'SAVE_SONG' | 'DELETE_SONG';
 type AppAction = Parameters<AppDispatch>[0];
-const Selector = PresetSelectorComponent<SavedSong, Command>;
+const Selector = PresetSelectorComponent<SavedSong, SongPresetCommand>;
 const derivedHashFields = new Set([
   'contentHash',
   'contentHashAlgorithm',
@@ -51,6 +56,12 @@ const mapStateToProps = (state: RootState) => {
 
 const mapDispatchToProps = (dispatch: AppDispatch) => ({
   doSaveSong: (id: string) => dispatch(doSaveSong(id) as unknown as AppAction),
+  exportSong: () => dispatch(exportCurrentSong() as unknown as AppAction),
+  importSong: (file: File) => {
+    stopAllNotes();
+    clearScheduledNotes();
+    dispatch(importSongFile(file) as unknown as AppAction);
+  },
   eraseSong: (id: string) => {
     stopAllNotes();
     clearScheduledNotes();
@@ -72,26 +83,6 @@ const mapDispatchToProps = (dispatch: AppDispatch) => ({
 type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 
-const memoryOptions = (
-  state: StateProps,
-): PresetSelectorCommand<Command>[] => [
-  {
-    label: state.patternPackEdited ? 'Save Pattern Pack Before Saving Song' : 'Save Song As...',
-    value: 'SAVE_SONG_AS',
-    disabled: state.patternPackEdited,
-  },
-  {
-    label: `Save "${state.selectedSong?.name || state.currentSong.name}"`,
-    value: 'SAVE_SONG',
-    disabled: state.patternPackEdited || !state.selectedSong || !state.isEdited,
-  },
-  {
-    label: `Delete "${state.selectedSong?.name || state.currentSong.name}"`,
-    value: 'DELETE_SONG',
-    disabled: !state.selectedSong,
-  },
-];
-
 const mergeProps = (state: StateProps, actions: DispatchProps) => {
   const blankSong: SavedSong = {
     id: 'song-1',
@@ -106,13 +97,20 @@ const mergeProps = (state: StateProps, actions: DispatchProps) => {
     getPresetId: (song: SavedSong) => song.id,
     isEdited: state.isEdited,
     label: 'SONG',
-    memoryOptions: memoryOptions(state),
+    memoryOptions: createSongMemoryOptions({
+      songName: state.selectedSong?.name || state.currentSong.name,
+      hasSelectedSong: Boolean(state.selectedSong),
+      isEdited: state.isEdited,
+      patternPackEdited: state.patternPackEdited,
+    }),
     modal: React.createElement(SaveSongModal),
     presets: [blankSong],
     userPresets: state.userSongs,
-    onSelectPreset: ({ value }: PresetSelectorOption<SavedSong, Command>) => {
+    onSelectPreset: ({ value }: PresetSelectorOption<SavedSong, SongPresetCommand>) => {
       if (value === 'SAVE_SONG_AS') actions.setSongPrompt(true);
       else if (value === 'SAVE_SONG' && state.selectedSong) actions.doSaveSong(state.selectedSong.id);
+      else if (value === 'EXPORT_SONG') actions.exportSong();
+      else if (value === 'IMPORT_SONG') openSongFilePicker(actions.importSong);
       else if (value === 'DELETE_SONG' && state.selectedSong) actions.eraseSong(state.selectedSong.id);
       else if (typeof value !== 'string') {
         if (value.id === blankSong.id) actions.startNewSong();

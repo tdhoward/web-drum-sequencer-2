@@ -45,4 +45,36 @@ describe('loadSavedSong', () => {
       typeof action !== 'function' && (action as DispatchedAction).type === 'song/setSelectedKitId'
     ))).toBeLessThan(dispatched.findIndex(action => typeof action === 'function'));
   });
+
+  test('finds imported user kits by their explicit kit id', () => {
+    const song: SavedSong = {
+      id: 'imported-song',
+      name: 'Imported Song',
+      selectedKitId: 'kit-import-explicit',
+      patternPackId: 'empty',
+      arrangementPatternIds: [],
+    };
+    const dispatched: unknown[] = [];
+    const state = {
+      patternPacks: {
+        selectedPatternPackId: 'empty',
+        userPatternPacks: [],
+      },
+      presets: {
+        preset: 'Other Kit',
+        userPresets: [{
+          name: 'Renamed Imported Kit',
+          kitId: 'kit-import-explicit',
+          channels: [{ id: 'kick', sample: 'kick.wav' }],
+        }],
+      },
+    };
+
+    loadSavedSong(song)(
+      action => dispatched.push(action),
+      () => state as never,
+    );
+
+    expect(dispatched.filter(action => typeof action === 'function')).toHaveLength(2);
+  });
 });

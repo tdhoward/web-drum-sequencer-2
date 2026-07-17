@@ -2,17 +2,23 @@ import React from 'react';
 import { connect } from 'react-redux';
 import {
   PresetSelectorComponent,
-  type PresetSelectorCommand,
   type PresetSelectorOption,
 } from './PresetSelector.component';
+import {
+  createKitPresetMemoryOptions,
+  type KitPresetCommand,
+} from './PresetSelector.commands';
 import { presetSelectorSelectors } from './PresetSelector.selectors';
 import {
   setPresetPrompt,
   doSavePreset,
   loadPreset,
   erasePreset,
+  exportSelectedKit,
+  importKitFile,
 } from '../../common';
 import presets from '../../presets';
+import { openKitFilePicker } from '../../services/kitFiles';
 import { SavePresetModal } from '../SavePresetModal';
 import type { UserPreset } from '../../common';
 import type { FactoryPreset } from '../../common/sequencerModel';
@@ -21,16 +27,17 @@ import type { RootState } from '../../reducer';
 
 type AppAction = Parameters<AppDispatch>[0];
 type LoadPresetInput = Parameters<typeof loadPreset>[0];
-type PresetCommand = 'SAVE_PRESET_AS' | 'SAVE_PRESET' | 'DELETE_PRESET';
 type PresetOption = FactoryPreset | UserPreset;
-type PresetSelectOption = PresetSelectorOption<PresetOption, PresetCommand>;
-const KitPresetSelectorComponent = PresetSelectorComponent<PresetOption, PresetCommand>;
+type PresetSelectOption = PresetSelectorOption<PresetOption, KitPresetCommand>;
+const KitPresetSelectorComponent = PresetSelectorComponent<PresetOption, KitPresetCommand>;
 
 type PresetSelectorDispatchProps = {
   setPresetPrompt: (isOpen: boolean) => void;
   doSavePreset: (presetName: string) => void;
   loadPreset: (preset: LoadPresetInput) => void;
   erasePreset: (presetName: string) => void;
+  exportKit: () => void;
+  importKit: (file: File) => void;
 };
 
 type PresetSelectorOwnProps = {
@@ -53,6 +60,12 @@ const mapDispatchToProps = (dispatch: AppDispatch): PresetSelectorDispatchProps 
   },
   erasePreset: (presetName) => {
     dispatch(erasePreset(presetName) as unknown as AppAction);
+  },
+  exportKit: () => {
+    dispatch(exportSelectedKit() as unknown as AppAction);
+  },
+  importKit: (file) => {
+    dispatch(importKitFile(file) as unknown as AppAction);
   },
 });
 
@@ -84,6 +97,12 @@ const mergeProps = (
       case 'SAVE_PRESET_AS':
         dispatchProps.setPresetPrompt(true);
         break;
+      case 'EXPORT_KIT':
+        dispatchProps.exportKit();
+        break;
+      case 'IMPORT_KIT':
+        openKitFilePicker(dispatchProps.importKit);
+        break;
       default:
         if (typeof value !== 'string') {
           dispatchProps.loadPreset(value as LoadPresetInput);
@@ -93,28 +112,14 @@ const mergeProps = (
   },
 });
 
-const createMemoryOptions = (
-  stateProps: PresetSelectorStateProps,
-): PresetSelectorCommand<PresetCommand>[] => {
+const createMemoryOptions = (stateProps: PresetSelectorStateProps) => {
   const selectedPresetName = stateProps.currentPreset?.name || presets[0]?.name || 'Unknown';
   const defaultPresetSelected = presets.some(preset => preset.name === selectedPresetName);
-
-  return [
-    {
-      label: 'Save Kit As...',
-      value: 'SAVE_PRESET_AS',
-    },
-    {
-      label: `Save "${selectedPresetName}"`,
-      value: 'SAVE_PRESET',
-      disabled: !stateProps.isEdited || defaultPresetSelected,
-    },
-    {
-      label: `Delete "${selectedPresetName}"`,
-      value: 'DELETE_PRESET',
-      disabled: defaultPresetSelected,
-    },
-  ];
+  return createKitPresetMemoryOptions(
+    selectedPresetName,
+    stateProps.isEdited,
+    defaultPresetSelected,
+  );
 };
 
 export const PresetSelector = connect(
