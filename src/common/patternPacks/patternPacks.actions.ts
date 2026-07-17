@@ -23,6 +23,7 @@ import {
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import {
   deletePatternPack,
+  renamePatternPack,
   savePatternPack,
   savePatternPackAs,
   setSelectedPatternPack,
@@ -218,4 +219,10 @@ export const erasePatternPack = (patternPackId: string) => (
 
   dispatch(deletePatternPack(patternPackId));
   dispatch(showFlashMessage(FLASH_MESSAGES.PATTERN_PACK_DELETED));
+};
+
+export const doRenamePatternPack = (patternPackId: string, name: string) => (
+  dispatch: Dispatch,
+): void => {
+  dispatch(renamePatternPack({ id: patternPackId, name }));
 };

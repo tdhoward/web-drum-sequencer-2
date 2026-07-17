@@ -23,7 +23,7 @@ import type {
   SongState,
 } from '../sequencerModel';
 import { currentKitPresetStateSelector } from './presets.selectors';
-import { presetsSlice, type UserPreset } from './presets.reducer';
+import { presetsSlice, type PresetsState, type UserPreset } from './presets.reducer';
 import { calculateKitPresetContentHash } from '../../services/libraryContentHash';
 import { selectedPatternPackSelector } from '../patternPacks/patternPacks.selectors';
 
@@ -31,6 +31,7 @@ export const {
   setPreset,
   savePreset,
   savePresetAs,
+  renamePreset,
   deletePreset,
 } = presetsSlice.actions;
 
@@ -44,6 +45,7 @@ type KitPreset = MappingReviewKitPreset & {
 
 type PresetRootState = SequencerRootState & {
   song: SongState;
+  presets?: PresetsState;
   patternPacks?: {
     selectedPatternPackId?: string;
   };
@@ -199,4 +201,19 @@ export const doSavePreset = (presetName: string) => (
     } as UserPreset));
     dispatch(showFlashMessage(FLASH_MESSAGES.PRESET_SAVED));
   });
+};
+
+export const doRenamePreset = (presetName: string, name: string) => (
+  dispatch: Dispatch,
+  getState: () => PresetRootState,
+): void => {
+  const state = getState();
+  const preset = state.presets?.userPresets.find(
+    userPreset => userPreset.name === presetName,
+  );
+  if (!preset) return;
+
+  const kitId = preset.kitId || state.song.selectedKitId || kitIdFromPresetName(presetName);
+  dispatch(renamePreset({ presetName, name, kitId }));
+  dispatch(setKitName(kitId, name));
 };

@@ -1,7 +1,7 @@
 import patternPacks from '../../patternPacks';
 import kitPresets from '../../presets';
 import { loadPatternPack } from '../patternPacks';
-import { loadSong, setSelectedKitId } from '../song';
+import { loadSong, setSelectedKitId, setSongName } from '../song';
 import { stopPlayback } from '../playbackSession';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import type { SavedSong } from '../sequencerModel';
@@ -11,6 +11,7 @@ import {
 } from './songLibrary.selectors';
 import {
   deleteSong,
+  renameSong,
   saveSong,
   saveSongAs,
   setSelectedSongId,
@@ -178,4 +179,11 @@ export const eraseSong = (songId: string) => (dispatch: Dispatch): void => {
   dispatch(deleteSong(songId));
   dispatch(startNewSong());
   dispatch(showFlashMessage(FLASH_MESSAGES.SONG_DELETED));
+};
+
+export const doRenameSong = (songId: string, name: string) => (
+  dispatch: Dispatch,
+): void => {
+  dispatch(renameSong({ id: songId, name }));
+  dispatch(setSongName(name));
 };

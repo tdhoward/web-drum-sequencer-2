@@ -9,6 +9,7 @@ import {
   needsMappingReview,
   requestPatternPackLoad,
   setPatternPackPrompt,
+  setPatternPackRenamePrompt,
 } from '../../common';
 import { patternPackSelectorSelectors } from './PatternPackSelector.selectors';
 import {
@@ -39,6 +40,7 @@ type PatternPackSelectorDispatchProps = {
   importPatternPack: (file: File) => void;
   loadPatternPack: (patternPack: PatternPack) => void;
   setPatternPackPrompt: (isOpen: boolean) => void;
+  setPatternPackRenamePrompt: (isOpen: boolean) => void;
 };
 
 type PatternPackSelectOption = PresetSelectorOption<PatternPack, PatternPackCommand>;
@@ -72,6 +74,9 @@ const mapDispatchToProps = (dispatch: AppDispatch): PatternPackSelectorDispatchP
   setPatternPackPrompt: (isOpen) => {
     dispatch(setPatternPackPrompt(isOpen));
   },
+  setPatternPackRenamePrompt: (isOpen) => {
+    dispatch(setPatternPackRenamePrompt(isOpen));
+  },
 });
 
 const mergeProps = (
@@ -103,6 +108,9 @@ const mergeProps = (
         break;
       case 'SAVE_PATTERN_PACK_AS':
         dispatchProps.setPatternPackPrompt(true);
+        break;
+      case 'RENAME_PATTERN_PACK':
+        dispatchProps.setPatternPackRenamePrompt(true);
         break;
       case 'EXPORT_PATTERN_PACK':
         dispatchProps.exportPatternPack();

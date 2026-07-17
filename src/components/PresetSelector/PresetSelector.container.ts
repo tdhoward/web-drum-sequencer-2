@@ -11,6 +11,7 @@ import {
 import { presetSelectorSelectors } from './PresetSelector.selectors';
 import {
   setPresetPrompt,
+  setPresetRenamePrompt,
   doSavePreset,
   requestPresetLoad,
   erasePreset,
@@ -33,6 +34,7 @@ const KitPresetSelectorComponent = PresetSelectorComponent<PresetOption, KitPres
 
 type PresetSelectorDispatchProps = {
   setPresetPrompt: (isOpen: boolean) => void;
+  setPresetRenamePrompt: (isOpen: boolean) => void;
   doSavePreset: (presetName: string) => void;
   loadPreset: (preset: LoadPresetInput) => void;
   erasePreset: (presetName: string) => void;
@@ -51,6 +53,9 @@ type PresetSelectorStateProps = ReturnType<typeof mapStateToProps>;
 const mapDispatchToProps = (dispatch: AppDispatch): PresetSelectorDispatchProps => ({
   setPresetPrompt: (isOpen) => {
     dispatch(setPresetPrompt(isOpen));
+  },
+  setPresetRenamePrompt: (isOpen) => {
+    dispatch(setPresetRenamePrompt(isOpen));
   },
   doSavePreset: (presetName) => {
     dispatch(doSavePreset(presetName) as unknown as AppAction);
@@ -96,6 +101,9 @@ const mergeProps = (
         break;
       case 'SAVE_PRESET_AS':
         dispatchProps.setPresetPrompt(true);
+        break;
+      case 'RENAME_PRESET':
+        dispatchProps.setPresetRenamePrompt(true);
         break;
       case 'EXPORT_KIT':
         dispatchProps.exportKit();

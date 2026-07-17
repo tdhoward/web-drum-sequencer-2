@@ -6,6 +6,9 @@ import {
   clearFlashMessage,
   setCanInstall,
   setPatternPackPrompt,
+  setPresetRenamePrompt,
+  setPatternPackRenamePrompt,
+  setSongRenamePrompt,
 } from './window.reducer';
 
 describe('setPresetPrompt', () => {
@@ -19,6 +22,18 @@ describe('setPatternPackPrompt', () => {
   test('should set patternPackPromptOpen to true', () => {
     const state = windowReducer(windowInitialState, setPatternPackPrompt(true));
     expect(state.patternPackPromptOpen).toBe(true);
+  });
+});
+
+describe('rename prompts', () => {
+  test.each([
+    ['kit', setPresetRenamePrompt, 'presetPromptOpen', 'presetRenamePrompt'],
+    ['pattern pack', setPatternPackRenamePrompt, 'patternPackPromptOpen', 'patternPackRenamePrompt'],
+    ['song', setSongRenamePrompt, 'songPromptOpen', 'songRenamePrompt'],
+  ] as const)('opens the %s name prompt in rename mode', (_label, action, openKey, renameKey) => {
+    const state = windowReducer(windowInitialState, action(true));
+    expect(state[openKey]).toBe(true);
+    expect(state[renameKey]).toBe(true);
   });
 });
 

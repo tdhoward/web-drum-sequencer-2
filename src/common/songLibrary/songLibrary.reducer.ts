@@ -29,6 +29,10 @@ export const songLibrarySlice = createSlice({
         song.id === action.payload.id ? action.payload : song
       ));
     },
+    renameSong(state, action: PayloadAction<{ id: string; name: string }>) {
+      const song = state.userSongs.find(userSong => userSong.id === action.payload.id);
+      if (song) song.name = action.payload.name;
+    },
     deleteSong(state, action: PayloadAction<string>) {
       state.userSongs = state.userSongs.filter(song => song.id !== action.payload);
       if (state.selectedSongId === action.payload) {
@@ -42,6 +46,7 @@ export const {
   setSelectedSongId,
   saveSongAs,
   saveSong,
+  renameSong,
   deleteSong,
 } = songLibrarySlice.actions;
 

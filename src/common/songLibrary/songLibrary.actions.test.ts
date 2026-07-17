@@ -1,10 +1,29 @@
-import { loadSavedSong } from './songLibrary.actions';
+import { doRenameSong, loadSavedSong } from './songLibrary.actions';
 import type { SavedSong } from '../sequencerModel';
 
 type DispatchedAction = {
   type?: string;
   payload?: unknown;
 };
+
+describe('doRenameSong', () => {
+  test('renames the library entry and live song by stable ID', () => {
+    const actions: DispatchedAction[] = [];
+    doRenameSong('user-song', 'Renamed Song')(
+      action => actions.push(action as DispatchedAction),
+    );
+    expect(actions).toEqual([
+      {
+        type: 'songLibrary/renameSong',
+        payload: { id: 'user-song', name: 'Renamed Song' },
+      },
+      {
+        type: 'song/setSongName',
+        payload: 'Renamed Song',
+      },
+    ]);
+  });
+});
 
 describe('loadSavedSong', () => {
   test('selects the saved kit before loading pattern content', () => {

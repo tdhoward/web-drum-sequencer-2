@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import { SavePresetModalComponent } from './SavePresetModal.component';
 import { savePresetModalSelectors } from './SavePresetModal.selectors';
 import {
   setPresetPrompt,
   doSavePresetAs,
+  doRenamePreset,
 } from '../../common';
 import defaultPresets from '../../presets';
 import type { UserPreset } from '../../common';
@@ -16,6 +17,7 @@ type AppAction = Parameters<AppDispatch>[0];
 type SavePresetModalDispatchProps = {
   setPresetPrompt: (isOpen: boolean) => void;
   doSavePresetAs: (presetName: string) => void;
+  doRenamePreset: (presetName: string, name: string) => void;
 };
 
 const isNameUnique = (proposedName: string, userPresets: UserPreset[]): boolean => [...defaultPresets, ...userPresets].find(
@@ -33,18 +35,31 @@ const mapDispatchToProps = (dispatch: AppDispatch): SavePresetModalDispatchProps
   doSavePresetAs: (presetName) => {
     dispatch(doSavePresetAs(presetName) as unknown as AppAction);
   },
+  doRenamePreset: (presetName, name) => {
+    dispatch(doRenamePreset(presetName, name) as unknown as AppAction);
+  },
 });
 
 type SavePresetModalContainerProps = SavePresetModalStateProps & SavePresetModalDispatchProps;
 
 const SavePresetModalContainer = ({
   doSavePresetAs: connectedDoSavePresetAs,
+  doRenamePreset: connectedDoRenamePreset,
   presetPromptOpen,
+  renamePrompt,
+  selectedPresetName,
   setPresetPrompt: connectedSetPresetPrompt,
   userPresets = [],
 }: SavePresetModalContainerProps) => {
   const [nameField, updateNameField] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (presetPromptOpen) {
+      updateNameField(renamePrompt ? selectedPresetName || '' : '');
+      setError(null);
+    }
+  }, [presetPromptOpen, renamePrompt, selectedPresetName]);
 
   const onChangeNameField = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.value.length < 32) {
@@ -60,16 +75,24 @@ const SavePresetModalContainer = ({
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const trimmedName = nameField.trim();
 
-    if (nameField.length < 1) {
+    if (trimmedName.length < 1) {
       setError('Min length 1');
-    } else if (nameField.length > 32) {
-      setError('Max length 32');
-    } else if (!isNameUnique(nameField, userPresets)) {
+    } else if (trimmedName.length > 31) {
+      setError('Max length 31');
+    } else if (
+      (!renamePrompt || trimmedName !== selectedPresetName)
+      && !isNameUnique(trimmedName, userPresets)
+    ) {
       setError('Must be unique');
     } else {
       connectedSetPresetPrompt(false);
-      connectedDoSavePresetAs(nameField);
+      if (renamePrompt && selectedPresetName) {
+        connectedDoRenamePreset(selectedPresetName, trimmedName);
+      } else {
+        connectedDoSavePresetAs(trimmedName);
+      }
       updateNameField('');
       setError(null);
     }
@@ -83,6 +106,7 @@ const SavePresetModalContainer = ({
       onClose={onClose}
       onSubmit={onSubmit}
       presetPromptOpen={presetPromptOpen}
+      submitLabel={renamePrompt ? 'RENAME' : 'SAVE'}
     />
   );
 };

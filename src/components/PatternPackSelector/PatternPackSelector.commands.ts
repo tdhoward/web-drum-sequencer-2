@@ -3,6 +3,7 @@ import type { PresetSelectorCommand } from '../PresetSelector/PresetSelector.com
 export type PatternPackCommand =
   | 'SAVE_PATTERN_PACK_AS'
   | 'SAVE_PATTERN_PACK'
+  | 'RENAME_PATTERN_PACK'
   | 'EXPORT_PATTERN_PACK'
   | 'IMPORT_PATTERN_PACK'
   | 'DELETE_PATTERN_PACK';
@@ -20,6 +21,11 @@ export const createPatternPackMemoryOptions = (
     label: `Save "${selectedPatternPackName}"`,
     value: 'SAVE_PATTERN_PACK',
     disabled: !isEdited || defaultPatternPackSelected,
+  },
+  {
+    label: `Rename "${selectedPatternPackName}"...`,
+    value: 'RENAME_PATTERN_PACK',
+    disabled: defaultPatternPackSelected,
   },
   {
     label: `Export "${selectedPatternPackName}"...`,

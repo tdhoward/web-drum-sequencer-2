@@ -10,6 +10,7 @@ import {
   isCurrentPatternPackEditedSelector,
   selectedSavedSongSelector,
   setSongPrompt,
+  setSongRenamePrompt,
   startNewSong,
   userSongsSelector,
 } from '../../common';
@@ -78,6 +79,7 @@ const mapDispatchToProps = (dispatch: AppDispatch) => ({
     dispatch(startNewSong() as unknown as AppAction);
   },
   setSongPrompt: (open: boolean) => dispatch(setSongPrompt(open)),
+  setSongRenamePrompt: (open: boolean) => dispatch(setSongRenamePrompt(open)),
 });
 
 type StateProps = ReturnType<typeof mapStateToProps>;
@@ -109,6 +111,7 @@ const mergeProps = (state: StateProps, actions: DispatchProps) => {
     onSelectPreset: ({ value }: PresetSelectorOption<SavedSong, SongPresetCommand>) => {
       if (value === 'SAVE_SONG_AS') actions.setSongPrompt(true);
       else if (value === 'SAVE_SONG' && state.selectedSong) actions.doSaveSong(state.selectedSong.id);
+      else if (value === 'RENAME_SONG') actions.setSongRenamePrompt(true);
       else if (value === 'EXPORT_SONG') actions.exportSong();
       else if (value === 'IMPORT_SONG') openSongFilePicker(actions.importSong);
       else if (value === 'DELETE_SONG' && state.selectedSong) actions.eraseSong(state.selectedSong.id);

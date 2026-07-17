@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
-import { doSaveSongAs, setSongPrompt, songPromptOpenSelector, userSongsSelector } from '../../common';
+import {
+  doRenameSong,
+  doSaveSongAs,
+  selectedSavedSongSelector,
+  setSongPrompt,
+  songPromptOpenSelector,
+  songRenamePromptSelector,
+  userSongsSelector,
+} from '../../common';
 import type { AppDispatch } from '../../store';
 import type { RootState } from '../../reducer';
 import { SavePresetModalComponent } from '../SavePresetModal/SavePresetModal.component';
@@ -9,19 +17,38 @@ type AppAction = Parameters<AppDispatch>[0];
 
 const mapStateToProps = (state: RootState) => ({
   open: songPromptOpenSelector(state),
+  renamePrompt: songRenamePromptSelector(state),
+  selectedSong: selectedSavedSongSelector(state),
   userSongs: userSongsSelector(state),
 });
 
 const mapDispatchToProps = (dispatch: AppDispatch) => ({
   save: (name: string) => dispatch(doSaveSongAs(name) as unknown as AppAction),
+  rename: (id: string, name: string) => (
+    dispatch(doRenameSong(id, name) as unknown as AppAction)
+  ),
   setOpen: (open: boolean) => dispatch(setSongPrompt(open)),
 });
 
 type Props = ReturnType<typeof mapStateToProps> & ReturnType<typeof mapDispatchToProps>;
 
-const SaveSongModalContainer = ({ open, userSongs, save, setOpen }: Props) => {
+const SaveSongModalContainer = ({
+  open,
+  renamePrompt,
+  selectedSong,
+  userSongs,
+  rename,
+  save,
+  setOpen,
+}: Props) => {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (open) {
+      setName(renamePrompt ? selectedSong?.name || '' : '');
+      setError(null);
+    }
+  }, [open, renamePrompt, selectedSong]);
   const close = () => {
     setName('');
     setError(null);
@@ -32,10 +59,14 @@ const SaveSongModalContainer = ({ open, userSongs, save, setOpen }: Props) => {
     const trimmedName = name.trim();
     if (!trimmedName) setError('Min length 1');
     else if (trimmedName.length > 31) setError('Max length 31');
-    else if (userSongs.some(song => song.name === trimmedName)) setError('Must be unique');
+    else if (
+      (!renamePrompt || trimmedName !== selectedSong?.name)
+      && userSongs.some(song => song.name === trimmedName)
+    ) setError('Must be unique');
     else {
       setOpen(false);
-      save(trimmedName);
+      if (renamePrompt && selectedSong) rename(selectedSong.id, trimmedName);
+      else save(trimmedName);
       setName('');
       setError(null);
     }
@@ -53,6 +84,7 @@ const SaveSongModalContainer = ({ open, userSongs, save, setOpen }: Props) => {
       onClose={close}
       onSubmit={submit}
       presetPromptOpen={open}
+      submitLabel={renamePrompt ? 'RENAME' : 'SAVE'}
     />
   );
 };

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import { SavePresetModalComponent } from '../SavePresetModal/SavePresetModal.component';
 import { savePatternPackModalSelectors } from './SavePatternPackModal.selectors';
 import {
   doSavePatternPackAs,
+  doRenamePatternPack,
   setPatternPackPrompt,
 } from '../../common';
 import defaultPatternPacks from '../../patternPacks';
@@ -15,6 +16,7 @@ type AppAction = Parameters<AppDispatch>[0];
 
 type SavePatternPackModalDispatchProps = {
   doSavePatternPackAs: (patternPackName: string) => void;
+  doRenamePatternPack: (patternPackId: string, name: string) => void;
   setPatternPackPrompt: (isOpen: boolean) => void;
 };
 
@@ -32,6 +34,9 @@ const mapDispatchToProps = (dispatch: AppDispatch): SavePatternPackModalDispatch
   doSavePatternPackAs: (patternPackName) => {
     dispatch(doSavePatternPackAs(patternPackName) as unknown as AppAction);
   },
+  doRenamePatternPack: (patternPackId, name) => {
+    dispatch(doRenamePatternPack(patternPackId, name) as unknown as AppAction);
+  },
   setPatternPackPrompt: (isOpen) => {
     dispatch(setPatternPackPrompt(isOpen));
   },
@@ -42,12 +47,22 @@ type SavePatternPackModalContainerProps =
 
 const SavePatternPackModalContainer = ({
   doSavePatternPackAs: connectedDoSavePatternPackAs,
+  doRenamePatternPack: connectedDoRenamePatternPack,
   patternPackPromptOpen,
+  renamePrompt,
+  selectedPatternPack,
   setPatternPackPrompt: connectedSetPatternPackPrompt,
   userPatternPacks = [],
 }: SavePatternPackModalContainerProps) => {
   const [nameField, updateNameField] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (patternPackPromptOpen) {
+      updateNameField(renamePrompt ? selectedPatternPack?.name || '' : '');
+      setError(null);
+    }
+  }, [patternPackPromptOpen, renamePrompt, selectedPatternPack]);
 
   const onChangeNameField = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.value.length < 32) {
@@ -63,16 +78,24 @@ const SavePatternPackModalContainer = ({
 
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const trimmedName = nameField.trim();
 
-    if (nameField.length < 1) {
+    if (trimmedName.length < 1) {
       setError('Min length 1');
-    } else if (nameField.length > 32) {
-      setError('Max length 32');
-    } else if (!isNameUnique(nameField, userPatternPacks)) {
+    } else if (trimmedName.length > 31) {
+      setError('Max length 31');
+    } else if (
+      (!renamePrompt || trimmedName !== selectedPatternPack?.name)
+      && !isNameUnique(trimmedName, userPatternPacks)
+    ) {
       setError('Must be unique');
     } else {
       connectedSetPatternPackPrompt(false);
-      connectedDoSavePatternPackAs(nameField);
+      if (renamePrompt && selectedPatternPack) {
+        connectedDoRenamePatternPack(selectedPatternPack.id, trimmedName);
+      } else {
+        connectedDoSavePatternPackAs(trimmedName);
+      }
       updateNameField('');
       setError(null);
     }
@@ -88,6 +111,7 @@ const SavePatternPackModalContainer = ({
       onClose={onClose}
       onSubmit={onSubmit}
       presetPromptOpen={patternPackPromptOpen}
+      submitLabel={renamePrompt ? 'RENAME' : 'SAVE'}
     />
   );
 };

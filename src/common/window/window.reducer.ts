@@ -24,8 +24,11 @@ export type FlashMessageKey = typeof FLASH_MESSAGES[keyof typeof FLASH_MESSAGES]
 
 export type WindowState = {
   presetPromptOpen: boolean;
+  presetRenamePrompt: boolean;
   patternPackPromptOpen: boolean;
+  patternPackRenamePrompt: boolean;
   songPromptOpen: boolean;
+  songRenamePrompt: boolean;
   flashMessageKey: FlashMessageKey | null;
   flashMessageVisible: boolean;
   canInstall: boolean;
@@ -33,8 +36,11 @@ export type WindowState = {
 
 export const windowInitialState: WindowState = {
   presetPromptOpen: false,
+  presetRenamePrompt: false,
   patternPackPromptOpen: false,
+  patternPackRenamePrompt: false,
   songPromptOpen: false,
+  songRenamePrompt: false,
   flashMessageKey: null,
   flashMessageVisible: false,
   canInstall: false,
@@ -46,12 +52,27 @@ export const windowSlice = createSlice({
   reducers: {
     setPresetPrompt(state, action: PayloadAction<boolean>) {
       state.presetPromptOpen = action.payload;
+      if (!action.payload) state.presetRenamePrompt = false;
+    },
+    setPresetRenamePrompt(state, action: PayloadAction<boolean>) {
+      state.presetPromptOpen = action.payload;
+      state.presetRenamePrompt = action.payload;
     },
     setPatternPackPrompt(state, action: PayloadAction<boolean>) {
       state.patternPackPromptOpen = action.payload;
+      if (!action.payload) state.patternPackRenamePrompt = false;
+    },
+    setPatternPackRenamePrompt(state, action: PayloadAction<boolean>) {
+      state.patternPackPromptOpen = action.payload;
+      state.patternPackRenamePrompt = action.payload;
     },
     setSongPrompt(state, action: PayloadAction<boolean>) {
       state.songPromptOpen = action.payload;
+      if (!action.payload) state.songRenamePrompt = false;
+    },
+    setSongRenamePrompt(state, action: PayloadAction<boolean>) {
+      state.songPromptOpen = action.payload;
+      state.songRenamePrompt = action.payload;
     },
     setPresetNameField: {
       reducer() {
@@ -81,8 +102,11 @@ export const windowSlice = createSlice({
 
 export const {
   setPresetPrompt,
+  setPresetRenamePrompt,
   setPatternPackPrompt,
+  setPatternPackRenamePrompt,
   setSongPrompt,
+  setSongRenamePrompt,
   setPresetNameField,
   showFlashMessage,
   clearFlashMessage,

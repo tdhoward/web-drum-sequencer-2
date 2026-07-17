@@ -4,6 +4,7 @@ import {
   savePreset,
   savePresetAs,
   deletePreset,
+  renamePreset,
 } from './presets.actions';
 
 jest.mock('../../presets');
@@ -48,5 +49,25 @@ describe('deletePreset', () => {
     expect(state.userPresets.length).toEqual(1);
     const newState = presetsReducer(state, deletePreset('Test preset'));
     expect(newState.userPresets.length).toEqual(0);
+  });
+});
+
+describe('renamePreset', () => {
+  test('renames a user preset and preserves a stable kit ID', () => {
+    const state = presetsReducer(
+      { ...presetsInitialState, preset: testPreset.name },
+      savePresetAs(testPreset),
+    );
+    const renamedState = presetsReducer(state, renamePreset({
+      presetName: testPreset.name,
+      name: 'Renamed preset',
+      kitId: 'kit-test-preset',
+    }));
+
+    expect(renamedState.preset).toBe('Renamed preset');
+    expect(renamedState.userPresets[0]).toEqual(expect.objectContaining({
+      name: 'Renamed preset',
+      kitId: 'kit-test-preset',
+    }));
   });
 });

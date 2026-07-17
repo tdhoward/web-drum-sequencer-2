@@ -1,6 +1,7 @@
 import {
   doSavePatternPack,
   doSavePatternPackAs,
+  doRenamePatternPack,
   loadPatternPack,
   requestPatternPackLoad,
 } from './patternPacks.actions';
@@ -17,6 +18,19 @@ type DispatchedAction = {
   type?: string;
   payload?: unknown;
 };
+
+describe('doRenamePatternPack', () => {
+  test('renames by stable pattern pack ID', () => {
+    const actions: DispatchedAction[] = [];
+    doRenamePatternPack('user-pack', 'Renamed Pack')(
+      action => actions.push(action as DispatchedAction),
+    );
+    expect(actions).toEqual([{
+      type: 'patternPacks/renamePatternPack',
+      payload: { id: 'user-pack', name: 'Renamed Pack' },
+    }]);
+  });
+});
 
 const createPatternsState = (laneIds: string[]): PatternsState => ({
   ids: ['pattern-0', 'pattern-1'],

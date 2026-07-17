@@ -14,6 +14,12 @@ export type PresetsState = {
   preset: string;
 };
 
+type RenamePresetPayload = {
+  presetName: string;
+  name: string;
+  kitId: string;
+};
+
 export const presetsInitialState: PresetsState = {
   userPresets: [],
   preset: defaultPresets[1].name,
@@ -40,6 +46,17 @@ export const presetsSlice = createSlice({
         ),
         action.payload,
       ];
+    },
+    renamePreset(state, action: PayloadAction<RenamePresetPayload>) {
+      const preset = state.userPresets.find(
+        userPreset => userPreset.name === action.payload.presetName,
+      );
+      if (!preset) return;
+      preset.name = action.payload.name;
+      preset.kitId = action.payload.kitId;
+      if (state.preset === action.payload.presetName) {
+        state.preset = action.payload.name;
+      }
     },
     deletePreset(state, action: PayloadAction<string>) {
       state.userPresets = state.userPresets.filter(

@@ -4,6 +4,7 @@ import {
   patternPacksReducer,
   savePatternPack,
   savePatternPackAs,
+  renamePatternPack,
 } from './patternPacks.reducer';
 import type { PatternPack } from '../sequencerModel';
 
@@ -51,5 +52,20 @@ describe('deletePatternPack', () => {
     const updatedState = patternPacksReducer(state, deletePatternPack(testPatternPack.id));
 
     expect(updatedState.userPatternPacks).toHaveLength(0);
+  });
+});
+
+describe('renamePatternPack', () => {
+  test('renames a user pattern pack without changing its ID', () => {
+    const state = patternPacksReducer(patternPacksInitialState, savePatternPackAs(testPatternPack));
+    const renamedState = patternPacksReducer(state, renamePatternPack({
+      id: testPatternPack.id,
+      name: 'Renamed Pack',
+    }));
+
+    expect(renamedState.userPatternPacks?.[0]).toEqual(expect.objectContaining({
+      id: testPatternPack.id,
+      name: 'Renamed Pack',
+    }));
   });
 });

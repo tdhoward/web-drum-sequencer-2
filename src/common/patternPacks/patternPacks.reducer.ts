@@ -34,6 +34,12 @@ export const patternPacksSlice = createSlice({
         action.payload,
       ];
     },
+    renamePatternPack(state, action: PayloadAction<{ id: string; name: string }>) {
+      const patternPack = (state.userPatternPacks || []).find(
+        userPatternPack => userPatternPack.id === action.payload.id,
+      );
+      if (patternPack) patternPack.name = action.payload.name;
+    },
     deletePatternPack(state, action: PayloadAction<string>) {
       state.userPatternPacks = (state.userPatternPacks || []).filter(
         userPatternPack => userPatternPack.id !== action.payload,
@@ -46,6 +52,7 @@ export const {
   setSelectedPatternPack,
   savePatternPack,
   savePatternPackAs,
+  renamePatternPack,
   deletePatternPack,
 } = patternPacksSlice.actions;
 

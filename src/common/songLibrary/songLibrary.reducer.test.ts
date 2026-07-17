@@ -2,6 +2,7 @@ import {
   deleteSong,
   saveSong,
   saveSongAs,
+  renameSong,
   songLibraryInitialState,
   songLibraryReducer,
 } from './songLibrary.reducer';
@@ -32,5 +33,19 @@ describe('song library', () => {
 
     expect(state.userSongs).toEqual([]);
     expect(state.selectedSongId).toBeUndefined();
+  });
+
+  test('renames a user song without changing its ID', () => {
+    const state = songLibraryReducer(songLibraryInitialState, saveSongAs(savedSong));
+    const renamedState = songLibraryReducer(state, renameSong({
+      id: savedSong.id,
+      name: 'Renamed Song',
+    }));
+
+    expect(renamedState.selectedSongId).toBe(savedSong.id);
+    expect(renamedState.userSongs[0]).toEqual(expect.objectContaining({
+      id: savedSong.id,
+      name: 'Renamed Song',
+    }));
   });
 });

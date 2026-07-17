@@ -1,4 +1,4 @@
-import { loadPreset, requestPresetLoad } from './presets.actions';
+import { doRenamePreset, loadPreset, requestPresetLoad } from './presets.actions';
 import { DEFAULT_KIT_ID, normalizeKitChannelsState } from '../sequencerModel';
 import type { PatternPack } from '../sequencerModel';
 import { PERCUSSION_TYPES } from '../percussion';
@@ -245,5 +245,34 @@ describe('loadPreset', () => {
     ]);
     expect(notesSelector(state)['portable-kick'][0]).toHaveLength(1);
     expect(notesSelector(state)['portable-snare'][0]).toHaveLength(1);
+  });
+});
+
+describe('doRenamePreset', () => {
+  test('keeps the selected kit ID stable while renaming its preset and kit entity', () => {
+    const actions: DispatchedAction[] = [];
+    const state = {
+      song: { selectedKitId: 'kit-original' },
+      presets: {
+        preset: 'Original',
+        userPresets: [{ name: 'Original', channels: [] }],
+      },
+    };
+
+    doRenamePreset('Original', 'Renamed')(
+      action => actions.push(action as DispatchedAction),
+      () => state as never,
+    );
+
+    expect(actions).toEqual([
+      {
+        type: 'presets/renamePreset',
+        payload: { presetName: 'Original', name: 'Renamed', kitId: 'kit-original' },
+      },
+      {
+        type: 'kits/setKitName',
+        payload: { kitId: 'kit-original', name: 'Renamed' },
+      },
+    ]);
   });
 });

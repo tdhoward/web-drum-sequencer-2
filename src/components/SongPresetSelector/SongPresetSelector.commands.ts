@@ -3,6 +3,7 @@ import type { PresetSelectorCommand } from '../PresetSelector/PresetSelector.com
 export type SongPresetCommand =
   | 'SAVE_SONG_AS'
   | 'SAVE_SONG'
+  | 'RENAME_SONG'
   | 'EXPORT_SONG'
   | 'IMPORT_SONG'
   | 'DELETE_SONG';
@@ -27,6 +28,11 @@ export const createSongMemoryOptions = ({
     label: `Save "${songName}"`,
     value: 'SAVE_SONG',
     disabled: patternPackEdited || !hasSelectedSong || !isEdited,
+  },
+  {
+    label: `Rename "${songName}"...`,
+    value: 'RENAME_SONG',
+    disabled: !hasSelectedSong,
   },
   {
     label: `Export "${songName}"...`,
