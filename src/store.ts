@@ -138,7 +138,7 @@ const persistConfig = {
   key: 'root',
   version: 9,
   storage,
-  blacklist: ['playbackSession', 'window', 'workspace'],
+  blacklist: ['playbackSession', 'window', 'workspace', 'mappingReview'],
   migrate: createMigrate(migrations as unknown as MigrationManifest, { debug: import.meta.env.DEV }),
 };
 

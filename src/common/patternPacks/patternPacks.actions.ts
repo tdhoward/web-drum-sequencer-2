@@ -8,6 +8,11 @@ import {
   mappingToAssignments,
   replaceKitChannelAssignments,
 } from '../kitChannelAssignments';
+import {
+  closeMappingReview,
+  needsMappingReview,
+  openMappingReview,
+} from '../mappingReview';
 import { setSelectedChannel } from '../master';
 import { setPattern, setSongPatternPackId } from '../song';
 import {
@@ -71,21 +76,17 @@ export const createPatternPackId = (name: string, existingPatternPacks: PatternP
   return id;
 };
 
-export const loadPatternPack = (patternPack: PatternPack) => (
+const commitPatternPackLoad = (
+  patternPack: PatternPack,
+  mappings: ReturnType<typeof resolveKitChannelMapping>['mappings'],
   dispatch: Dispatch,
-  getState: () => SequencerRootState,
-) => {
+  state: SequencerRootState,
+): void => {
   dispatch(stopPlayback());
-  const state = getState();
   const targetKitChannels = getSelectedKitChannels(state);
   const laneIds = patternPack.lanes.map(lane => lane.laneId || lane.id);
   const patternSettings = getPatternPackPatternSettings(patternPack);
   const patterns = createPatternsStateForPatternPack(patternPack, laneIds);
-  const mappingResult = resolveKitChannelMapping({
-    patternLanes: patternPack.lanes,
-    sourceKitChannels: patternPack.lanes,
-    targetKitChannels,
-  });
 
   dispatch(setBPM(patternPack.bpm));
   dispatch(setSwing(patternPack.swing));
@@ -97,14 +98,68 @@ export const loadPatternPack = (patternPack: PatternPack) => (
     patterns,
   }));
   dispatch(replaceKitChannelAssignments({
-    assignments: mappingToAssignments(mappingResult.mappings, targetKitChannels),
+    assignments: mappingToAssignments(mappings, targetKitChannels),
   }));
   dispatch(setPattern(0));
-  dispatch(setSelectedChannel(mappingResult.mappings[0]?.laneId || patternPack.lanes[0]?.laneId));
+  dispatch(setSelectedChannel(mappings[0]?.laneId || patternPack.lanes[0]?.laneId));
   dispatch(setSelectedPatternPack(patternPack.id));
   dispatch(setSongPatternPackId(patternPack.id));
+};
+
+export const loadPatternPack = (patternPack: PatternPack) => (
+  dispatch: Dispatch,
+  getState: () => SequencerRootState,
+) => {
+  const state = getState();
+  const targetKitChannels = getSelectedKitChannels(state);
+  const mappingResult = resolveKitChannelMapping({
+    patternLanes: patternPack.lanes,
+    sourceKitChannels: patternPack.lanes,
+    targetKitChannels,
+  });
+
+  commitPatternPackLoad(patternPack, mappingResult.mappings, dispatch, state);
 
   return mappingResult;
+};
+
+export const requestPatternPackLoad = (patternPack: PatternPack) => (
+  dispatch: Dispatch,
+  getState: () => SequencerRootState,
+) => {
+  const state = getState();
+  const targetKitChannels = getSelectedKitChannels(state);
+  const mappingResult = resolveKitChannelMapping({
+    patternLanes: patternPack.lanes,
+    sourceKitChannels: patternPack.lanes,
+    targetKitChannels,
+  });
+
+  if (needsMappingReview(mappingResult)) {
+    dispatch(openMappingReview({
+      operation: {
+        type: 'patternPack',
+        patternPack,
+      },
+      mappingResult,
+      targetKitChannels,
+    }));
+    return mappingResult;
+  }
+
+  return loadPatternPack(patternPack)(dispatch, getState);
+};
+
+export const applyPatternPackMapping = (
+  patternPack: PatternPack,
+  mappings: ReturnType<typeof resolveKitChannelMapping>['mappings'],
+) => (
+  dispatch: Dispatch,
+  getState: () => SequencerRootState,
+): void => {
+  const state = getState();
+  commitPatternPackLoad(patternPack, mappings, dispatch, state);
+  dispatch(closeMappingReview());
 };
 
 export const doSavePatternPackAs = (patternPackName: string) => (

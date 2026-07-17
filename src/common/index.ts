@@ -12,6 +12,7 @@ export * from './patterns';
 export * from './kits';
 export * from './samples';
 export * from './kitChannelAssignments';
+export * from './mappingReview';
 export * from './patternPacks';
 export * from './compatibility.selectors';
 export * from './workspace';

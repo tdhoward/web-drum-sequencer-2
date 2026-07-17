@@ -6,7 +6,8 @@ import {
   erasePatternPack,
   exportSelectedPatternPack,
   importPatternPackFile,
-  loadPatternPack,
+  needsMappingReview,
+  requestPatternPackLoad,
   setPatternPackPrompt,
 } from '../../common';
 import { patternPackSelectorSelectors } from './PatternPackSelector.selectors';
@@ -16,6 +17,7 @@ import {
 } from '../PresetSelector/PresetSelector.component';
 import { SavePatternPackModal } from '../SavePatternPackModal';
 import type { PatternPack } from '../../common/sequencerModel';
+import type { KitChannelMappingResult } from '../../common';
 import type { AppDispatch } from '../../store';
 import type { RootState } from '../../reducer';
 import { clearScheduledNotes } from '../../services/audioScheduler';
@@ -59,9 +61,13 @@ const mapDispatchToProps = (dispatch: AppDispatch): PatternPackSelectorDispatchP
     dispatch(importPatternPackFile(file) as unknown as AppAction);
   },
   loadPatternPack: (patternPack) => {
-    stopAllNotes();
-    clearScheduledNotes();
-    dispatch(loadPatternPack(patternPack) as unknown as AppAction);
+    const result = dispatch(
+      requestPatternPackLoad(patternPack) as unknown as AppAction,
+    ) as unknown as KitChannelMappingResult;
+    if (!needsMappingReview(result)) {
+      stopAllNotes();
+      clearScheduledNotes();
+    }
   },
   setPatternPackPrompt: (isOpen) => {
     dispatch(setPatternPackPrompt(isOpen));

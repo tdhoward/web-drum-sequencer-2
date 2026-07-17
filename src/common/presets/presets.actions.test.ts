@@ -1,4 +1,4 @@
-import { loadPreset } from './presets.actions';
+import { loadPreset, requestPresetLoad } from './presets.actions';
 import { DEFAULT_KIT_ID, normalizeKitChannelsState } from '../sequencerModel';
 import type { PatternPack } from '../sequencerModel';
 import { PERCUSSION_TYPES } from '../percussion';
@@ -18,6 +18,51 @@ type DispatchedAction = {
 };
 
 describe('loadPreset', () => {
+  test('defers an unresolved kit switch for mapping review without changing kit state', () => {
+    const preset = {
+      name: 'Kick Only Kit',
+      channels: [{
+        id: 'kick-channel',
+        sample: 'kick.wav',
+        percussionType: PERCUSSION_TYPES.BASS_DRUM,
+      }],
+    };
+    const state = {
+      song: {
+        id: 'song-1',
+        name: 'Test Song',
+        selectedKitId: DEFAULT_KIT_ID,
+        selectedPatternId: 'pattern-0',
+        patternIds: ['pattern-0'],
+      },
+      patterns: {
+        ids: ['pattern-0'],
+        entities: {
+          'pattern-0': {
+            id: 'pattern-0',
+            name: 'Pattern 1',
+            timeSignature: { beatsPerBar: 4, beatUnit: 4 },
+            bars: 1,
+            stepsPerBeat: 4,
+            laneIds: ['unknown-lane'],
+          },
+        },
+      },
+    };
+    const actions: DispatchedAction[] = [];
+
+    const result = requestPresetLoad(preset)(
+      action => actions.push(action as DispatchedAction),
+      () => state,
+    );
+
+    expect(result.unresolved).toHaveLength(1);
+    expect(actions.map(action => action.type)).toEqual(['mappingReview/openMappingReview']);
+    expect(actions[0].payload).toEqual(expect.objectContaining({
+      operation: expect.objectContaining({ type: 'kitPreset', preset }),
+    }));
+  });
+
   test('loads kit data and assignments without replacing pattern data', () => {
     const preset = {
       name: 'Djembe Kit',

@@ -109,10 +109,10 @@ Current UI/component naming baseline:
 * User-facing channel column labels should stay generic (`Channels` and `Channel`) unless a specific workflow needs extra clarity.
 * Sample editing surfaces should keep `SampleEditorModal` and `SampleManagerModal` names so one-shot waveform editing and broader sample-library cleanup remain separate workflows.
 
-When kit switching is exposed in the UI, prefer a review/apply flow:
+Kit and Pattern Pack selector switching use a review/apply flow:
 
-* If every lane maps confidently, the app may apply the mapping directly.
-* If mappings are low confidence or unresolved, show a dialog with the proposed mapping.
+* If every lane maps with high or medium confidence, the app applies the mapping directly.
+* If mappings are low confidence or unresolved, the app shows a dialog before changing state.
 * The dialog should let the user choose a target channel, mute/ignore an unresolved lane, or accept the fallback.
 * User corrections should update assignments, not rewrite notes.
 

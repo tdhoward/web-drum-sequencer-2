@@ -7,6 +7,12 @@ import {
   mappingToAssignments,
   replaceKitChannelAssignments,
 } from '../kitChannelAssignments';
+import {
+  closeMappingReview,
+  needsMappingReview,
+  openMappingReview,
+  type MappingReviewKitPreset,
+} from '../mappingReview';
 import presets from '../../presets';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import type {
@@ -30,14 +36,10 @@ export const {
 
 type Dispatch = (action: unknown) => unknown;
 
-type KitPreset = {
-  name: string;
-  kitId?: string;
-  channels: FactoryPresetChannel[];
+type KitPreset = MappingReviewKitPreset & {
   bpm?: number;
   swing?: number;
   notes?: LegacyNotes;
-  [key: string]: unknown;
 };
 
 type PresetRootState = SequencerRootState & {
@@ -87,20 +89,65 @@ const resolveAssignmentsForPreset = (
   };
 };
 
+const commitPresetLoad = (
+  preset: KitPreset,
+  mappings: ReturnType<typeof resolveAssignmentsForPreset>['mappingResult']['mappings'],
+  dispatch: Dispatch,
+) => {
+  const kitId = preset.kitId || kitIdFromPresetName(preset.name);
+  const targetKitChannels = preset.channels.map(channelForKit(kitId));
+  dispatch(setSelectedKitId(kitId));
+  dispatch(loadChannels(preset.channels, kitId));
+  dispatch(setKitName(kitId, preset.name));
+  dispatch(setPreset(preset.name));
+  dispatch(replaceKitChannelAssignments({
+    assignments: mappingToAssignments(mappings, targetKitChannels),
+  }));
+  dispatch(setSelectedChannel(mappings[0]?.laneId || preset.channels[0]?.id));
+};
+
 export const loadPreset = (preset: KitPreset) => (
   dispatch: Dispatch,
   getState: () => PresetRootState,
 ) => {
   const state = getState();
   const kitId = preset.kitId || kitIdFromPresetName(preset.name);
-  const { mappingResult, assignments } = resolveAssignmentsForPreset(preset, kitId, state);
-  dispatch(setSelectedKitId(kitId));
-  dispatch(loadChannels(preset.channels, kitId));
-  dispatch(setKitName(kitId, preset.name));
-  dispatch(setPreset(preset.name));
-  dispatch(replaceKitChannelAssignments({ assignments }));
-  dispatch(setSelectedChannel(mappingResult.mappings[0]?.laneId || preset.channels[0].id));
+  const { mappingResult } = resolveAssignmentsForPreset(preset, kitId, state);
+  commitPresetLoad(preset, mappingResult.mappings, dispatch);
   return mappingResult;
+};
+
+export const requestPresetLoad = (preset: KitPreset) => (
+  dispatch: Dispatch,
+  getState: () => PresetRootState,
+) => {
+  const state = getState();
+  const kitId = preset.kitId || kitIdFromPresetName(preset.name);
+  const targetKitChannels = preset.channels.map(channelForKit(kitId));
+  const { mappingResult } = resolveAssignmentsForPreset(preset, kitId, state);
+
+  if (needsMappingReview(mappingResult)) {
+    dispatch(openMappingReview({
+      operation: {
+        type: 'kitPreset',
+        preset,
+      },
+      mappingResult,
+      targetKitChannels,
+    }));
+    return mappingResult;
+  }
+
+  commitPresetLoad(preset, mappingResult.mappings, dispatch);
+  return mappingResult;
+};
+
+export const applyPresetMapping = (
+  preset: KitPreset,
+  mappings: ReturnType<typeof resolveAssignmentsForPreset>['mappingResult']['mappings'],
+) => (dispatch: Dispatch): void => {
+  commitPresetLoad(preset, mappings, dispatch);
+  dispatch(closeMappingReview());
 };
 
 export const erasePreset = (presetName: string) => (

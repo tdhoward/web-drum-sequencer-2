@@ -52,7 +52,7 @@ export type EnrichedPatternLane = KitChannelMetadata & {
   laneId: string;
 };
 
-export type MappingConfidence = 'high' | 'medium' | 'low' | 'unresolved';
+export type MappingConfidence = 'high' | 'medium' | 'low' | 'manual' | 'unresolved';
 
 export type KitChannelMapping = {
   laneId: string;

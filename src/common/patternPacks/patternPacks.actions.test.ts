@@ -2,6 +2,7 @@ import {
   doSavePatternPack,
   doSavePatternPackAs,
   loadPatternPack,
+  requestPatternPackLoad,
 } from './patternPacks.actions';
 import {
   DEFAULT_KIT_ID,
@@ -111,6 +112,57 @@ const createSaveState = (userPatternPacks: PatternPack[] = []) => {
 };
 
 describe('loadPatternPack', () => {
+  test('defers a low-confidence pattern pack mapping without replacing pattern data', () => {
+    const patternPack: PatternPack = {
+      id: 'rim-patterns',
+      name: 'Rim Patterns',
+      bpm: 110,
+      swing: 0,
+      lanes: [{
+        id: 'rim-lane',
+        laneId: 'rim-lane',
+        percussionType: PERCUSSION_TYPES.RIMSHOT,
+      }],
+      notes: {},
+    };
+    const state = {
+      song: {
+        id: 'song-1',
+        name: 'Test Song',
+        selectedKitId: DEFAULT_KIT_ID,
+        selectedPatternId: 'pattern-0',
+        patternIds: ['pattern-0'],
+      },
+      kits: {
+        ids: [DEFAULT_KIT_ID],
+        entities: {
+          [DEFAULT_KIT_ID]: {
+            id: DEFAULT_KIT_ID,
+            name: 'Snare Kit',
+            channelIds: ['snare-channel'],
+          },
+        },
+      },
+      kitChannels: normalizeKitChannelsState([{
+        id: 'snare-channel',
+        sample: 'snare.wav',
+        percussionType: PERCUSSION_TYPES.SNARE_DRUM,
+      }]),
+    };
+    const actions: DispatchedAction[] = [];
+
+    const result = requestPatternPackLoad(patternPack)(
+      action => actions.push(action as DispatchedAction),
+      () => state,
+    );
+
+    expect(result.mappings[0].confidence).toBe('low');
+    expect(actions.map(action => action.type)).toEqual(['mappingReview/openMappingReview']);
+    expect(actions[0].payload).toEqual(expect.objectContaining({
+      operation: expect.objectContaining({ type: 'patternPack', patternPack }),
+    }));
+  });
+
   test('loads pattern content and resolves it onto the selected kit', () => {
     const patternPack: PatternPack = {
       id: 'hip-hop-swing',

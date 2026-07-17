@@ -28,6 +28,7 @@ export * from './VolumeMeter.component';
 export * from './WorkspaceNav';
 export * from './WorkspacePanel';
 export * from './KitChannelList';
+export * from './MappingReviewModal';
 export * from './SampleManagerModal';
 export * from './SampleEditorModal';
 export * from './SampleRecorderModal';

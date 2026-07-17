@@ -17,6 +17,7 @@ import {
   FlashMessage,
   AppMenu,
   WorkspacePanel,
+  MappingReviewModal,
 } from '.';
 import { selectedWorkspaceSelector, WORKSPACES } from '../common/workspace';
 import { selectedThemeSelector } from '../common/uiPreferences';
@@ -131,6 +132,7 @@ const AppComponent = ({ selectedTheme, selectedWorkspace }: AppComponentProps) =
           </Box>
         </footer>
         <FlashMessage />
+        <MappingReviewModal />
       </Box>
     </>
   </ThemeProvider>

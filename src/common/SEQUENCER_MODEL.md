@@ -469,8 +469,10 @@ the bundle are never treated as authoritative local IDs.
 
 Kit switching should be treated as an explicit lane-to-kit-channel assignment,
 not as note mutation. The resolver produces an inspectable mapping result with
-confidence and reasons so a later review dialog can ask the user to approve or
-correct uncertain assignments.
+confidence and reasons. Kit and Pattern Pack selector changes apply high- and
+medium-confidence results directly; low-confidence or unresolved results open
+the mapping review dialog before changing kit or pattern state. The dialog can
+accept a fallback, choose another target channel, or leave a lane silent.
 
 The current compatibility UI still reads `kitChannel.laneId`, but
 `kitChannelAssignments` is the forward path for applying a resolved mapping.

@@ -12,7 +12,7 @@ import { presetSelectorSelectors } from './PresetSelector.selectors';
 import {
   setPresetPrompt,
   doSavePreset,
-  loadPreset,
+  requestPresetLoad,
   erasePreset,
   exportSelectedKit,
   importKitFile,
@@ -26,7 +26,7 @@ import type { AppDispatch } from '../../store';
 import type { RootState } from '../../reducer';
 
 type AppAction = Parameters<AppDispatch>[0];
-type LoadPresetInput = Parameters<typeof loadPreset>[0];
+type LoadPresetInput = Parameters<typeof requestPresetLoad>[0];
 type PresetOption = FactoryPreset | UserPreset;
 type PresetSelectOption = PresetSelectorOption<PresetOption, KitPresetCommand>;
 const KitPresetSelectorComponent = PresetSelectorComponent<PresetOption, KitPresetCommand>;
@@ -56,7 +56,7 @@ const mapDispatchToProps = (dispatch: AppDispatch): PresetSelectorDispatchProps 
     dispatch(doSavePreset(presetName) as unknown as AppAction);
   },
   loadPreset: (preset) => {
-    dispatch(loadPreset(preset) as unknown as AppAction);
+    dispatch(requestPresetLoad(preset) as unknown as AppAction);
   },
   erasePreset: (presetName) => {
     dispatch(erasePreset(presetName) as unknown as AppAction);
