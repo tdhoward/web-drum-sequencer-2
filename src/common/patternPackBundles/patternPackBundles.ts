@@ -102,7 +102,7 @@ const isPatternPackNotes = (value: unknown): boolean => (
   ))
 );
 
-const assertPatternPackShape: (value: unknown) => asserts value is PatternPack = (value) => {
+export const assertPatternPackShape: (value: unknown) => asserts value is PatternPack = (value) => {
   if (
     !isRecord(value)
     || typeof value.id !== 'string'

@@ -227,6 +227,15 @@ sample payloads. These snapshots make the exported song self-contained without
 changing the normalized live in-app state model; import resolves the snapshots
 to global library objects and then makes the saved song reference those objects.
 
+Portable Songs use the `.wds-song` extension and GZIP-compressed JSON. Export
+captures the live arrangement, tempo markers, Kit, referenced sample bytes, and
+active Pattern pack, including unsaved authored Pattern changes. Pattern data
+uses the same portability boundary as `.wds-pattern-pack`: runtime note IDs,
+unresolved lanes, and notes beyond active Pattern lengths are omitted. Import
+verifies the complete dependency hash chain before changing Redux content,
+resolves matching Kit, Pattern pack, and Song content by hash, and remaps the
+saved Song to collision-safe local dependency IDs when new objects are needed.
+
 ```text
 kit
   id

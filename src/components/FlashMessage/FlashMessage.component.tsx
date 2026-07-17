@@ -18,6 +18,11 @@ import {
 import { SongSaved } from '../SongSaved.component';
 import { SongDeleted } from '../SongDeleted.component';
 import {
+  SongExported,
+  SongImported,
+  SongTransferError,
+} from '../SongTransferMessage.component';
+import {
   KitExported,
   KitImported,
   KitTransferError,
@@ -57,6 +62,12 @@ const getMessageComponent = (messageKey: string | null | undefined): FlashMessag
       return SongSaved;
     case FLASH_MESSAGES.SONG_DELETED:
       return SongDeleted;
+    case FLASH_MESSAGES.SONG_EXPORTED:
+      return SongExported;
+    case FLASH_MESSAGES.SONG_IMPORTED:
+      return SongImported;
+    case FLASH_MESSAGES.SONG_TRANSFER_ERROR:
+      return SongTransferError;
     case FLASH_MESSAGES.KIT_EXPORTED:
       return KitExported;
     case FLASH_MESSAGES.KIT_IMPORTED:

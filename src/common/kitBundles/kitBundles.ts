@@ -11,6 +11,10 @@ import type {
   KitChannel,
   Sample,
 } from '../sequencerModel';
+import {
+  parseBinaryPayloads,
+  serializeBinaryPayloads,
+} from '../bundlePayloads';
 
 export const KIT_BUNDLE_FORMAT = 'wds-kit-bundle' as const;
 export const KIT_BUNDLE_VERSION = 1;
@@ -222,44 +226,6 @@ export const resolveKitBundleImport = async (
   };
 };
 
-const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-
-const bytesToBase64 = (buffer: ArrayBuffer): string => {
-  const bytes = new Uint8Array(buffer);
-  let result = '';
-  for (let index = 0; index < bytes.length; index += 3) {
-    const first = bytes[index];
-    const second = bytes[index + 1];
-    const third = bytes[index + 2];
-    const value = (first << 16) | ((second || 0) << 8) | (third || 0);
-    result += BASE64_ALPHABET[(value >> 18) & 63];
-    result += BASE64_ALPHABET[(value >> 12) & 63];
-    result += index + 1 < bytes.length ? BASE64_ALPHABET[(value >> 6) & 63] : '=';
-    result += index + 2 < bytes.length ? BASE64_ALPHABET[value & 63] : '=';
-  }
-  return result;
-};
-
-const base64ToBytes = (value: string): ArrayBuffer => {
-  if (value.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(value)) {
-    throw new Error('Kit bundle contains an invalid sample payload');
-  }
-  const padding = value.endsWith('==') ? 2 : value.endsWith('=') ? 1 : 0;
-  const bytes = new Uint8Array((value.length / 4) * 3 - padding);
-  let outputIndex = 0;
-  for (let index = 0; index < value.length; index += 4) {
-    const first = BASE64_ALPHABET.indexOf(value[index]);
-    const second = BASE64_ALPHABET.indexOf(value[index + 1]);
-    const third = value[index + 2] === '=' ? 0 : BASE64_ALPHABET.indexOf(value[index + 2]);
-    const fourth = value[index + 3] === '=' ? 0 : BASE64_ALPHABET.indexOf(value[index + 3]);
-    const combined = (first << 18) | (second << 12) | (third << 6) | fourth;
-    if (outputIndex < bytes.length) bytes[outputIndex++] = (combined >> 16) & 255;
-    if (outputIndex < bytes.length) bytes[outputIndex++] = (combined >> 8) & 255;
-    if (outputIndex < bytes.length) bytes[outputIndex++] = combined & 255;
-  }
-  return bytes.buffer;
-};
-
 type SerializedKitBundle = {
   manifest: KitBundleManifest;
   samplePayloads: Record<string, string>;
@@ -269,26 +235,26 @@ const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 );
 
-const assertManifestShape: (value: unknown) => asserts value is KitBundleManifest = (value) => {
-  if (!isRecord(value) || value.format !== KIT_BUNDLE_FORMAT || value.version !== KIT_BUNDLE_VERSION) {
-    throw new Error('Unsupported kit bundle format or version');
-  }
-  const drumkit = value.drumkit;
+export const assertDrumkitSnapshotShape: (
+  value: unknown,
+) => asserts value is DrumkitSnapshot = (value) => {
+  const drumkit = value;
   if (!isRecord(drumkit) || !isRecord(drumkit.kit)
     || !Array.isArray(drumkit.channels) || !Array.isArray(drumkit.samples)) {
     throw new Error('Kit bundle manifest is invalid');
   }
 };
 
+const assertManifestShape: (value: unknown) => asserts value is KitBundleManifest = (value) => {
+  if (!isRecord(value) || value.format !== KIT_BUNDLE_FORMAT || value.version !== KIT_BUNDLE_VERSION) {
+    throw new Error('Unsupported kit bundle format or version');
+  }
+  assertDrumkitSnapshotShape(value.drumkit);
+};
+
 export const serializeKitExportBundle = (bundle: KitExportBundle): string => JSON.stringify({
   manifest: bundle.manifest,
-  samplePayloads: Object.entries(bundle.samplePayloads).reduce<Record<string, string>>(
-    (payloads, [key, buffer]) => {
-      payloads[key] = bytesToBase64(buffer);
-      return payloads;
-    },
-    {},
-  ),
+  samplePayloads: serializeBinaryPayloads(bundle.samplePayloads),
 } satisfies SerializedKitBundle);
 
 export const parseKitExportBundle = (value: string): KitExportBundle => {
@@ -302,13 +268,9 @@ export const parseKitExportBundle = (value: string): KitExportBundle => {
   assertManifestShape(parsed.manifest);
   if (!isRecord(parsed.samplePayloads)) throw new Error('Kit bundle sample payloads are invalid');
 
-  const samplePayloads = Object.entries(parsed.samplePayloads).reduce<Record<string, ArrayBuffer>>(
-    (payloads, [key, encoded]) => {
-      if (typeof encoded !== 'string') throw new Error('Kit bundle sample payloads are invalid');
-      payloads[key] = base64ToBytes(encoded);
-      return payloads;
-    },
-    {},
+  const samplePayloads = parseBinaryPayloads(
+    parsed.samplePayloads,
+    'Kit bundle sample payloads are invalid',
   );
   return { manifest: parsed.manifest, samplePayloads };
 };

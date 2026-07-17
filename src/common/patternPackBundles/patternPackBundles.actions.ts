@@ -45,7 +45,7 @@ const sameHash = (
   hasCurrentContentHash(value) && value.contentHash === hash.contentHash
 );
 
-const findMatchingPatternPack = async (
+export const findMatchingPatternPack = async (
   existingPatternPacks: PatternPack[],
   hash: ContentHashMetadata,
 ): Promise<PatternPack | undefined> => {
@@ -57,7 +57,7 @@ const findMatchingPatternPack = async (
   return undefined;
 };
 
-const createUniquePatternPackName = (
+export const createUniquePatternPackName = (
   requestedName: string,
   existingPatternPacks: PatternPack[],
 ): string => {
@@ -71,6 +71,42 @@ const createUniquePatternPackName = (
     candidate = `${baseName} (Imported ${suffix})`;
   }
   return candidate;
+};
+
+export type PreparedPatternPackBundleImport = {
+  patternPack: PatternPack;
+  isNew: boolean;
+};
+
+export const preparePatternPackBundleImport = async (
+  bundle: ReturnType<typeof parsePatternPackExportBundle>,
+  verifiedHash: ContentHashMetadata,
+  existingPatternPacks: PatternPack[],
+): Promise<PreparedPatternPackBundleImport> => {
+  const duplicate = await findMatchingPatternPack(existingPatternPacks, verifiedHash);
+  if (duplicate) return { patternPack: duplicate, isNew: false };
+
+  const name = createUniquePatternPackName(
+    bundle.manifest.patternPack.name,
+    existingPatternPacks,
+  );
+  return {
+    patternPack: {
+      ...bundle.manifest.patternPack,
+      id: createPatternPackId(name, existingPatternPacks),
+      name,
+      ...verifiedHash,
+    },
+    isNew: true,
+  };
+};
+
+export const applyPreparedPatternPackBundleImport = (
+  dispatch: Dispatch,
+  prepared: PreparedPatternPackBundleImport,
+): void => {
+  if (prepared.isNew) dispatch(savePatternPackAs(prepared.patternPack));
+  dispatch(loadPatternPack(prepared.patternPack));
 };
 
 export const exportSelectedPatternPack = () => async (
@@ -111,25 +147,12 @@ export const importPatternPackFile = (file: File) => async (
     const verifiedHash = await verifyPatternPackExportBundle(bundle);
     const state = getState();
     const existingPatternPacks = allPatternPacksSelector(state);
-    const duplicate = await findMatchingPatternPack(existingPatternPacks, verifiedHash);
-    if (duplicate) {
-      dispatch(loadPatternPack(duplicate));
-      dispatch(showFlashMessage(FLASH_MESSAGES.PATTERN_PACK_IMPORTED));
-      return true;
-    }
-
-    const name = createUniquePatternPackName(
-      bundle.manifest.patternPack.name,
+    const prepared = await preparePatternPackBundleImport(
+      bundle,
+      verifiedHash,
       existingPatternPacks,
     );
-    const importedPatternPack: PatternPack = {
-      ...bundle.manifest.patternPack,
-      id: createPatternPackId(name, existingPatternPacks),
-      name,
-      ...verifiedHash,
-    };
-    dispatch(savePatternPackAs(importedPatternPack));
-    dispatch(loadPatternPack(importedPatternPack));
+    applyPreparedPatternPackBundleImport(dispatch, prepared);
     dispatch(showFlashMessage(FLASH_MESSAGES.PATTERN_PACK_IMPORTED));
     return true;
   } catch (error) {

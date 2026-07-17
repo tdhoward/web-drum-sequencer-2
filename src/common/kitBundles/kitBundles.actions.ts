@@ -9,7 +9,7 @@ import {
   saveImportedSampleBytes,
 } from '../../services/sampleStore';
 import { uuid } from '../../services/uuid';
-import { replaceKit } from '../kits';
+import { kitIdFromPresetName, replaceKit } from '../kits';
 import { loadPreset, savePresetAs } from '../presets';
 import type { PresetsState, UserPreset } from '../presets';
 import type {
@@ -36,7 +36,7 @@ import {
 } from './kitBundles';
 import type { ExportedSample } from './kitBundles';
 
-type KitTransferState = SequencerRootState & {
+export type KitTransferState = SequencerRootState & {
   song: SongState;
   presets?: PresetsState;
   userSamples?: UserSamplesState;
@@ -198,6 +198,129 @@ const resolveActiveKitDuplicate = (
   return activeKit && hasHash(activeKit, hash) ? activeKit : undefined;
 };
 
+type ImportedUserSample = {
+  id: string;
+  name: string;
+  sourceName?: string;
+  sourceType: 'imported';
+} & ContentHashMetadata & { byteLength: number };
+
+export type PreparedKitBundleImport = {
+  kitId: string;
+  duplicatePreset?: UserPreset;
+  activeDuplicate?: Kit;
+  importedPreset?: UserPreset;
+  importedKit?: Kit;
+  newUserSamples: ImportedUserSample[];
+};
+
+export const prepareKitBundleImport = async (
+  bundle: ReturnType<typeof parseKitExportBundle>,
+  verified: {
+    sampleHashes: Record<string, ContentHashMetadata & { byteLength: number }>;
+    kitHash: ContentHashMetadata;
+  },
+  state: KitTransferState,
+): Promise<PreparedKitBundleImport> => {
+  const userPresets = state.presets?.userPresets || [];
+  const duplicatePreset = existingPresetWithHash(userPresets, verified.kitHash);
+  if (duplicatePreset?.channels) {
+    return {
+      kitId: duplicatePreset.kitId || kitIdFromPresetName(duplicatePreset.name),
+      duplicatePreset,
+      newUserSamples: [],
+    };
+  }
+  const activeDuplicate = resolveActiveKitDuplicate(state, verified.kitHash);
+  if (activeDuplicate) {
+    return {
+      kitId: activeDuplicate.id,
+      activeDuplicate,
+      newUserSamples: [],
+    };
+  }
+
+  const { drumkit } = bundle.manifest;
+  const sampleHashIndex = createExistingSampleHashIndex(state);
+  const existingSampleIds = new Set((state.userSamples || []).map(getUserSampleId));
+  const localSampleUrls = new Map<string, string>();
+  const newUserSamples: ImportedUserSample[] = [];
+
+  for (const sample of drumkit.samples) {
+    const existingUrl = sampleHashIndex.get(sample.contentHash)
+      || localSampleUrls.get(sample.contentHash);
+    if (existingUrl) {
+      localSampleUrls.set(sample.contentHash, existingUrl);
+      continue;
+    }
+    const localId = createImportedSampleId(sample, existingSampleIds);
+    const fingerprint = verified.sampleHashes[sample.id];
+    await saveImportedSampleBytes(
+      localId,
+      bundle.samplePayloads[sample.payloadKey],
+      fingerprint,
+    );
+    localSampleUrls.set(sample.contentHash, localId);
+    sampleHashIndex.set(sample.contentHash, localId);
+    newUserSamples.push({
+      id: localId,
+      name: sample.name?.trim() || sample.fileName?.trim() || localId,
+      sourceName: sample.fileName || sample.url,
+      sourceType: 'imported',
+      ...fingerprint,
+    });
+  }
+
+  const kitId = createUniqueKitId(state);
+  const name = createUniqueKitName(drumkit.kit.name, userPresets);
+  const samplesById = drumkit.samples.reduce<Record<string, ExportedSample>>((result, sample) => {
+    result[sample.id] = sample;
+    return result;
+  }, {});
+  const channels = drumkit.channels.map((channel) => {
+    const importedSample = samplesById[channel.sampleId];
+    if (!importedSample) throw new Error(`Imported kit sample is missing: ${channel.sampleId}`);
+    const localUrl = localSampleUrls.get(importedSample.contentHash);
+    if (!localUrl) throw new Error(`Imported kit sample could not be resolved: ${channel.sampleId}`);
+    return createImportedChannel(channel, kitId, importedSample, localUrl);
+  });
+  const importedPreset: UserPreset = {
+    name,
+    kitId,
+    channels,
+    ...verified.kitHash,
+  };
+  return {
+    kitId,
+    importedPreset,
+    importedKit: {
+      id: kitId,
+      name,
+      channelIds: channels.map(channel => channel.id),
+      ...verified.kitHash,
+    },
+    newUserSamples,
+  };
+};
+
+export const applyPreparedKitBundleImport = (
+  dispatch: Dispatch,
+  prepared: PreparedKitBundleImport,
+): void => {
+  if (prepared.duplicatePreset) {
+    dispatch(loadPreset(prepared.duplicatePreset as Parameters<typeof loadPreset>[0]));
+    return;
+  }
+  if (prepared.activeDuplicate) return;
+  if (!prepared.importedPreset || !prepared.importedKit) {
+    throw new Error('Imported kit could not be prepared');
+  }
+  prepared.newUserSamples.forEach(sample => dispatch(addUserSample(sample)));
+  dispatch(savePresetAs(prepared.importedPreset));
+  dispatch(loadPreset(prepared.importedPreset as Parameters<typeof loadPreset>[0]));
+  dispatch(replaceKit(prepared.importedKit));
+};
+
 export const importKitFile = (file: File) => async (
   dispatch: Dispatch,
   getState: GetState,
@@ -206,84 +329,8 @@ export const importKitFile = (file: File) => async (
     const serialized = await readKitFile(file);
     const bundle = parseKitExportBundle(serialized);
     const verified = await verifyKitExportBundle(bundle);
-    const state = getState();
-    const userPresets = state.presets?.userPresets || [];
-    const duplicatePreset = existingPresetWithHash(userPresets, verified.kitHash);
-    if (duplicatePreset?.channels) {
-      dispatch(loadPreset(duplicatePreset as Parameters<typeof loadPreset>[0]));
-      dispatch(showFlashMessage(FLASH_MESSAGES.KIT_IMPORTED));
-      return true;
-    }
-    if (resolveActiveKitDuplicate(state, verified.kitHash)) {
-      dispatch(showFlashMessage(FLASH_MESSAGES.KIT_IMPORTED));
-      return true;
-    }
-
-    const { drumkit } = bundle.manifest;
-    const sampleHashIndex = createExistingSampleHashIndex(state);
-    const existingSampleIds = new Set((state.userSamples || []).map(getUserSampleId));
-    const localSampleUrls = new Map<string, string>();
-    const newUserSamples: Array<{
-      id: string;
-      name: string;
-      sourceName?: string;
-      sourceType: 'imported';
-    } & ContentHashMetadata & { byteLength: number }> = [];
-
-    for (const sample of drumkit.samples) {
-      const existingUrl = sampleHashIndex.get(sample.contentHash)
-        || localSampleUrls.get(sample.contentHash);
-      if (existingUrl) {
-        localSampleUrls.set(sample.contentHash, existingUrl);
-        continue;
-      }
-      const localId = createImportedSampleId(sample, existingSampleIds);
-      const fingerprint = verified.sampleHashes[sample.id];
-      await saveImportedSampleBytes(
-        localId,
-        bundle.samplePayloads[sample.payloadKey],
-        fingerprint,
-      );
-      localSampleUrls.set(sample.contentHash, localId);
-      sampleHashIndex.set(sample.contentHash, localId);
-      newUserSamples.push({
-        id: localId,
-        name: sample.name?.trim() || sample.fileName?.trim() || localId,
-        sourceName: sample.fileName || sample.url,
-        sourceType: 'imported',
-        ...fingerprint,
-      });
-    }
-
-    const kitId = createUniqueKitId(state);
-    const name = createUniqueKitName(drumkit.kit.name, userPresets);
-    const samplesById = drumkit.samples.reduce<Record<string, ExportedSample>>((result, sample) => {
-      result[sample.id] = sample;
-      return result;
-    }, {});
-    const channels = drumkit.channels.map((channel) => {
-      const importedSample = samplesById[channel.sampleId];
-      if (!importedSample) throw new Error(`Imported kit sample is missing: ${channel.sampleId}`);
-      const localUrl = localSampleUrls.get(importedSample.contentHash);
-      if (!localUrl) throw new Error(`Imported kit sample could not be resolved: ${channel.sampleId}`);
-      return createImportedChannel(channel, kitId, importedSample, localUrl);
-    });
-    const importedPreset: UserPreset = {
-      name,
-      kitId,
-      channels,
-      ...verified.kitHash,
-    };
-
-    newUserSamples.forEach(sample => dispatch(addUserSample(sample)));
-    dispatch(savePresetAs(importedPreset));
-    dispatch(loadPreset(importedPreset as Parameters<typeof loadPreset>[0]));
-    dispatch(replaceKit({
-      id: kitId,
-      name,
-      channelIds: channels.map(channel => channel.id),
-      ...verified.kitHash,
-    }));
+    const prepared = await prepareKitBundleImport(bundle, verified, getState());
+    applyPreparedKitBundleImport(dispatch, prepared);
     dispatch(showFlashMessage(FLASH_MESSAGES.KIT_IMPORTED));
     return true;
   } catch (error) {
