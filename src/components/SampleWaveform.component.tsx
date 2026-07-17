@@ -16,6 +16,7 @@ type WaveformTracePoint = {
 type SampleWaveformProps = {
   alignmentOffset?: number;
   onAlignmentChange?: (alignmentOffset: number) => void;
+  sampleContentHash?: string;
   sampleUrl?: string;
   onClick?: () => void;
   title?: string;
@@ -415,6 +416,7 @@ export const formatAlignmentOffset = (offset: number): string => (
 export const SampleWaveform = ({
   alignmentOffset = 0,
   onAlignmentChange,
+  sampleContentHash,
   sampleUrl,
   onClick,
   title,
@@ -450,7 +452,7 @@ export const SampleWaveform = ({
     return () => {
       isCancelled = true;
     };
-  }, [sampleUrl]);
+  }, [sampleContentHash, sampleUrl]);
 
   useEffect(() => {
     const frame = frameRef.current;

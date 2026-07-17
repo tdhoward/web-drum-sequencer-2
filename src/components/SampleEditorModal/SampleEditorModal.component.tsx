@@ -29,9 +29,15 @@ type SampleEditorChannel = {
 };
 
 type SampleEditorModalProps = {
+  canReplaceExisting?: boolean;
   channel: SampleEditorChannel | null;
+  existingSampleName?: string;
   onClose: () => void;
-  onSaveEditedSample: (audioBuffer: AudioBuffer, sampleName: string) => Promise<void> | void;
+  onSaveEditedSample: (
+    audioBuffer: AudioBuffer,
+    sampleName: string,
+    replaceExisting: boolean,
+  ) => Promise<void> | void;
 };
 
 type CanvasSize = {
@@ -190,6 +196,26 @@ const NameInput = styled.input`
   }
 `;
 
+const ReplaceOption = styled.label`
+  align-items: flex-start;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  display: flex;
+  font-size: 0.78rem;
+  gap: 0.5rem;
+  line-height: 1.35;
+  max-width: 32rem;
+
+  input {
+    margin: 0.15rem 0 0;
+  }
+`;
+
+const ReplaceHint = styled.span`
+  color: ${({ theme }) => theme.colors.textMuted};
+  display: block;
+  font-size: 0.7rem;
+`;
+
 const ButtonGroup = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -205,7 +231,7 @@ const ControlButton = styled.button<ToggleButtonProps>`
   )};
   border-radius: 0.25rem;
   color: ${({ $active, theme }) => (
-    $active ? theme.colors.surfaceInverse : theme.colors.textPrimary
+    $active ? theme.colors.textInverse : theme.colors.textPrimary
   )};
   cursor: pointer;
   font-size: 0.78rem;
@@ -319,7 +345,9 @@ const getNearestHandle = (
 };
 
 export const SampleEditorModal = ({
+  canReplaceExisting = false,
   channel,
+  existingSampleName,
   onClose,
   onSaveEditedSample,
 }: SampleEditorModalProps) => {
@@ -337,6 +365,7 @@ export const SampleEditorModal = ({
     normalizeEnabled: false,
   });
   const [sampleName, setSampleName] = useState('');
+  const [replaceExisting, setReplaceExisting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -362,6 +391,7 @@ export const SampleEditorModal = ({
     setAudioBuffer(null);
     setError(null);
     setIsSaving(false);
+    setReplaceExisting(false);
     setSampleName(getDefaultEditedSampleName(channelName));
 
     if (!sampleUrl) {
@@ -555,6 +585,7 @@ export const SampleEditorModal = ({
       && !isFullSelection(getSourceAudioBuffer(), selection),
   );
   const hasEdits = hasTrimEdit || selection.normalizeEnabled;
+  const willReplaceExisting = canReplaceExisting && replaceExisting;
   const sourceAudioBuffer = getSourceAudioBuffer();
   const selectedDuration = sourceAudioBuffer
     ? formatSeconds(selection.endSample - selection.startSample, sourceAudioBuffer.sampleRate)
@@ -701,7 +732,11 @@ export const SampleEditorModal = ({
     });
     setIsSaving(true);
     setError(null);
-    Promise.resolve(onSaveEditedSample(editedBuffer, nextSampleName))
+    Promise.resolve(onSaveEditedSample(
+      editedBuffer,
+      nextSampleName,
+      willReplaceExisting,
+    ))
       .then(() => {
         logDiagnostics('save:success', {}, {
           editedBuffer,
@@ -797,7 +832,7 @@ export const SampleEditorModal = ({
           </ControlButton>
         </ControlBar>
         <NameRow>
-          <NameLabel>Save As</NameLabel>
+          <NameLabel>{willReplaceExisting ? 'Name' : 'Save As'}</NameLabel>
           <NameInput
             aria-label="Edited sample name"
             disabled={!audioBuffer || isSaving}
@@ -810,6 +845,28 @@ export const SampleEditorModal = ({
             value={sampleName}
           />
         </NameRow>
+        {canReplaceExisting && (
+          <ReplaceOption>
+            <input
+              checked={replaceExisting}
+              disabled={!audioBuffer || isSaving}
+              onChange={(event) => {
+                const shouldReplace = event.target.checked;
+                setReplaceExisting(shouldReplace);
+                setSampleName(shouldReplace
+                  ? existingSampleName?.trim() || channelName
+                  : getDefaultEditedSampleName(channelName));
+              }}
+              type="checkbox"
+            />
+            <span>
+              Replace existing user sample
+              <ReplaceHint>
+                Keeps this sample in place and updates every channel that uses it.
+              </ReplaceHint>
+            </span>
+          </ReplaceOption>
+        )}
         <ActionRow>
           <ButtonGroup>
             <ControlButton
@@ -837,7 +894,7 @@ export const SampleEditorModal = ({
               onClick={handleSave}
               type="button"
             >
-              {isSaving ? 'Saving' : 'OK'}
+              {isSaving ? 'Saving' : willReplaceExisting ? 'Replace' : 'Save Copy'}
             </PrimaryButton>
           </ButtonGroup>
         </ActionRow>

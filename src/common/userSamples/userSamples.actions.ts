@@ -1,9 +1,11 @@
 import {
   deleteSampleBuffer,
+  replaceUserSampleBuffer,
   saveEditedSampleBuffer,
   saveRecordedSampleBuffer,
   saveToSampleStore,
 } from '../../services/sampleStore';
+import factorySamples from '../../samples.config';
 import { loadAndSetChannelSample } from '../channels';
 import {
   removeSampleFromUrl,
@@ -11,9 +13,18 @@ import {
   setSampleFingerprint,
 } from '../samples';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
-import { userSamplesSlice } from './userSamples.reducer';
+import {
+  getUserSampleId,
+  normalizeUserSample,
+  userSamplesSlice,
+  type UserSamplesState,
+} from './userSamples.reducer';
 
 type Dispatch = (action: unknown) => unknown;
+
+type UserSamplesRootState = {
+  userSamples?: UserSamplesState;
+};
 
 export const {
   addUserSample,
@@ -49,21 +60,40 @@ export const saveEditedUserSample = (
   audioBuffer: AudioBuffer,
   sourceName?: string,
   sampleName?: string,
+  replaceSampleId?: string,
 ) => (
   dispatch: Dispatch,
+  getState: () => UserSamplesRootState,
 ): Promise<void> => {
   const displayName = sampleName?.trim() || sourceName?.trim() || 'Edited Sample';
+  const isFactorySample = factorySamples.some(sample => sample.url === replaceSampleId);
+  const existingUserSample = replaceSampleId && !isFactorySample
+    ? (getState().userSamples || []).find(
+      userSample => getUserSampleId(userSample) === replaceSampleId,
+    )
+    : undefined;
+  const existingUserSampleRecord = existingUserSample
+    ? normalizeUserSample(existingUserSample)
+    : undefined;
+  const saveSample = existingUserSampleRecord
+    ? replaceUserSampleBuffer(audioBuffer, existingUserSampleRecord.id)
+    : saveEditedSampleBuffer(audioBuffer, displayName);
 
-  return saveEditedSampleBuffer(audioBuffer, displayName)
+  return saveSample
     .then(({ id: sampleURL, fingerprint }) => {
       dispatch(addUserSample({
         id: sampleURL,
         name: displayName,
-        sourceName,
+        createdAt: existingUserSampleRecord?.createdAt,
+        sourceName: sourceName || existingUserSampleRecord?.sourceName,
         sourceType: 'edited',
         ...fingerprint,
       }));
-      dispatch(loadAndSetChannelSample(channel, sampleURL));
+      if (existingUserSampleRecord) {
+        dispatch(renameSampleFromUrl(sampleURL, displayName));
+      } else {
+        dispatch(loadAndSetChannelSample(channel, sampleURL));
+      }
       dispatch(setSampleFingerprint(sampleURL, fingerprint));
     })
     .catch((error) => {

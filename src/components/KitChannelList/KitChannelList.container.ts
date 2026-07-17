@@ -12,6 +12,7 @@ import {
   setChannelReverb,
   setSampleAlignmentOffset,
   updateChannelOrder,
+  userSamplesSelector,
 } from '../../common';
 import { playNoteNow } from '../../services/audioScheduler';
 import { KitChannelListComponent } from './KitChannelList.component';
@@ -44,6 +45,7 @@ type KitChannelListDispatchProps = {
     audioBuffer: AudioBuffer,
     sourceName?: string,
     sampleName?: string,
+    replaceSampleId?: string,
   ) => Promise<void>;
   updateChannelOrder: (oldIndex: number, newIndex: number) => void;
 };
@@ -62,6 +64,7 @@ const confirmChannelDelete = (channel: LegacyChannel): boolean => {
 const mapStateToProps = (state: RootState) => ({
   channels: channelsSelector(state),
   selectedChannelId: selectedChannelSelector(state) || '',
+  userSamples: userSamplesSelector(state) || [],
 });
 
 type KitChannelListStateProps = ReturnType<typeof mapStateToProps>;
@@ -91,12 +94,19 @@ const mapDispatchToProps = (dispatch: AppDispatch): KitChannelListDispatchProps 
   setSampleAlignmentOffset: (sampleId, alignmentOffset) => {
     dispatch(setSampleAlignmentOffset({ sampleId, alignmentOffset }));
   },
-  saveEditedUserSample: (channelId, audioBuffer, sourceName, sampleName) => (
+  saveEditedUserSample: (
+    channelId,
+    audioBuffer,
+    sourceName,
+    sampleName,
+    replaceSampleId,
+  ) => (
     dispatch(saveEditedUserSample(
       channelId,
       audioBuffer,
       sourceName,
       sampleName,
+      replaceSampleId,
     ) as unknown as AppAction) as unknown as Promise<void>
   ),
   updateChannelOrder: (oldIndex, newIndex) => {
@@ -152,12 +162,14 @@ const mergeProps = (
     channel: LegacyChannel,
     audioBuffer: AudioBuffer,
     sampleName: string,
+    replaceExisting: boolean,
   ) => (
     dispatchProps.saveEditedUserSample(
       getKitChannelId(channel),
       audioBuffer,
       channel.name || channel.sample || channel.id,
       sampleName,
+      replaceExisting ? channel.sample : undefined,
     )
   ),
 });

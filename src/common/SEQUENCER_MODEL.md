@@ -316,10 +316,14 @@ the marker lands on the beat. The scheduler expands its lookahead by the offset;
 at transport startup it clamps source start times to the current Web Audio time
 instead of passing a negative or already elapsed scheduling time.
 
-Sample editing is non-destructive. Trimming or normalizing a factory sample
-creates a new `userSample` and a corresponding `sample` entity rather than
-mutating the source sample. The current editor supports waveform selection,
-auto-select, trim, normalize, original/edited preview, and save-as naming.
+Sample editing defaults to non-destructive save-copy behavior. Trimming or
+normalizing a factory sample creates a new `userSample` and a corresponding
+`sample` entity rather than mutating the source sample. An existing user sample
+may instead be explicitly replaced under its current ID, which updates every
+channel that references it. Replacement eligibility requires the ID to exist in
+the user-sample registry and not in the factory catalog. The current editor
+supports waveform selection, auto-select, trim, normalize, original/edited
+preview, and save-as naming.
 Trim applies a tiny fade only at the end boundary to avoid blunting drum
 attacks. User samples can be renamed, previewed, and deleted through the Kit
 workspace sample manager, but deletion is disabled while the sample is assigned

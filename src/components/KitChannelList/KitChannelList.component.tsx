@@ -22,8 +22,14 @@ import {
   getPercussionTypeAbbreviation,
   getPercussionTypeLabel,
 } from '../../common/percussion';
+import {
+  getUserSampleDisplayName,
+  getUserSampleId,
+  type LegacyChannel,
+  type UserSample,
+} from '../../common';
 import construction from '../../assets/images/construction-light.svg';
-import type { LegacyChannel } from '../../common';
+import factorySamples from '../../samples.config';
 
 const kitChannelGridColumns = 'minmax(8rem, 11rem) 1.2rem 3rem 15rem minmax(10rem, 1fr) repeat(4, 5.125rem) 2rem';
 
@@ -39,6 +45,7 @@ type KitChannelListChannel = LegacyChannel & {
 
 type KitChannelListComponentProps = {
   channels: KitChannelListChannel[];
+  userSamples: UserSample[];
   onPressHitButton: (channel: KitChannelListChannel) => void;
   onPressRemove: (channel: KitChannelListChannel) => void;
   onUpdateChannelOrder: (oldIndex: number, newIndex: number) => void;
@@ -53,6 +60,7 @@ type KitChannelListComponentProps = {
     channel: KitChannelListChannel,
     audioBuffer: AudioBuffer,
     sampleName: string,
+    replaceExisting: boolean,
   ) => Promise<void> | void;
 };
 
@@ -467,6 +475,7 @@ export class KitChannelListComponent extends React.Component<
       onSetPan,
       onSetChannelPitchCoarse,
       onSetReverb,
+      userSamples,
     } = this.props;
     const {
       editingChannelId,
@@ -474,6 +483,14 @@ export class KitChannelListComponent extends React.Component<
       percussionMenuChannelId,
       sampleEditorChannel,
     } = this.state;
+    const isEditingFactorySample = factorySamples.some(
+      sample => sample.url === sampleEditorChannel?.sample,
+    );
+    const editedUserSample = sampleEditorChannel && !isEditingFactorySample
+      ? userSamples.find(
+        userSample => getUserSampleId(userSample) === sampleEditorChannel.sample,
+      )
+      : undefined;
 
     return (
       <>
@@ -577,6 +594,7 @@ export class KitChannelListComponent extends React.Component<
                       this.props.onSetSampleAlignment(channel, alignmentOffset)
                     )}
                     onClick={() => this.openSampleEditor(channel)}
+                    sampleContentHash={channel.sampleContentHash}
                     sampleUrl={channel.sample}
                     title="Edit sample"
                   />
@@ -642,11 +660,20 @@ export class KitChannelListComponent extends React.Component<
           <AddChannelButton />
         </KitChannelListBox>
         <SampleEditorModal
+          canReplaceExisting={Boolean(editedUserSample)}
           channel={sampleEditorChannel}
+          existingSampleName={editedUserSample
+            ? getUserSampleDisplayName(editedUserSample)
+            : undefined}
           onClose={this.closeSampleEditor}
-          onSaveEditedSample={(audioBuffer, sampleName) => (
+          onSaveEditedSample={(audioBuffer, sampleName, replaceExisting) => (
             sampleEditorChannel
-              ? onSaveEditedSample(sampleEditorChannel, audioBuffer, sampleName)
+              ? onSaveEditedSample(
+                sampleEditorChannel,
+                audioBuffer,
+                sampleName,
+                replaceExisting,
+              )
               : undefined
           )}
         />

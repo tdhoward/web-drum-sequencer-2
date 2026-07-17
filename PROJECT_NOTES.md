@@ -19,7 +19,7 @@ The app should be organized around three main workspaces:
    * Each channel should be configurable independently.
    * Channel settings should include sample selection plus musical/mix properties such as gain, pan, reverb, and pitch where supported by the existing audio code.
    * Channel samples can be edited from the Kit workspace waveform. The current editor supports manual selection, auto-select, trim, normalize, original/edited preview, and save-as naming.
-   * Sample edits are non-destructive: saving an edit creates a new user sample instead of overwriting a bundled factory sample or an existing user sample.
+   * Sample edits default to non-destructive save-copy behavior. Existing user samples may be explicitly replaced in place, while bundled factory samples are always saved as new user-sample copies.
    * User samples can be managed from the Kit workspace. The current sample manager supports rename, preview, and deletion for unused user samples.
 
 2. Pattern workspace

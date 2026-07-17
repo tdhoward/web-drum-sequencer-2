@@ -176,6 +176,11 @@ export const saveEditedSampleBuffer = (
   return saveAudioBufferAsWav(id, audioBuffer);
 };
 
+export const replaceUserSampleBuffer = (
+  audioBuffer: AudioBuffer,
+  userSampleId: string,
+): Promise<StoredSample> => saveAudioBufferAsWav(userSampleId, audioBuffer);
+
 export const saveRecordedSampleBuffer = (
   audioBuffer: AudioBuffer,
   sourceName?: string,
