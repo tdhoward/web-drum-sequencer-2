@@ -22,7 +22,7 @@ const currentPresetSelector = createSelector(
 );
 
 // Indicates if the preset is a "stock" preset or has been modified by user (not saved)
-const isEditedSelector = createSelector(
+export const isCurrentKitEditedSelector = createSelector(
   currentPresetSelector,
   currentKitPresetStateSelector,
   (preset, currentState): boolean => !deepEqual(
@@ -32,7 +32,7 @@ const isEditedSelector = createSelector(
 );
 
 export const presetSelectorSelectors = createStructuredSelector({
-  isEdited: isEditedSelector,
+  isEdited: isCurrentKitEditedSelector,
   currentPreset: currentPresetSelector,
   userPresets: userPresetsSelector,
   currentState: currentKitPresetStateSelector,

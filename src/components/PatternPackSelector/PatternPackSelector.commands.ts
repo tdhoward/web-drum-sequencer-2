@@ -9,34 +9,35 @@ export type PatternPackCommand =
   | 'DELETE_PATTERN_PACK';
 
 export const createPatternPackMemoryOptions = (
-  selectedPatternPackName: string,
   isEdited: boolean,
   defaultPatternPackSelected: boolean,
 ): PresetSelectorCommand<PatternPackCommand>[] => [
   {
-    label: 'Save Pattern Pack As...',
+    label: 'Save As',
     value: 'SAVE_PATTERN_PACK_AS',
   },
   {
-    label: `Save "${selectedPatternPackName}"`,
+    label: defaultPatternPackSelected
+      ? "Save — factory pattern packs can't be overwritten"
+      : isEdited ? 'Save' : 'Save — no changes',
     value: 'SAVE_PATTERN_PACK',
     disabled: !isEdited || defaultPatternPackSelected,
   },
   {
-    label: `Rename "${selectedPatternPackName}"...`,
+    label: 'Rename',
     value: 'RENAME_PATTERN_PACK',
     disabled: defaultPatternPackSelected,
   },
   {
-    label: `Export "${selectedPatternPackName}"...`,
+    label: 'Export',
     value: 'EXPORT_PATTERN_PACK',
   },
   {
-    label: 'Import Pattern Pack...',
+    label: 'Import',
     value: 'IMPORT_PATTERN_PACK',
   },
   {
-    label: `Delete "${selectedPatternPackName}"`,
+    label: 'Delete',
     value: 'DELETE_PATTERN_PACK',
     disabled: defaultPatternPackSelected,
   },

@@ -25,6 +25,7 @@ import type { UserPreset } from '../../common';
 import type { FactoryPreset } from '../../common/sequencerModel';
 import type { AppDispatch } from '../../store';
 import type { RootState } from '../../reducer';
+import { confirmUnsavedSwitch } from '../confirmUnsavedSwitch';
 
 type AppAction = Parameters<AppDispatch>[0];
 type LoadPresetInput = Parameters<typeof requestPresetLoad>[0];
@@ -83,6 +84,7 @@ const mergeProps = (
   ...stateProps,
   presets,
   ariaLabel: 'Select Kit Preset',
+  memoryGroupLabel: 'Current Kit',
   memoryOptions: createMemoryOptions(stateProps),
   modal: React.createElement(SavePresetModal),
   onSelectPreset: ({ value }: PresetSelectOption) => {
@@ -109,10 +111,18 @@ const mergeProps = (
         dispatchProps.exportKit();
         break;
       case 'IMPORT_KIT':
-        openKitFilePicker(dispatchProps.importKit);
+        openKitFilePicker((file) => {
+          if (confirmUnsavedSwitch(stateProps.isEdited ? ['kit'] : [])) {
+            dispatchProps.importKit(file);
+          }
+        });
         break;
       default:
-        if (typeof value !== 'string') {
+        if (
+          typeof value !== 'string'
+          && value.name !== currentPresetName
+          && confirmUnsavedSwitch(stateProps.isEdited ? ['kit'] : [])
+        ) {
           dispatchProps.loadPreset(value as LoadPresetInput);
         }
         break;
@@ -124,7 +134,6 @@ const createMemoryOptions = (stateProps: PresetSelectorStateProps) => {
   const selectedPresetName = stateProps.currentPreset?.name || presets[0]?.name || 'Unknown';
   const defaultPresetSelected = presets.some(preset => preset.name === selectedPresetName);
   return createKitPresetMemoryOptions(
-    selectedPresetName,
     stateProps.isEdited,
     defaultPresetSelected,
   );

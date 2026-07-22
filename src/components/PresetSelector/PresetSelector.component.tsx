@@ -36,6 +36,7 @@ type PresetSelectorComponentProps<
   height?: string;
   isEdited?: boolean;
   label?: string;
+  memoryGroupLabel?: string;
   memoryOptions?: PresetSelectorCommand<TCommand>[];
   minWidth?: string;
   modal?: React.ReactNode;
@@ -69,6 +70,7 @@ export function PresetSelectorComponent<
   height = '3rem',
   isEdited = false,
   label = 'PRESETS',
+  memoryGroupLabel = 'Memory',
   memoryOptions = [],
   minWidth,
   modal,
@@ -109,7 +111,7 @@ export function PresetSelectorComponent<
 
   if (memoryOptions.length > 0) {
     groupedOptions.push({
-      label: 'Memory',
+      label: memoryGroupLabel,
       options: memoryOptions,
     });
   }

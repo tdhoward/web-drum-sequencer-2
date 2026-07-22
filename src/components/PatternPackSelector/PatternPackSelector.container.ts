@@ -28,6 +28,7 @@ import {
   createPatternPackMemoryOptions,
   type PatternPackCommand,
 } from './PatternPackSelector.commands';
+import { confirmUnsavedSwitch } from '../confirmUnsavedSwitch';
 
 type AppAction = Parameters<AppDispatch>[0];
 const PatternPackSelectorComponent =
@@ -88,6 +89,7 @@ const mergeProps = (
   currentPreset: stateProps.currentPatternPack,
   getPresetId: (patternPack: PatternPack) => patternPack.id,
   label: 'PATTERN PACK',
+  memoryGroupLabel: 'Current Pattern pack',
   memoryOptions: createMemoryOptions(stateProps),
   modal: React.createElement(SavePatternPackModal),
   presets: patternPacks,
@@ -116,10 +118,18 @@ const mergeProps = (
         dispatchProps.exportPatternPack();
         break;
       case 'IMPORT_PATTERN_PACK':
-        openPatternPackFilePicker(dispatchProps.importPatternPack);
+        openPatternPackFilePicker((file) => {
+          if (confirmUnsavedSwitch(stateProps.isEdited ? ['pattern pack'] : [])) {
+            dispatchProps.importPatternPack(file);
+          }
+        });
         break;
       default:
-        if (typeof value !== 'string') {
+        if (
+          typeof value !== 'string'
+          && value.id !== currentPatternPackId
+          && confirmUnsavedSwitch(stateProps.isEdited ? ['pattern pack'] : [])
+        ) {
           dispatchProps.loadPatternPack(value);
         }
         break;
@@ -131,14 +141,12 @@ const createMemoryOptions = (
   stateProps: PatternPackSelectorStateProps,
 ) => {
   const selectedPatternPack = stateProps.currentPatternPack || patternPacks[0];
-  const selectedPatternPackName = selectedPatternPack?.name || 'Unknown';
   const selectedPatternPackId = selectedPatternPack?.id;
   const defaultPatternPackSelected = patternPacks.some(
     patternPack => patternPack.id === selectedPatternPackId,
   );
 
   return createPatternPackMemoryOptions(
-    selectedPatternPackName,
     stateProps.isEdited,
     defaultPatternPackSelected,
   );

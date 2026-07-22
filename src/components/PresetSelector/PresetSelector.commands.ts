@@ -9,34 +9,35 @@ export type KitPresetCommand =
   | 'DELETE_PRESET';
 
 export const createKitPresetMemoryOptions = (
-  selectedPresetName: string,
   isEdited: boolean,
   defaultPresetSelected: boolean,
 ): PresetSelectorCommand<KitPresetCommand>[] => [
   {
-    label: 'Save Kit As...',
+    label: 'Save As',
     value: 'SAVE_PRESET_AS',
   },
   {
-    label: `Save "${selectedPresetName}"`,
+    label: defaultPresetSelected
+      ? "Save — factory kits can't be overwritten"
+      : isEdited ? 'Save' : 'Save — no changes',
     value: 'SAVE_PRESET',
     disabled: !isEdited || defaultPresetSelected,
   },
   {
-    label: `Rename "${selectedPresetName}"...`,
+    label: 'Rename',
     value: 'RENAME_PRESET',
     disabled: defaultPresetSelected,
   },
   {
-    label: `Export "${selectedPresetName}"...`,
+    label: 'Export',
     value: 'EXPORT_KIT',
   },
   {
-    label: 'Import Kit...',
+    label: 'Import',
     value: 'IMPORT_KIT',
   },
   {
-    label: `Delete "${selectedPresetName}"`,
+    label: 'Delete',
     value: 'DELETE_PRESET',
     disabled: defaultPresetSelected,
   },

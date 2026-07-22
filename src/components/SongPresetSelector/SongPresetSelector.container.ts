@@ -30,6 +30,11 @@ import {
   createSongMemoryOptions,
   type SongPresetCommand,
 } from './SongPresetSelector.commands';
+import { isCurrentKitEditedSelector } from '../PresetSelector/PresetSelector.selectors';
+import {
+  confirmUnsavedSwitch,
+  type UnsavedContent,
+} from '../confirmUnsavedSwitch';
 
 type AppAction = Parameters<AppDispatch>[0];
 const Selector = PresetSelectorComponent<SavedSong, SongPresetCommand>;
@@ -51,6 +56,7 @@ const mapStateToProps = (state: RootState) => {
     isEdited: selectedSong
       ? !deepEqual(currentSong, omitFields(selectedSong, derivedHashFields))
       : currentSong.arrangementPatternIds.length > 0,
+    kitEdited: isCurrentKitEditedSelector(state),
     patternPackEdited: isCurrentPatternPackEditedSelector(state),
   };
 };
@@ -93,16 +99,22 @@ const mergeProps = (state: StateProps, actions: DispatchProps) => {
     patternPackId: state.currentSong.patternPackId,
     arrangementPatternIds: [],
   };
+  const editedContent: UnsavedContent[] = [
+    ...(state.kitEdited ? ['kit' as const] : []),
+    ...(state.patternPackEdited ? ['pattern pack' as const] : []),
+    ...(state.isEdited ? ['song' as const] : []),
+  ];
   return {
     ariaLabel: 'Select Song',
     currentPreset: state.selectedSong || blankSong,
     getPresetId: (song: SavedSong) => song.id,
     isEdited: state.isEdited,
     label: 'SONG',
+    memoryGroupLabel: 'Current Song',
     memoryOptions: createSongMemoryOptions({
-      songName: state.selectedSong?.name || state.currentSong.name,
       hasSelectedSong: Boolean(state.selectedSong),
       isEdited: state.isEdited,
+      kitEdited: state.kitEdited,
       patternPackEdited: state.patternPackEdited,
     }),
     modal: React.createElement(SaveSongModal),
@@ -113,11 +125,19 @@ const mergeProps = (state: StateProps, actions: DispatchProps) => {
       else if (value === 'SAVE_SONG' && state.selectedSong) actions.doSaveSong(state.selectedSong.id);
       else if (value === 'RENAME_SONG') actions.setSongRenamePrompt(true);
       else if (value === 'EXPORT_SONG') actions.exportSong();
-      else if (value === 'IMPORT_SONG') openSongFilePicker(actions.importSong);
+      else if (value === 'IMPORT_SONG') {
+        openSongFilePicker((file) => {
+          if (confirmUnsavedSwitch(editedContent)) actions.importSong(file);
+        });
+      }
       else if (value === 'DELETE_SONG' && state.selectedSong) actions.eraseSong(state.selectedSong.id);
       else if (typeof value !== 'string') {
-        if (value.id === blankSong.id) actions.startNewSong();
-        else actions.loadSavedSong(value);
+        if (value.id === blankSong.id) {
+          if (confirmUnsavedSwitch(state.isEdited ? ['song'] : [])) actions.startNewSong();
+        } else if (
+          value.id !== state.selectedSong?.id
+          && confirmUnsavedSwitch(editedContent)
+        ) actions.loadSavedSong(value);
       }
     },
   };

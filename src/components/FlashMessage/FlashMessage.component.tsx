@@ -1,32 +1,6 @@
-import React from 'react';
-import * as animol from 'animol';
+import React, { useEffect } from 'react';
+import styled, { css, keyframes } from 'styled-components';
 import { FLASH_MESSAGES } from '../../common';
-import {
-  Box,
-  HoverButton,
-} from '../design-system';
-import { SampleLoadError } from '../SampleLoadError.component';
-import { PresetSaved } from '../PresetSaved.component';
-import { PresetDeleted } from '../PresetDeleted.component';
-import { PatternPackSaved } from '../PatternPackSaved.component';
-import { PatternPackDeleted } from '../PatternPackDeleted.component';
-import {
-  PatternPackExported,
-  PatternPackImported,
-  PatternPackTransferError,
-} from '../PatternPackTransferMessage.component';
-import { SongSaved } from '../SongSaved.component';
-import { SongDeleted } from '../SongDeleted.component';
-import {
-  SongExported,
-  SongImported,
-  SongTransferError,
-} from '../SongTransferMessage.component';
-import {
-  KitExported,
-  KitImported,
-  KitTransferError,
-} from '../KitTransferMessage.component';
 
 type FlashMessageComponentProps = {
   messageKey?: string | null;
@@ -34,175 +8,323 @@ type FlashMessageComponentProps = {
   flashMessageVisible?: boolean;
 };
 
-type FlashMessageContentProps = {
-  onDismiss: () => void;
+type ToastTone = 'success' | 'error';
+
+type ToastMessage = {
+  title: string;
+  detail?: string;
+  tone: ToastTone;
 };
 
-type FlashMessageContent = React.ComponentType<FlashMessageContentProps>;
-
-const getMessageComponent = (messageKey: string | null | undefined): FlashMessageContent | undefined => {
-  switch (messageKey) {
-    case FLASH_MESSAGES.SAMPLE_LOAD_ERROR:
-      return SampleLoadError;
-    case FLASH_MESSAGES.PRESET_SAVED:
-      return PresetSaved;
-    case FLASH_MESSAGES.PRESET_DELETED:
-      return PresetDeleted;
-    case FLASH_MESSAGES.PATTERN_PACK_SAVED:
-      return PatternPackSaved;
-    case FLASH_MESSAGES.PATTERN_PACK_DELETED:
-      return PatternPackDeleted;
-    case FLASH_MESSAGES.PATTERN_PACK_EXPORTED:
-      return PatternPackExported;
-    case FLASH_MESSAGES.PATTERN_PACK_IMPORTED:
-      return PatternPackImported;
-    case FLASH_MESSAGES.PATTERN_PACK_TRANSFER_ERROR:
-      return PatternPackTransferError;
-    case FLASH_MESSAGES.SONG_SAVED:
-      return SongSaved;
-    case FLASH_MESSAGES.SONG_DELETED:
-      return SongDeleted;
-    case FLASH_MESSAGES.SONG_EXPORTED:
-      return SongExported;
-    case FLASH_MESSAGES.SONG_IMPORTED:
-      return SongImported;
-    case FLASH_MESSAGES.SONG_TRANSFER_ERROR:
-      return SongTransferError;
-    case FLASH_MESSAGES.KIT_EXPORTED:
-      return KitExported;
-    case FLASH_MESSAGES.KIT_IMPORTED:
-      return KitImported;
-    case FLASH_MESSAGES.KIT_TRANSFER_ERROR:
-      return KitTransferError;
-    default:
-      return undefined;
-  }
+const TOAST_MESSAGES: Record<string, ToastMessage> = {
+  [FLASH_MESSAGES.SAMPLE_LOAD_ERROR]: {
+    title: 'Sample couldn\'t load',
+    detail: 'Check the sample file and try again.',
+    tone: 'error',
+  },
+  [FLASH_MESSAGES.PRESET_SAVED]: {
+    title: 'Kit saved',
+    detail: 'Your user kit is ready to use.',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.PRESET_DELETED]: {
+    title: 'Kit deleted',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.PATTERN_PACK_SAVED]: {
+    title: 'Pattern pack saved',
+    detail: 'Your user pattern pack is ready to use.',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.PATTERN_PACK_DELETED]: {
+    title: 'Pattern pack deleted',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.PATTERN_PACK_EXPORTED]: {
+    title: 'Pattern pack exported',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.PATTERN_PACK_IMPORTED]: {
+    title: 'Pattern pack imported',
+    detail: 'The imported pattern pack is now selected.',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.PATTERN_PACK_TRANSFER_ERROR]: {
+    title: 'Pattern pack transfer failed',
+    detail: 'The file may be invalid or incomplete. Check it and try again.',
+    tone: 'error',
+  },
+  [FLASH_MESSAGES.SONG_SAVED]: {
+    title: 'Song saved',
+    detail: 'Your user song is ready to use.',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.SONG_DELETED]: {
+    title: 'Song deleted',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.SONG_EXPORTED]: {
+    title: 'Song exported',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.SONG_IMPORTED]: {
+    title: 'Song imported',
+    detail: 'The imported song is now selected.',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.SONG_TRANSFER_ERROR]: {
+    title: 'Song transfer failed',
+    detail: 'The file may be invalid or incomplete. Check it and try again.',
+    tone: 'error',
+  },
+  [FLASH_MESSAGES.KIT_EXPORTED]: {
+    title: 'Kit exported',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.KIT_IMPORTED]: {
+    title: 'Kit imported',
+    detail: 'The imported kit is now selected.',
+    tone: 'success',
+  },
+  [FLASH_MESSAGES.KIT_TRANSFER_ERROR]: {
+    title: 'Kit transfer failed',
+    detail: 'The file may be invalid or incomplete. Check it and try again.',
+    tone: 'error',
+  },
 };
 
-export class FlashMessageComponent extends React.Component<FlashMessageComponentProps> {
-  dismissTimer: ReturnType<typeof setTimeout> | null = null;
-
-  flashBox: HTMLDivElement | null = null;
-
-  flashMessage: HTMLDivElement | null = null;
-
-  componentDidMount() {
-    this.animateBox();
-    this.updateDismissTimer();
+const enterToast = keyframes`
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.75rem, 0) scale(0.98);
   }
 
-  componentDidUpdate(prevProps: FlashMessageComponentProps) {
-    this.animateBox();
-    this.updateDismissTimer(prevProps);
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+`;
+
+const exitToast = keyframes`
+  from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
   }
 
-  componentWillUnmount() {
-    this.clearDismissTimer();
+  to {
+    opacity: 0;
+    transform: translate3d(0, 0.4rem, 0) scale(0.98);
+  }
+`;
+
+const drainProgress = keyframes`
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+`;
+
+const toneColor = css<{ $tone: ToastTone }>`
+  ${({ $tone, theme }) => (
+    $tone === 'error' ? theme.colors.danger : theme.colors.accentPrimary
+  )}
+`;
+
+const Toast = styled.div<{ $tone: ToastTone; $visible: boolean }>`
+  animation: ${({ $visible }) => ($visible ? enterToast : exitToast)}
+    ${({ $visible }) => ($visible ? '260ms' : '180ms')}
+    cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  background: ${({ theme }) => theme.colors.surfacePanelRaised};
+  border: 1px solid ${({ theme }) => theme.colors.borderDefault};
+  border-left: 4px solid ${toneColor};
+  border-radius: 0.75rem;
+  bottom: 1.5rem;
+  box-shadow: 0 0.8rem 2.5rem rgba(0, 0, 0, 0.34),
+    0 0.15rem 0.5rem rgba(0, 0, 0, 0.22);
+  box-sizing: border-box;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  max-width: calc(100vw - 2rem);
+  min-width: 20rem;
+  overflow: hidden;
+  padding: 0.9rem 0.75rem 1rem 1rem;
+  pointer-events: ${({ $visible }) => ($visible ? 'auto' : 'none')};
+  position: fixed;
+  right: 1.5rem;
+  width: 24rem;
+  z-index: 40;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: 1ms;
+  }
+`;
+
+const StatusIcon = styled.div<{ $tone: ToastTone }>`
+  align-items: center;
+  background: ${({ $tone, theme }) => (
+    $tone === 'error' ? theme.colors.dangerSubtle : theme.colors.accentPrimaryGlow
+  )};
+  border-radius: 50%;
+  color: ${toneColor};
+  display: flex;
+  height: 2rem;
+  justify-content: center;
+  margin-top: 0.05rem;
+  width: 2rem;
+
+  svg {
+    height: 1rem;
+    width: 1rem;
+  }
+`;
+
+const Message = styled.div`
+  min-width: 0;
+  padding-top: 0.05rem;
+`;
+
+const Title = styled.div`
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+`;
+
+const Detail = styled.div`
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-size: 0.8rem;
+  line-height: 1.1rem;
+  margin-top: 0.15rem;
+`;
+
+const CloseButton = styled.button`
+  align-items: center;
+  align-self: start;
+  background: transparent;
+  border: 0;
+  border-radius: 0.35rem;
+  color: ${({ theme }) => theme.colors.textMuted};
+  cursor: pointer;
+  display: flex;
+  height: 1.8rem;
+  justify-content: center;
+  padding: 0;
+  transition: background-color 150ms ease, color 150ms ease;
+  width: 1.8rem;
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.borderSubtle};
+    color: ${({ theme }) => theme.colors.textPrimary};
   }
 
-  clearDismissTimer() {
-    if (this.dismissTimer) {
-      clearTimeout(this.dismissTimer);
-      this.dismissTimer = null;
-    }
+  &:focus-visible {
+    outline: 2px solid ${({ theme }) => theme.colors.accentPrimary};
+    outline-offset: 1px;
   }
 
-  updateDismissTimer(prevProps: Partial<FlashMessageComponentProps> = {}) {
-    const { flashMessageVisible, messageKey, onDismiss } = this.props;
-    const flashMessageChanged = prevProps.flashMessageVisible !== flashMessageVisible
-      || prevProps.messageKey !== messageKey
-      || prevProps.onDismiss !== onDismiss;
-
-    if (!flashMessageChanged) {
-      return;
-    }
-
-    this.clearDismissTimer();
-
-    if (messageKey && flashMessageVisible) {
-      this.dismissTimer = setTimeout(onDismiss, 6000);
-    }
+  svg {
+    height: 0.8rem;
+    width: 0.8rem;
   }
+`;
 
-  animateBox() {
-    const { flashMessageVisible, messageKey } = this.props;
-    if (!this.flashBox) {
-      return;
-    }
+const ProgressTrack = styled.div`
+  background: ${({ theme }) => theme.colors.borderSubtle};
+  bottom: 0;
+  height: 2px;
+  left: 0;
+  position: absolute;
+  right: 0;
+`;
 
-    if (messageKey && flashMessageVisible) {
-      this.flashBox.style.display = 'block';
-      animol.css(
-        this.flashBox,
-        500,
-        { opacity: 0, transform: { translateY: '10%' } },
-        { opacity: 1, transform: { translateY: '0%' } },
-        animol.Easing.easeOutCubic,
-      );
-    } else if (messageKey) {
-      const animation = animol.css(
-        this.flashBox,
-        200,
-        { opacity: 1 },
-        { opacity: 0 },
-        animol.Easing.easeInCubic,
-      );
-      animation.promise.then(() => {
-        if (this.flashBox) {
-          this.flashBox.style.display = 'none';
-        }
-      });
-    }
+const Progress = styled.div<{ $duration: number; $tone: ToastTone }>`
+  animation: ${drainProgress} ${({ $duration }) => $duration}ms linear forwards;
+  background: ${toneColor};
+  height: 100%;
+  transform-origin: left;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
   }
+`;
 
-  render() {
-    const { messageKey, onDismiss } = this.props;
-    const Message = getMessageComponent(messageKey);
+const SuccessIcon = () => (
+  <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path
+      d="m3.25 8.2 3.05 3.05 6.45-6.5"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
-    return Message
-      ? (
-        <Box
-          bg="white"
-          position="fixed"
-          bottom={0}
-          right={0}
-          m={3}
-          boxShadow="0 0.5rem 3rem rgba(0,0,0,0.9)"
-          maxWidth="30rem"
-          zIndex={40}
-          ref={(comp) => { this.flashBox = comp; }}
-          opacity="0"
-        >
-          <Box
-            ref={(comp) => { this.flashMessage = comp; }}
-            p={4}
-          >
-            <Message onDismiss={onDismiss} />
-            <HoverButton
-              bg="transparent"
-              m={1}
-              display="flex"
-              justifyContent="space-between"
-              onClick={onDismiss}
-              fontSize={3}
-              alignItems="center"
-              alignSelf="center"
-              transitionSpeed="0.2s"
-              position="absolute"
-              right="0.3rem"
-              top="0.3rem"
-              width="0.8rem"
-              height="0.8rem"
-              hoverOpacity="0.5"
-              p={0}
-            >
-              <svg width="100%" height="100%" viewBox="169 215 170 170" xmlns="http://www.w3.org/2000/svg">
-                <path d="M 169.72656,371.38672 L 238.67188,302.44141 L 169.92188,233.69141 L 181.25,222.36328 L 250,291.11328 L 318.75,222.36328 L 329.6875,233.49609 L 260.9375,302.24609 L 330.07812,371.38672 L 318.94531,382.71484 L 249.80469,313.57422 L 180.85938,382.51953 L 169.72656,371.38672 z" />
-              </svg>
-            </HoverButton>
-          </Box>
-        </Box>
-      )
-      : null;
-  }
-}
+const ErrorIcon = () => (
+  <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M8 4.15v4.7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    <circle cx="8" cy="11.65" r="1" fill="currentColor" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path
+      d="m4 4 8 8m0-8-8 8"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+export const FlashMessageComponent = ({
+  flashMessageVisible = false,
+  messageKey,
+  onDismiss,
+}: FlashMessageComponentProps) => {
+  const toastMessage = messageKey ? TOAST_MESSAGES[messageKey] : undefined;
+  const duration = toastMessage?.tone === 'error' ? 8000 : 4500;
+
+  useEffect(() => {
+    if (!flashMessageVisible || !toastMessage) return undefined;
+
+    const dismissTimer = window.setTimeout(onDismiss, duration);
+    return () => window.clearTimeout(dismissTimer);
+  }, [duration, flashMessageVisible, messageKey, onDismiss, toastMessage]);
+
+  if (!toastMessage) return null;
+
+  const isError = toastMessage.tone === 'error';
+
+  return (
+    <Toast
+      $tone={toastMessage.tone}
+      $visible={flashMessageVisible}
+      aria-atomic="true"
+      aria-hidden={!flashMessageVisible}
+      aria-live={isError ? 'assertive' : 'polite'}
+      role={isError ? 'alert' : 'status'}
+    >
+      <StatusIcon $tone={toastMessage.tone}>
+        {isError ? <ErrorIcon /> : <SuccessIcon />}
+      </StatusIcon>
+      <Message>
+        <Title>{toastMessage.title}</Title>
+        {toastMessage.detail && <Detail>{toastMessage.detail}</Detail>}
+      </Message>
+      <CloseButton type="button" onClick={onDismiss} aria-label="Dismiss notification">
+        <CloseIcon />
+      </CloseButton>
+      {flashMessageVisible && (
+        <ProgressTrack aria-hidden="true">
+          <Progress
+            key={messageKey}
+            $duration={duration}
+            $tone={toastMessage.tone}
+          />
+        </ProgressTrack>
+      )}
+    </Toast>
+  );
+};
