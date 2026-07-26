@@ -1,9 +1,15 @@
 import {
   replaceUserSampleBuffer,
   saveEditedSampleBuffer,
+  saveRecordedSampleBuffer,
+  saveToSampleStore,
 } from '../../services/sampleStore';
 import factorySamples from '../../samples.config';
-import { saveEditedUserSample } from './userSamples.actions';
+import {
+  saveEditedUserSample,
+  saveRecordedUserSample,
+  saveUserSample,
+} from './userSamples.actions';
 
 jest.mock('../../services/sampleStore', () => ({
   deleteSampleBuffer: jest.fn(),
@@ -26,6 +32,49 @@ const mockedReplaceUserSampleBuffer = (
 const mockedSaveEditedSampleBuffer = (
   saveEditedSampleBuffer as jest.MockedFunction<typeof saveEditedSampleBuffer>
 );
+const mockedSaveRecordedSampleBuffer = (
+  saveRecordedSampleBuffer as jest.MockedFunction<typeof saveRecordedSampleBuffer>
+);
+const mockedSaveToSampleStore = (
+  saveToSampleStore as jest.MockedFunction<typeof saveToSampleStore>
+);
+
+describe('new user samples', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('resets channel pitch after importing a sample', async () => {
+    const dispatch = jest.fn();
+    const file = new File(['sample'], 'imported.wav', { type: 'audio/wav' });
+    const savedSample = Promise.resolve({ id: 'imported.wav', fingerprint });
+    mockedSaveToSampleStore.mockReturnValue(savedSample);
+
+    saveUserSample('channel-1', [file])(dispatch);
+    await savedSample;
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'kitChannels/setChannelPitchCoarse',
+      payload: { channel: 'channel-1', pitchCoarse: 0 },
+    });
+  });
+
+  test('resets channel pitch after recording a sample', async () => {
+    const dispatch = jest.fn();
+    const audioBuffer = {} as AudioBuffer;
+    mockedSaveRecordedSampleBuffer.mockResolvedValue({
+      id: 'recorded.wav',
+      fingerprint,
+    });
+
+    await saveRecordedUserSample('channel-1', audioBuffer, 'Recording')(dispatch);
+
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'kitChannels/setChannelPitchCoarse',
+      payload: { channel: 'channel-1', pitchCoarse: 0 },
+    });
+  });
+});
 
 describe('saveEditedUserSample', () => {
   beforeEach(() => {

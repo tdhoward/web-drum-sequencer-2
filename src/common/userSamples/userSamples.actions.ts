@@ -6,7 +6,7 @@ import {
   saveToSampleStore,
 } from '../../services/sampleStore';
 import factorySamples from '../../samples.config';
-import { loadAndSetChannelSample } from '../channels';
+import { loadAndSetChannelSample, setChannelPitchCoarse } from '../channels';
 import {
   removeSampleFromUrl,
   renameSampleFromUrl,
@@ -48,6 +48,7 @@ export const saveUserSample = (channel: string, files: FileList | File[]) => (
         ...fingerprint,
       }));
       dispatch(loadAndSetChannelSample(channel, sampleURL));
+      dispatch(setChannelPitchCoarse(channel, 0));
       dispatch(setSampleFingerprint(sampleURL, fingerprint));
     })
     .catch(() => {
@@ -120,6 +121,7 @@ export const saveRecordedUserSample = (
         ...fingerprint,
       }));
       dispatch(loadAndSetChannelSample(channel, sampleURL));
+      dispatch(setChannelPitchCoarse(channel, 0));
       dispatch(setSampleFingerprint(sampleURL, fingerprint));
     })
     .catch((error) => {
