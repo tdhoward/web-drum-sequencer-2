@@ -10,13 +10,19 @@ import {
   loadAndSetChannelSample,
   loadSampleAsset,
   setChannelPitchCoarse,
+  transformChannelSampleAlignments,
 } from '../channels';
+import { transformPresetSampleAlignments } from '../presets';
 import {
   removeSampleFromUrl,
   renameSampleFromUrl,
   setSampleFingerprint,
 } from '../samples';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
+import {
+  sampleIdFromUrl,
+  type SampleAlignmentTransform,
+} from '../velocityLayers';
 import {
   getUserSampleId,
   normalizeUserSample,
@@ -60,6 +66,25 @@ export const saveUserSample = (channel: string, files: FileList | File[]) => (
     });
 };
 
+export const createUploadedUserSample = (file: File) => (
+  dispatch: Dispatch,
+): Promise<string> => saveToSampleStore(file)
+  .then(({ id: sampleURL, fingerprint }) => {
+    dispatch(addUserSample({
+      id: sampleURL,
+      name: file.name,
+      sourceType: 'uploaded',
+      ...fingerprint,
+    }));
+    dispatch(loadSampleAsset(sampleURL));
+    dispatch(setSampleFingerprint(sampleURL, fingerprint));
+    return sampleURL;
+  })
+  .catch((error) => {
+    dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
+    return Promise.reject(error);
+  });
+
 export const saveEditedUserSample = (
   channel: string,
   audioBuffer: AudioBuffer,
@@ -67,6 +92,7 @@ export const saveEditedUserSample = (
   sampleName?: string,
   replaceSampleId?: string,
   assignToChannel = true,
+  alignmentTransform?: SampleAlignmentTransform,
 ) => (
   dispatch: Dispatch,
   getState: () => UserSamplesRootState,
@@ -97,11 +123,48 @@ export const saveEditedUserSample = (
       }));
       if (existingUserSampleRecord) {
         dispatch(renameSampleFromUrl(sampleURL, displayName));
+        if (alignmentTransform) {
+          const sampleId = sampleIdFromUrl(sampleURL);
+          dispatch(transformChannelSampleAlignments({
+            sampleId,
+            ...alignmentTransform,
+          }));
+          dispatch(transformPresetSampleAlignments({
+            sampleId,
+            ...alignmentTransform,
+          }));
+        }
       } else if (assignToChannel) {
         dispatch(loadAndSetChannelSample(channel, sampleURL));
       } else {
         dispatch(loadSampleAsset(sampleURL));
       }
+      dispatch(setSampleFingerprint(sampleURL, fingerprint));
+      return sampleURL;
+    })
+    .catch((error) => {
+      dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
+      return Promise.reject(error);
+    });
+};
+
+export const createRecordedUserSample = (
+  audioBuffer: AudioBuffer,
+  sampleName?: string,
+) => (
+  dispatch: Dispatch,
+): Promise<string> => {
+  const displayName = sampleName?.trim() || 'Recorded Sample';
+
+  return saveRecordedSampleBuffer(audioBuffer, displayName)
+    .then(({ id: sampleURL, fingerprint }) => {
+      dispatch(addUserSample({
+        id: sampleURL,
+        name: displayName,
+        sourceType: 'recorded',
+        ...fingerprint,
+      }));
+      dispatch(loadSampleAsset(sampleURL));
       dispatch(setSampleFingerprint(sampleURL, fingerprint));
       return sampleURL;
     })

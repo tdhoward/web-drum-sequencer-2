@@ -13,7 +13,10 @@ import type {
   KitChannelsState,
   SequencerRootState,
 } from '../sequencerModel';
-import { getVelocityLayerSampleReferences } from '../velocityLayers';
+import {
+  getReferenceVelocityLayer,
+  getVelocityLayerSampleReferences,
+} from '../velocityLayers';
 import {
   SAMPLE_LOAD_STATUSES,
   setSampleLoadStatus,
@@ -79,6 +82,7 @@ export const {
   setVelocityLayerSample,
   setVelocityLayerAlignment,
   replaceChannelVelocityLayers,
+  transformChannelSampleAlignments,
   setChannelReverb,
 } = channelsSlice.actions;
 
@@ -168,9 +172,24 @@ export const newChannel = (): Thunk => (dispatch, getState) => {
 
 export const loadAndSetChannelSample = (channelId: string, sampleURL: string) => (
   dispatch: Dispatch,
+  getState: () => SequencerRootState,
 ): void => {
+  const state = getState();
+  const channels = state.kitChannels || state.channels;
+  const channel = channels?.entities?.[channelId];
+  const referenceLayer = channel
+    ? getReferenceVelocityLayer(channel.velocityLayers)
+    : undefined;
+  const changedReferenceLayer = Boolean(
+    referenceLayer
+      && referenceLayer.sampleId !== sampleIdFromUrl(sampleURL),
+  );
+
   dispatch(loadSampleAsset(sampleURL));
   dispatch(setChannelSample(channelId, sampleURL));
+  if (changedReferenceLayer && channel && channel.velocityLayers.length > 1) {
+    dispatch(showFlashMessage(FLASH_MESSAGES.VELOCITY_LAYER_SAMPLE_CHANGED));
+  }
 };
 
 export const loadSampleAsset = (

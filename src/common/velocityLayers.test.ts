@@ -13,6 +13,7 @@ import {
   setVelocityLayerBoundary,
   SILENT_MIDI_VELOCITY,
   splitVelocityLayer,
+  transformSampleAlignmentOffset,
   validateVelocityLayers,
 } from './velocityLayers';
 import type { VelocityLayer } from './velocityLayers';
@@ -166,6 +167,26 @@ describe('velocity layer normalization', () => {
         sampleId: 'sample:one',
       })),
     })).toThrow(RangeError);
+  });
+});
+
+describe('sample alignment transformation', () => {
+  test('preserves the source alignment point after a leading trim', () => {
+    expect(transformSampleAlignmentOffset(0.4, {
+      trimStartSeconds: 0.25,
+      renderedDuration: 0.5,
+    })).toBeCloseTo(0.15);
+  });
+
+  test('clamps alignment before the trim and beyond the rendered duration', () => {
+    expect(transformSampleAlignmentOffset(0.1, {
+      trimStartSeconds: 0.25,
+      renderedDuration: 0.5,
+    })).toBe(0);
+    expect(transformSampleAlignmentOffset(1.2, {
+      trimStartSeconds: 0.25,
+      renderedDuration: 0.5,
+    })).toBe(0.5);
   });
 });
 

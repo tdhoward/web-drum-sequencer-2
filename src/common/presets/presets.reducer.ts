@@ -1,6 +1,11 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import defaultPresets from '../../presets';
 import type { ContentHashMetadata, KitChannelInput } from '../sequencerModel';
+import {
+  sampleIdFromUrl,
+  transformSampleAlignmentOffset,
+  type SampleAlignmentTransform,
+} from '../velocityLayers';
 
 export type UserPreset = {
   name: string;
@@ -18,6 +23,10 @@ type RenamePresetPayload = {
   presetName: string;
   name: string;
   kitId: string;
+};
+
+type TransformSampleAlignmentsPayload = SampleAlignmentTransform & {
+  sampleId: string;
 };
 
 export const presetsInitialState: PresetsState = {
@@ -63,7 +72,34 @@ export const presetsSlice = createSlice({
         userPreset => userPreset.name !== action.payload,
       );
     },
+    transformPresetSampleAlignments(
+      state,
+      action: PayloadAction<TransformSampleAlignmentsPayload>,
+    ) {
+      state.userPresets.forEach((preset) => {
+        let presetChanged = false;
+        (preset.channels || []).forEach((channel) => {
+          (channel.velocityLayers || []).forEach((layer) => {
+            const layerSampleId = layer.sampleId || sampleIdFromUrl(layer.sample);
+            if (layerSampleId === action.payload.sampleId) {
+              layer.alignmentOffset = transformSampleAlignmentOffset(
+                layer.alignmentOffset || 0,
+                action.payload,
+              );
+              presetChanged = true;
+            }
+          });
+        });
+        if (presetChanged) {
+          delete preset.contentHash;
+          delete preset.contentHashAlgorithm;
+          delete preset.contentHashVersion;
+        }
+      });
+    },
   },
 });
+
+export const { transformPresetSampleAlignments } = presetsSlice.actions;
 
 export const presetsReducer = presetsSlice.reducer;

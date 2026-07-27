@@ -7,8 +7,14 @@ import {
   SAMPLE_LOAD_STATUSES,
   sampleLoadStatusSelector,
 } from '../sampleLoadStatus';
-import { getReferenceVelocityLayer } from '../velocityLayers';
-import type { VelocityLayer } from '../velocityLayers';
+import {
+  getReferenceVelocityLayer,
+  getVelocityLayerRange,
+} from '../velocityLayers';
+import type {
+  VelocityLayer,
+  VelocityLayerRange,
+} from '../velocityLayers';
 import type {
   KitChannel,
   KitChannelsState,
@@ -32,8 +38,15 @@ export type LegacyChannel = KitChannel & {
   id: string;
   kitChannelId: string;
   velocityLayers: PlaybackVelocityLayer[];
+  velocityLayerCount: number;
   sampleId: string;
   referenceVelocityLayerId: string;
+  referenceVelocityLayer: PlaybackVelocityLayer;
+  referenceVelocityLayerRange: VelocityLayerRange;
+  referenceSampleUrl?: string;
+  referenceSampleContentHash?: string;
+  referenceSampleLoaded?: boolean;
+  referenceAlignmentOffset: number;
   sample?: string;
   sampleContentHash?: string;
   alignmentOffset?: number;
@@ -77,14 +90,31 @@ export const channelsSelector = createSelector(
       if (!referenceLayer) {
         return result;
       }
+      const referenceLayerIndex = velocityLayers.findIndex(
+        layer => layer.id === referenceLayer.id,
+      );
+      const referenceVelocityLayerRange = getVelocityLayerRange(
+        velocityLayers,
+        referenceLayerIndex,
+      );
+      if (!referenceVelocityLayerRange) {
+        return result;
+      }
       const assignment = assignments.entities[channel.id];
       result.push({
         ...channel,
         velocityLayers,
+        velocityLayerCount: velocityLayers.length,
         id: assignment?.laneId || channel.laneId || channel.id,
         kitChannelId: channel.id,
         sampleId: referenceLayer.sampleId,
         referenceVelocityLayerId: referenceLayer.id,
+        referenceVelocityLayer: referenceLayer,
+        referenceVelocityLayerRange,
+        referenceSampleUrl: referenceLayer.sample,
+        referenceSampleContentHash: referenceLayer.sampleContentHash,
+        referenceSampleLoaded: referenceLayer.sampleLoaded,
+        referenceAlignmentOffset: referenceLayer.alignmentOffset,
         sample: referenceLayer.sample,
         sampleContentHash: referenceLayer.sampleContentHash,
         alignmentOffset: referenceLayer.alignmentOffset,

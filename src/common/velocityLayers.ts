@@ -27,6 +27,11 @@ export type VelocityLayerRange = {
   maxVelocity: number;
 };
 
+export type SampleAlignmentTransform = {
+  trimStartSeconds: number;
+  renderedDuration: number;
+};
+
 export type VelocityLayerChannelInput = {
   id: string;
   sample?: string;
@@ -50,6 +55,20 @@ export type VelocityLayerSampleReference = {
 const clamp = (value: number, min: number, max: number): number => (
   Math.min(max, Math.max(min, value))
 );
+
+export const transformSampleAlignmentOffset = (
+  alignmentOffset: number,
+  transform: SampleAlignmentTransform,
+): number => {
+  const safeOffset = Number.isFinite(alignmentOffset) ? Math.max(0, alignmentOffset) : 0;
+  const trimStartSeconds = Number.isFinite(transform.trimStartSeconds)
+    ? Math.max(0, transform.trimStartSeconds)
+    : 0;
+  const renderedDuration = Number.isFinite(transform.renderedDuration)
+    ? Math.max(0, transform.renderedDuration)
+    : 0;
+  return clamp(safeOffset - trimStartSeconds, 0, renderedDuration);
+};
 
 const isFiniteNumber = (value: unknown): value is number => (
   typeof value === 'number' && Number.isFinite(value)

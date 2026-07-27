@@ -2,9 +2,11 @@ import { DEFAULT_KIT_ID, normalizeKitChannelsState } from '../sequencerModel';
 import {
   deleteChannel,
   getNextNewChannelName,
+  loadAndSetChannelSample,
   loadChannels,
   newChannel,
 } from './channels.actions';
+import { FLASH_MESSAGES } from '../window';
 
 jest.mock('../../presets');
 jest.mock('../../samples.config');
@@ -131,6 +133,96 @@ describe('loadChannels', () => {
       sampleURL: 'hard.wav',
       sourceType: 'factory',
     });
+  });
+});
+
+describe('loadAndSetChannelSample', () => {
+  const createLayeredState = () => {
+    const kitChannels = normalizeKitChannelsState([{
+      id: 'snare',
+      velocityLayers: [
+        {
+          id: 'snare:soft',
+          sample: 'soft.wav',
+          maxVelocity: 55,
+        },
+        {
+          id: 'snare:medium',
+          sample: 'medium.wav',
+          maxVelocity: 100,
+        },
+        {
+          id: 'snare:hard',
+          sample: 'hard.wav',
+          maxVelocity: 127,
+        },
+      ],
+    }]);
+
+    return {
+      kitChannels,
+    };
+  };
+
+  test('changes the current reference layer and announces the multi-layer scope', () => {
+    const state = createLayeredState();
+    const actions: DispatchedAction[] = [];
+
+    loadAndSetChannelSample('snare', 'replacement.wav')(
+      action => {
+        actions.push(action as DispatchedAction);
+        return action;
+      },
+      () => state as never,
+    );
+
+    expect(actions).toEqual([
+      expect.any(Function),
+      {
+        type: 'kitChannels/setChannelSample',
+        payload: {
+          channel: 'snare',
+          sampleURL: 'replacement.wav',
+        },
+      },
+      {
+        type: 'window/showFlashMessage',
+        payload: FLASH_MESSAGES.VELOCITY_LAYER_SAMPLE_CHANGED,
+      },
+    ]);
+  });
+
+  test('does not show the scope notification for one layer or an unchanged sample', () => {
+    const singleLayerState = {
+      kitChannels: normalizeKitChannelsState([{
+        id: 'kick',
+        sample: 'kick.wav',
+      }]),
+    };
+    const singleLayerActions: DispatchedAction[] = [];
+    const unchangedActions: DispatchedAction[] = [];
+
+    loadAndSetChannelSample('kick', 'replacement.wav')(
+      action => {
+        singleLayerActions.push(action as DispatchedAction);
+        return action;
+      },
+      () => singleLayerState as never,
+    );
+    loadAndSetChannelSample('snare', 'medium.wav')(
+      action => {
+        unchangedActions.push(action as DispatchedAction);
+        return action;
+      },
+      () => createLayeredState() as never,
+    );
+
+    expect(singleLayerActions).not.toContainEqual(expect.objectContaining({
+      type: 'window/showFlashMessage',
+    }));
+    expect(unchangedActions).not.toContainEqual(expect.objectContaining({
+      type: 'window/showFlashMessage',
+    }));
   });
 });
 

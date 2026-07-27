@@ -38,6 +38,7 @@ type SampleSelectComponentProps = {
 
 type SamplePickerProps = {
   ariaLabel?: string;
+  disabled?: boolean;
   onChooseFile?: () => void;
   onRecordSample?: () => void;
   onSelectSample: (sample: SampleSelectOption) => void;
@@ -115,6 +116,7 @@ export const getSampleDisplayName = (
 
 export const SamplePicker = ({
   ariaLabel = 'Select sample',
+  disabled = false,
   onChooseFile,
   onRecordSample,
   onSelectSample,
@@ -146,6 +148,7 @@ export const SamplePicker = ({
   return (
     <Select<SampleSelectOption, false, GroupBase<SampleSelectOption>>
       aria-label={ariaLabel}
+      isDisabled={disabled}
       options={getSampleSelectOptions(userOptions, includeCreationOptions)}
       onChange={(choice) => {
         if (!choice) {

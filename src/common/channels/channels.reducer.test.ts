@@ -17,6 +17,7 @@ import {
   setChannelSolo,
   setVelocityLayerAlignment,
   setVelocityLayerSample,
+  transformChannelSampleAlignments,
 } from './channels.actions';
 import { PERCUSSION_TYPES } from '../percussion';
 import type { KitChannelsState } from '../sequencerModel';
@@ -92,6 +93,41 @@ describe('velocity layer updates', () => {
       sampleId: 'sample:replacement',
       alignmentOffset: 0.126,
     }));
+  });
+
+  test('transforms every active layer that references a replaced sample', () => {
+    const original = getFirstChannel(channelsInitialState).velocityLayers[0];
+    const layered = channelsReducer(
+      channelsInitialState,
+      replaceChannelVelocityLayers({
+        channelId: firstChannelId,
+        velocityLayers: [
+          {
+            ...original,
+            id: 'soft',
+            alignmentOffset: 0.1,
+            maxVelocity: 63,
+          },
+          {
+            ...original,
+            id: 'hard',
+            alignmentOffset: 0.6,
+            maxVelocity: 127,
+          },
+        ],
+      }),
+    );
+    const transformed = channelsReducer(
+      layered,
+      transformChannelSampleAlignments({
+        sampleId: original.sampleId,
+        trimStartSeconds: 0.25,
+        renderedDuration: 0.3,
+      }),
+    );
+
+    expect(getFirstChannel(transformed).velocityLayers.map(layer => layer.alignmentOffset))
+      .toEqual([0, 0.3]);
   });
 
   test('replaces a complete valid partition atomically and rejects invalid partitions', () => {

@@ -362,8 +362,8 @@ half-migrated behavior.
 
 As of July 27, 2026:
 
-- Phases 1 through 4 are complete.
-- Phase 5, Main Kit-row waveform and selector integration, is the next phase.
+- Phases 1 through 6 are complete.
+- Phase 7, Sample loading, lifecycle, and management, is the next phase.
 - Phase 4 also completed some groundwork originally listed under Phase 6:
   - Dirty waveform edits are guarded when switching layers.
   - Edited copies can be created as library assets without assigning the
@@ -371,9 +371,28 @@ As of July 27, 2026:
   - Replacement eligibility and naming follow the selected layer.
   - Selected-layer preview includes layer trim.
   - The correct waveform is refreshed after an edited asset is saved.
-- Phase 6 is not complete. The shared Audio Edit/Beat Alignment modes,
-  alignment transformation, upload/record support inside the editor, and the
-  combined `Save Copy & Apply` / `Replace & Apply` actions remain pending.
+- Phase 5 completed the Kit-row integration:
+  - The row selector, waveform, and Hit button resolve through the velocity-64
+    reference layer.
+  - The waveform is one pointer- and keyboard-accessible editor entry point.
+  - Multi-layer rows show the informational `×N` badge beside duration and
+    announce their layer count in the waveform's accessible name.
+  - The old inline Align controls are removed; only non-default reference-layer
+    alignment is indicated in the row.
+  - Main-row select, upload, and record assignments change only the reference
+    layer and show a non-blocking scope notification on multi-layer channels.
+- Phase 6 completed the unified waveform and transactional workflow:
+  - Audio Edit and Beat Alignment use one selected-layer canvas with
+    mode-specific Pointer Event gestures.
+  - Beat Alignment previews pending rendered audio and preserves the intended
+    source alignment point when a leading trim changes sample coordinates.
+  - Uploads and recordings create library assets without assigning the channel
+    until the complete layer draft is applied.
+  - The primary action is now `Apply`, `Save Copy & Apply`, or
+    `Replace & Apply` according to the pending work.
+  - User-sample replacement transforms alignment for every active layer and
+    saved user Kit layer that references the replaced asset.
+  - Failed sample persistence leaves the channel draft uncommitted.
 
 ### Phase 1: Pure velocity and layer domain
 
@@ -566,16 +585,15 @@ Implementation notes:
 
 - The editor retains the existing Audio Edit controls while configuration
   changes remain in a complete local layer draft until Apply.
-- Saving or replacing edited audio currently updates the selected layer draft,
-  after which Apply commits the complete partition. Phase 6 will combine these
-  into the specified dynamic primary actions.
+- Phase 6 replaced the earlier two-step edited-audio save flow with the
+  transactional `Save Copy & Apply` and `Replace & Apply` primary actions.
 - Phase 4 QA corrected the deferred canvas-sizing lifecycle so the waveform
   draws after draft initialization, and completed theme-aware open-menu styling
   for the reusable sample picker.
 
 ### Phase 5: Main Kit-row waveform and selector integration
 
-**Status:** Next.
+**Status:** Complete.
 
 **Goal:** Expose the feature without adding persistent clutter to the Kit row.
 
@@ -614,9 +632,22 @@ Acceptance criteria:
   clear non-blocking notification.
 - No overflow or additional small touch control is added to the waveform.
 
+Implementation notes:
+
+- `channelsSelector` exposes the resolved reference layer, its inclusive range,
+  layer count, sample URL/content revision/load status, and alignment while
+  retaining the flattened compatibility fields used by existing audio paths.
+- The Kit-row waveform is a single native button. Its `×N` and duration badges
+  use `pointer-events: none`, so their full area activates the same editor
+  entry point.
+- The alignment guide and marker use the existing 0.5 ms display epsilon and
+  are omitted at the default offset.
+- The shared main-row assignment thunk owns the multi-layer scope
+  notification, so selecting, uploading, and recording cannot bypass it.
+
 ### Phase 6: Unified waveform modes and transactional save workflow
 
-**Status:** Pending, with the groundwork identified above already complete.
+**Status:** Complete.
 
 **Goal:** Integrate Beat Alignment and waveform audio editing into the unified
 draft editor with clear save semantics.
@@ -681,7 +712,26 @@ Acceptance criteria:
 - A failed sample save/replace leaves channel state unchanged.
 - Single-layer editing remains compact while offering both waveform modes.
 
+Implementation notes:
+
+- The layer's draft alignment represents an absolute point in the source
+  sample. Beat Alignment derives its displayed offset by subtracting the
+  pending trim start and clamping to the rendered duration, so changing trim
+  boundaries does not repeatedly accumulate alignment error.
+- Alignment pointer placement and 10 ms steps update only the local layer
+  draft. Audio Edit pointer gestures update only the trim selection.
+- Edited-copy persistence returns a new asset ID, updates only the selected
+  layer draft, and then atomically applies the complete partition.
+- Replacement keeps the existing user-sample ID. After persistence succeeds,
+  reducers transform every matching active layer and saved user Kit layer;
+  affected saved Kit content hashes are invalidated.
+- Upload and recording actions have asset-only variants for the editor. Cancel
+  may leave the created asset in the library but never assigns its draft
+  sample to the channel.
+
 ### Phase 7: Sample loading, lifecycle, and management
+
+**Status:** Next.
 
 **Goal:** Ensure every layer's sample is loaded, tracked, protected, and
 recoverable.
@@ -873,11 +923,11 @@ end. Before declaring the feature complete, cover at least:
 - [x] MIDI-style note velocity UI and playback.
 - [x] Correct layer selection, trim, and alignment scheduling.
 - [x] Unified sample and velocity editor with draft layer configuration.
-- [ ] Main waveform `×N` badge, reference alignment indicator, and touch
+- [x] Main waveform `×N` badge, reference alignment indicator, and touch
       behavior.
-- [ ] Main-selector scoped-change notification.
-- [ ] Shared Audio Edit/Beat Alignment waveform modes.
-- [ ] Transactional Apply/Save Copy/Replace routing.
+- [x] Main-selector scoped-change notification.
+- [x] Shared Audio Edit/Beat Alignment waveform modes.
+- [x] Transactional Apply/Save Copy/Replace routing.
 - [ ] Multi-layer sample loading and Sample Manager usage protection.
 - [ ] Kit/Pattern Pack/Song preset and bundle portability.
 - [ ] Content-hash schema updates.

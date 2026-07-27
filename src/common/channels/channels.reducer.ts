@@ -15,8 +15,10 @@ import { isValidPercussionType } from '../percussion';
 import { createDefaultKitChannelsState } from '../defaultSequencerState';
 import {
   getReferenceVelocityLayer,
+  transformSampleAlignmentOffset,
   validateVelocityLayers,
 } from '../velocityLayers';
+import type { SampleAlignmentTransform } from '../velocityLayers';
 
 export const channelsInitialState = createDefaultKitChannelsState();
 
@@ -42,6 +44,10 @@ type VelocityLayerAlignmentPayload = {
 type ReplaceChannelVelocityLayersPayload = {
   channelId: string;
   velocityLayers: VelocityLayer[];
+};
+
+type TransformSampleAlignmentsPayload = SampleAlignmentTransform & {
+  sampleId: string;
 };
 
 type ChannelNumberPayload<TField extends string> = {
@@ -153,6 +159,23 @@ export const channelsSlice = createSlice({
       }
       updateChannel(state, action.payload.channelId, (channel) => {
         channel.velocityLayers = action.payload.velocityLayers.map(layer => ({ ...layer }));
+      });
+    },
+    transformChannelSampleAlignments(
+      state,
+      action: PayloadAction<TransformSampleAlignmentsPayload>,
+    ) {
+      state.ids.forEach((channelId) => {
+        updateChannel(state, channelId, (channel) => {
+          channel.velocityLayers.forEach((layer) => {
+            if (layer.sampleId === action.payload.sampleId) {
+              layer.alignmentOffset = transformSampleAlignmentOffset(
+                layer.alignmentOffset,
+                action.payload,
+              );
+            }
+          });
+        });
       });
     },
     setChannelGain: {

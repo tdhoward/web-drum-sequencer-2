@@ -91,6 +91,11 @@ const TOAST_MESSAGES: Record<string, ToastMessage> = {
     detail: 'The file may be invalid or incomplete. Check it and try again.',
     tone: 'error',
   },
+  [FLASH_MESSAGES.VELOCITY_LAYER_SAMPLE_CHANGED]: {
+    title: 'Velocity-layer sample changed',
+    detail: 'The layer containing velocity 64 changed. Other velocity layers were left unchanged.',
+    tone: 'success',
+  },
 };
 
 const enterToast = keyframes`

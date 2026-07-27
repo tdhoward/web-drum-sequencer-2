@@ -36,6 +36,17 @@ describe('channelsSelector', () => {
       kitChannelId: firstChannelId,
       sampleId: referenceLayer.sampleId,
       referenceVelocityLayerId: referenceLayer.id,
+      referenceVelocityLayer: expect.objectContaining({
+        id: referenceLayer.id,
+        sampleId: referenceLayer.sampleId,
+      }),
+      referenceVelocityLayerRange: {
+        minVelocity: 1,
+        maxVelocity: 127,
+      },
+      referenceSampleUrl: state.samples.entities[referenceLayer.sampleId].url,
+      referenceAlignmentOffset: 0.125,
+      velocityLayerCount: 1,
       alignmentOffset: 0.125,
       sampleLoaded: true,
     }));
@@ -89,5 +100,46 @@ describe('channelsSelector', () => {
       }),
     ]);
     expect(resolvedChannel.sampleId).toBe(referenceLayer.sampleId);
+  });
+
+  test('exposes the velocity-64 layer range and waveform inputs for a layered channel', () => {
+    const state = createDefaultSequencerState();
+    const firstChannelId = state.kitChannels.ids[0];
+    const channel = state.kitChannels.entities[firstChannelId];
+    const originalLayer = channel.velocityLayers[0];
+    const referenceSample = state.samples.entities[originalLayer.sampleId];
+    channel.velocityLayers = [
+      {
+        ...originalLayer,
+        id: `${firstChannelId}:soft`,
+        sampleId: 'sample:soft',
+        maxVelocity: 55,
+      },
+      {
+        ...originalLayer,
+        id: `${firstChannelId}:medium`,
+        maxVelocity: 100,
+        alignmentOffset: 0.04,
+      },
+      {
+        ...originalLayer,
+        id: `${firstChannelId}:hard`,
+        sampleId: 'sample:hard',
+      },
+    ];
+
+    const [resolvedChannel] = channelsSelector(state);
+
+    expect(resolvedChannel).toEqual(expect.objectContaining({
+      velocityLayerCount: 3,
+      referenceVelocityLayerId: `${firstChannelId}:medium`,
+      referenceVelocityLayerRange: {
+        minVelocity: 56,
+        maxVelocity: 100,
+      },
+      referenceSampleUrl: referenceSample.url,
+      referenceSampleContentHash: referenceSample.contentHash,
+      referenceAlignmentOffset: 0.04,
+    }));
   });
 });

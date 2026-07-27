@@ -24,6 +24,7 @@ import {
 } from '../../common/percussion';
 import {
   type LegacyChannel,
+  type SampleAlignmentTransform,
   type UserSample,
   type VelocityLayer,
 } from '../../common';
@@ -53,7 +54,6 @@ type KitChannelListComponentProps = {
   onSetPan: (channel: KitChannelListChannel, event: Event) => void;
   onSetChannelPitchCoarse: (channel: KitChannelListChannel, event: Event) => void;
   onSetReverb: (channel: KitChannelListChannel, event: Event) => void;
-  onSetSampleAlignment: (channel: KitChannelListChannel, alignmentOffset: number) => void;
   onApplyVelocityLayers: (
     channel: KitChannelListChannel,
     layers: VelocityLayer[],
@@ -65,7 +65,13 @@ type KitChannelListComponentProps = {
     sourceName: string,
     sampleName: string,
     replaceSampleId?: string,
+    alignmentTransform?: SampleAlignmentTransform,
   ) => Promise<string | void> | string | void;
+  onCreateUploadedSample: (file: File) => Promise<string>;
+  onCreateRecordedSample: (
+    audioBuffer: AudioBuffer,
+    sampleName: string,
+  ) => Promise<string>;
 };
 
 type KitChannelListComponentState = {
@@ -279,6 +285,15 @@ const getSampleSelectChannel = (channel: KitChannelListChannel): KitChannelListC
 
 const getKitEditChannel = getSampleSelectChannel;
 
+export const getKitChannelWaveformAccessibleName = (
+  channelName: string,
+  layerCount: number,
+): string => (
+  layerCount > 1
+    ? `Edit ${channelName} samples; ${layerCount} velocity layers`
+    : `Edit ${channelName} sample`
+);
+
 export const KitChannelHeader = () => (
   <KitChannelHeaderBar>
     <ChannelHeaderLabel>Channel</ChannelHeaderLabel>
@@ -473,6 +488,8 @@ export class KitChannelListComponent extends React.Component<
     const {
       channels,
       onApplyVelocityLayers,
+      onCreateRecordedSample,
+      onCreateUploadedSample,
       onPressHitButton,
       onPressRemove,
       onSaveEditedSample,
@@ -586,14 +603,16 @@ export class KitChannelListComponent extends React.Component<
                 </Box>
                 <WaveformCell>
                   <SampleWaveform
-                    alignmentOffset={channel.alignmentOffset || 0}
-                    onAlignmentChange={alignmentOffset => (
-                      this.props.onSetSampleAlignment(channel, alignmentOffset)
+                    accessibleName={getKitChannelWaveformAccessibleName(
+                      channel.name || channel.id,
+                      channel.velocityLayerCount,
                     )}
+                    alignmentOffset={channel.referenceAlignmentOffset}
+                    layerCount={channel.velocityLayerCount}
                     onClick={() => this.openSampleEditor(channel)}
-                    sampleContentHash={channel.sampleContentHash}
-                    sampleUrl={channel.sample}
-                    title="Edit sample"
+                    sampleContentHash={channel.referenceSampleContentHash}
+                    sampleUrl={channel.referenceSampleUrl}
+                    title={`Edit ${channel.name || channel.id} samples`}
                   />
                 </WaveformCell>
                 {detuneSupported ? (
@@ -669,7 +688,15 @@ export class KitChannelListComponent extends React.Component<
               : undefined
           )}
           onClose={this.closeSampleEditor}
-          onSaveEditedSample={(audioBuffer, sourceName, sampleName, replaceSampleId) => (
+          onCreateRecordedSample={onCreateRecordedSample}
+          onCreateUploadedSample={onCreateUploadedSample}
+          onSaveEditedSample={(
+            audioBuffer,
+            sourceName,
+            sampleName,
+            replaceSampleId,
+            alignmentTransform,
+          ) => (
             sampleEditorChannel
               ? onSaveEditedSample(
                 sampleEditorChannel,
@@ -677,6 +704,7 @@ export class KitChannelListComponent extends React.Component<
                 sourceName,
                 sampleName,
                 replaceSampleId,
+                alignmentTransform,
               )
               : undefined
           )}

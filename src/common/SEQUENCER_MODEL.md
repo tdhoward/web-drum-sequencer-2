@@ -321,6 +321,15 @@ partition. Channel-level `sample`, `sampleId`, and `alignmentOffset` fields are
 accepted only at normalization, migration, and v1 serialization boundaries;
 normalized Redux channels do not store those fields.
 
+The Kit-row view model exposes that resolved reference layer, its inclusive
+range, the total layer count, and the reference sample's URL, content revision,
+load status, and alignment. The main row sample selector changes only this
+layer. Its waveform is a single editor button: multi-layer rows show an
+informational `×N` badge beside duration, include the layer count in the
+accessible name, and show alignment markers only for a non-default reference
+offset. Beat Alignment is edited in the unified editor rather than inline in
+the row.
+
 `sample` is reusable normalized asset metadata referenced by velocity layers.
 It does not contain channel-specific alignment. `userSample` is the persisted
 user-facing library metadata used by the sample selector and sample manager.
@@ -333,6 +342,11 @@ Each velocity layer stores an `alignmentOffset` in seconds from its sample
 beginning. Zero preserves normal playback. The waveform's alignment mode clamps
 the value to the decoded sample duration and offers drag/tap placement, reset,
 and 10 ms steps.
+Audio Edit and Beat Alignment share the selected layer's waveform, with
+mode-specific Pointer Event behavior. While a waveform edit is pending, Beat
+Alignment displays the rendered trim/normalize output. The draft preserves the
+alignment point in source-sample coordinates; the final offset subtracts the
+leading trim duration and clamps to the rendered sample duration.
 For a note whose beat time is `T`, playback begins at `T - alignmentOffset` so
 the marker lands on the beat. The scheduler expands its lookahead by the offset;
 at transport startup it clamps source start times to the current Web Audio time
@@ -350,9 +364,15 @@ normalizing a factory sample creates a new `userSample` and a corresponding
 `sample` entity rather than mutating the source sample. An existing user sample
 may instead be explicitly replaced under its current ID, which updates every
 layer that references it. Replacement eligibility requires the ID to exist in
-the user-sample registry and not in the factory catalog. The current editor
-supports waveform selection, auto-select, trim, normalize, original/edited
-preview, and save-as naming.
+the user-sample registry and not in the factory catalog. Replacement alignment
+transforms apply to matching layers in active channels and saved user Kit
+presets; affected saved Kit content hashes are invalidated.
+The editor supports waveform selection, auto-select, trim, normalize,
+original/edited preview, and save-as naming. Its transactional primary action
+is `Apply`, `Save Copy & Apply`, or `Replace & Apply`. Uploading or recording
+inside the editor creates a library asset without assigning it to the channel
+until the complete valid layer draft is applied. Failed sample persistence
+does not commit that draft.
 Trim applies a tiny fade only at the end boundary to avoid blunting drum
 attacks. User samples can be renamed, previewed, and deleted through the Kit
 workspace sample manager, but deletion is disabled while the sample is assigned

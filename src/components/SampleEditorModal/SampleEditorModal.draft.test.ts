@@ -1,5 +1,6 @@
 import {
   addDraftVelocityLayer,
+  applySavedSampleToDraft,
   getInitialVelocityLayerId,
   getLayerWorkspaceAriaLabel,
   getVelocityLayerPresentation,
@@ -7,6 +8,7 @@ import {
   removeDraftVelocityLayer,
   setDraftLayerMaxVelocity,
   setDraftLayerMinVelocity,
+  setDraftLayerAlignment,
   setDraftLayerSample,
   setDraftLayerTrim,
 } from './SampleEditorModal.draft';
@@ -89,6 +91,59 @@ describe('Sample Editor velocity-layer draft', () => {
       trimDb: -3,
     }));
     expect(withTrim[1]).toEqual(layers[1]);
+  });
+
+  test('keeps alignment in the local draft until apply', () => {
+    const layers = [
+      createLayer('soft', 63),
+      createLayer('hard', 127, 'sample:hard.wav'),
+    ];
+
+    const updated = setDraftLayerAlignment(layers, 'hard', 0.126);
+
+    expect(updated[0]).toEqual(layers[0]);
+    expect(updated[1].alignmentOffset).toBe(0.126);
+  });
+
+  test('attaches a saved copy only to the selected layer and transforms its alignment', () => {
+    const layers = [
+      { ...createLayer('soft', 63), alignmentOffset: 0.1 },
+      { ...createLayer('hard', 127, 'sample:hard.wav'), alignmentOffset: 0.4 },
+    ];
+
+    const updated = applySavedSampleToDraft({
+      layers,
+      selectedLayerId: 'hard',
+      savedSampleId: 'sample:hard-copy.wav',
+      alignmentTransform: {
+        trimStartSeconds: 0.25,
+        renderedDuration: 0.5,
+      },
+    });
+
+    expect(updated[0]).toEqual(layers[0]);
+    expect(updated[1].sampleId).toBe('sample:hard-copy.wav');
+    expect(updated[1].alignmentOffset).toBeCloseTo(0.15);
+  });
+
+  test('transforms every draft reference when replacing a shared sample', () => {
+    const layers = [
+      { ...createLayer('soft', 63, 'sample:shared.wav'), alignmentOffset: 0.1 },
+      { ...createLayer('hard', 127, 'sample:shared.wav'), alignmentOffset: 0.7 },
+    ];
+
+    const updated = applySavedSampleToDraft({
+      layers,
+      selectedLayerId: 'hard',
+      savedSampleId: 'sample:shared.wav',
+      replacedSampleId: 'sample:shared.wav',
+      alignmentTransform: {
+        trimStartSeconds: 0.25,
+        renderedDuration: 0.4,
+      },
+    });
+
+    expect(updated.map(layer => layer.alignmentOffset)).toEqual([0, 0.4]);
   });
 
   test('derives the visible three-layer summary and waveform label', () => {

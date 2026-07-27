@@ -4,7 +4,9 @@ import {
   removeVelocityLayer,
   setVelocityLayerBoundary,
   splitVelocityLayer,
+  transformSampleAlignmentOffset,
   validateVelocityLayers,
+  type SampleAlignmentTransform,
   type VelocityLayer,
   type VelocityLayerRange,
 } from '../../common';
@@ -145,6 +147,51 @@ export const setDraftLayerSample = (
     : { ...layer }
 ));
 
+export const setDraftLayerAlignment = (
+  layers: readonly VelocityLayer[],
+  layerId: string,
+  alignmentOffset: number,
+): VelocityLayer[] => {
+  if (!Number.isFinite(alignmentOffset)) {
+    return cloneLayers(layers);
+  }
+  return layers.map(layer => (
+    layer.id === layerId
+      ? { ...layer, alignmentOffset: Math.max(0, alignmentOffset) }
+      : { ...layer }
+  ));
+};
+
+type ApplySavedSampleToDraftInput = {
+  layers: readonly VelocityLayer[];
+  selectedLayerId: string;
+  savedSampleId: string;
+  replacedSampleId?: string;
+  alignmentTransform: SampleAlignmentTransform;
+};
+
+export const applySavedSampleToDraft = ({
+  layers,
+  selectedLayerId,
+  savedSampleId,
+  replacedSampleId,
+  alignmentTransform,
+}: ApplySavedSampleToDraftInput): VelocityLayer[] => layers.map((layer) => {
+  const shouldUpdate = replacedSampleId
+    ? layer.sampleId === replacedSampleId
+    : layer.id === selectedLayerId;
+  return shouldUpdate
+    ? {
+      ...layer,
+      sampleId: savedSampleId,
+      alignmentOffset: transformSampleAlignmentOffset(
+        layer.alignmentOffset,
+        alignmentTransform,
+      ),
+    }
+    : { ...layer };
+});
+
 export const setDraftLayerTrim = (
   layers: readonly VelocityLayer[],
   layerId: string,
@@ -169,4 +216,3 @@ export const getLayerWorkspaceAriaLabel = (
   label: string,
   rangeLabel: string,
 ): string => `Edit ${label} ${rangeLabel} sample waveform`;
-

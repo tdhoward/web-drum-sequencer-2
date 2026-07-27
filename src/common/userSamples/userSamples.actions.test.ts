@@ -6,6 +6,8 @@ import {
 } from '../../services/sampleStore';
 import factorySamples from '../../samples.config';
 import {
+  createRecordedUserSample,
+  createUploadedUserSample,
   saveEditedUserSample,
   saveRecordedUserSample,
   saveUserSample,
@@ -74,6 +76,34 @@ describe('new user samples', () => {
       payload: { channel: 'channel-1', pitchCoarse: 0 },
     });
   });
+
+  test('can create uploaded and recorded assets without assigning a channel', async () => {
+    const dispatch = jest.fn(action => action);
+    const file = new File(['sample'], 'draft-upload.wav', { type: 'audio/wav' });
+    mockedSaveToSampleStore.mockResolvedValue({
+      id: 'draft-upload.wav',
+      fingerprint,
+    });
+    mockedSaveRecordedSampleBuffer.mockResolvedValue({
+      id: 'draft-recording.wav',
+      fingerprint,
+    });
+
+    await createUploadedUserSample(file)(dispatch);
+    await createRecordedUserSample({} as AudioBuffer, 'Draft Recording')(dispatch);
+
+    expect(dispatch.mock.calls.some(([action]) => (
+      action?.type === 'kitChannels/setChannelSample'
+    ))).toBe(false);
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'userSamples/addUserSample',
+      payload: expect.objectContaining({ id: 'draft-upload.wav' }),
+    }));
+    expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'userSamples/addUserSample',
+      payload: expect.objectContaining({ id: 'draft-recording.wav' }),
+    }));
+  });
 });
 
 describe('saveEditedUserSample', () => {
@@ -98,6 +128,11 @@ describe('saveEditedUserSample', () => {
       'Kick',
       'My Kick',
       'user-kick.wav',
+      false,
+      {
+        trimStartSeconds: 0.25,
+        renderedDuration: 0.5,
+      },
     );
 
     await thunk(dispatch, () => ({
@@ -131,6 +166,22 @@ describe('saveEditedUserSample', () => {
       },
     }));
     expect(dispatch.mock.calls.some(([action]) => typeof action === 'function')).toBe(false);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'kitChannels/transformChannelSampleAlignments',
+      payload: {
+        sampleId: 'sample:user-kick.wav',
+        trimStartSeconds: 0.25,
+        renderedDuration: 0.5,
+      },
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'presets/transformPresetSampleAlignments',
+      payload: {
+        sampleId: 'sample:user-kick.wav',
+        trimStartSeconds: 0.25,
+        renderedDuration: 0.5,
+      },
+    });
   });
 
   test('falls back to save-copy when the requested id is not a user sample', async () => {
@@ -177,6 +228,32 @@ describe('saveEditedUserSample', () => {
     expect(dispatchedThunks).toHaveLength(1);
     expect(dispatch.mock.calls.some(([action]) => (
       action?.type === 'kitChannels/setChannelSample'
+    ))).toBe(false);
+  });
+
+  test('does not transform layer state when replacement persistence fails', async () => {
+    const dispatch = jest.fn(action => action);
+    mockedReplaceUserSampleBuffer.mockRejectedValueOnce(new Error('save failed'));
+    const thunk = saveEditedUserSample(
+      'channel-1',
+      {} as AudioBuffer,
+      'Kick',
+      'My Kick',
+      'user-kick.wav',
+      false,
+      {
+        trimStartSeconds: 0.25,
+        renderedDuration: 0.5,
+      },
+    );
+
+    await expect(thunk(dispatch, () => ({
+      userSamples: [{ id: 'user-kick.wav', name: 'Kick' }],
+    }))).rejects.toThrow('save failed');
+
+    expect(dispatch.mock.calls.some(([action]) => (
+      action?.type === 'kitChannels/transformChannelSampleAlignments'
+      || action?.type === 'presets/transformPresetSampleAlignments'
     ))).toBe(false);
   });
 });

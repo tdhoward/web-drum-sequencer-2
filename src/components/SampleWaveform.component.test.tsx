@@ -1,10 +1,28 @@
+/** @jest-environment jsdom */
+
+import React from 'react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
+import { ThemeProvider } from 'styled-components';
+import { loadSampleBuffer } from '../services/sampleStore';
+import { classicDarkTheme } from '../styles/theme';
 import {
   getWaveformPeaks,
   getWaveformTracePoints,
   alignmentOffsetFromPointer,
   clampAlignmentOffset,
   formatAlignmentOffset,
+  SampleWaveform,
+  shouldShowAlignmentIndicator,
 } from './SampleWaveform.component';
+
+jest.mock('../services/sampleStore', () => ({
+  loadSampleBuffer: jest.fn(),
+}));
 
 class TestAudioBuffer {
   numberOfChannels: number;
@@ -37,6 +55,18 @@ class TestAudioBuffer {
 
 const createBuffer = (channels: number[][]): AudioBuffer => (
   new TestAudioBuffer(channels) as unknown as AudioBuffer
+);
+
+const mockedLoadSampleBuffer = (
+  loadSampleBuffer as jest.MockedFunction<typeof loadSampleBuffer>
+);
+
+const renderWaveform = (
+  props: React.ComponentProps<typeof SampleWaveform>,
+) => render(
+  <ThemeProvider theme={classicDarkTheme}>
+    <SampleWaveform {...props} />
+  </ThemeProvider>,
 );
 
 describe('getWaveformPeaks', () => {
@@ -109,5 +139,79 @@ describe('sample beat alignment interaction helpers', () => {
   test('formats the editing value in user-friendly milliseconds', () => {
     expect(formatAlignmentOffset(0)).toBe('On sample start');
     expect(formatAlignmentOffset(0.126)).toBe('Start 126 ms early');
+  });
+
+  test('treats offsets within the display epsilon as the default position', () => {
+    expect(shouldShowAlignmentIndicator(0)).toBe(false);
+    expect(shouldShowAlignmentIndicator(0.0005)).toBe(false);
+    expect(shouldShowAlignmentIndicator(0.00051)).toBe(true);
+  });
+});
+
+describe('SampleWaveform Kit-row interaction', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockedLoadSampleBuffer.mockResolvedValue(createBuffer([[0, 0.5, -0.25, 0]]));
+    jest.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation((() => ({
+      clearRect: jest.fn(),
+    })) as unknown as typeof HTMLCanvasElement.prototype.getContext);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  test('reports the layer count and opens from pointer, keyboard, and badge-area clicks', async () => {
+    const onClick = jest.fn();
+
+    renderWaveform({
+      accessibleName: 'Edit Open Hat samples; 3 velocity layers',
+      layerCount: 3,
+      onClick,
+      sampleUrl: 'open-hat.wav',
+    });
+
+    const waveformButton = screen.getByRole('button', {
+      name: 'Edit Open Hat samples; 3 velocity layers',
+    });
+    const layerBadge = await screen.findByTestId('velocity-layer-count');
+
+    expect(layerBadge.textContent).toBe('×3');
+    expect(window.getComputedStyle(layerBadge).pointerEvents).toBe('none');
+    expect(screen.queryByRole('button', { name: 'Align' })).toBeNull();
+
+    fireEvent.pointerDown(waveformButton, { pointerId: 1 });
+    fireEvent.click(waveformButton);
+    expect(onClick).toHaveBeenCalledTimes(1);
+
+    waveformButton.focus();
+    fireEvent.click(waveformButton, { detail: 0 });
+    expect(onClick).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(layerBadge);
+    expect(onClick).toHaveBeenCalledTimes(3);
+  });
+
+  test('shows alignment only when the reference layer has a non-default offset', async () => {
+    const { container, rerender } = renderWaveform({
+      alignmentOffset: 0,
+      sampleUrl: 'snare.wav',
+    });
+
+    await screen.findByText('0.00 s');
+    expect(container.querySelectorAll('[data-alignment-indicator="true"]')).toHaveLength(0);
+
+    rerender(
+      <ThemeProvider theme={classicDarkTheme}>
+        <SampleWaveform
+          alignmentOffset={0.001}
+          sampleUrl="snare.wav"
+        />
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('[data-alignment-indicator="true"]')).toHaveLength(2);
+    });
   });
 });
