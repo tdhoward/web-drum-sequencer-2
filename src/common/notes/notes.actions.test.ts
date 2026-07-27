@@ -39,11 +39,11 @@ describe('setNoteVelocityAtBeat', () => {
     const state = createTestState();
     const dispatch = jest.fn();
 
-    setNoteVelocityAtBeat('kick', 0, 1, 1.25)(dispatch, () => state);
+    setNoteVelocityAtBeat('kick', 0, 1, 80)(dispatch, () => state);
 
     expect(dispatch).toHaveBeenCalledWith(setNoteVelocity({
       id: 'kick-1',
-      velocity: 1.25,
+      velocity: 80,
     }));
   });
 
@@ -51,7 +51,7 @@ describe('setNoteVelocityAtBeat', () => {
     const state = createTestState();
     const dispatch = jest.fn();
 
-    setNoteVelocityAtBeat('kick', 0, 2, 0.5)(dispatch, () => state);
+    setNoteVelocityAtBeat('kick', 0, 2, 32)(dispatch, () => state);
 
     expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatch.mock.calls[0][0]).toEqual(addNote({
@@ -60,7 +60,7 @@ describe('setNoteVelocityAtBeat', () => {
       patternId: 'pattern-0',
       step: 4,
       pitch: 0,
-      velocity: 0.5,
+      velocity: 32,
     }));
   });
 });

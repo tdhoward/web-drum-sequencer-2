@@ -3,8 +3,11 @@ import styled from 'styled-components';
 import {
   DEFAULT_NOTE_VELOCITY,
   MAX_NOTE_VELOCITY,
-  MIN_NOTE_VELOCITY,
 } from '../../common/sequencerModel';
+import {
+  MIN_AUDIBLE_MIDI_VELOCITY,
+  noteVelocityToGain,
+} from '../../common/velocityLayers';
 
 type NoteVelocityPopoverProps = {
   beat: number;
@@ -13,9 +16,11 @@ type NoteVelocityPopoverProps = {
   onResetVelocity: () => void;
 };
 
-const VELOCITY_STEP = 0.05;
+const VELOCITY_STEP = 1;
 
-const formatVelocity = (velocity: number): string => `${Math.round(velocity * 100)}%`;
+const formatVelocityPercent = (
+  velocity: number,
+): string => `${Math.round(noteVelocityToGain(velocity) * 100)}%`;
 
 const stopPropagation = (event: React.SyntheticEvent): void => {
   event.stopPropagation();
@@ -31,8 +36,8 @@ const Popover = styled.div`
   left: 50%;
   bottom: calc(100% + 0.5rem);
   z-index: 30;
-  width: 3.5rem;
-  min-height: 9.5rem;
+  width: 4.25rem;
+  min-height: 10rem;
   padding: 0.5rem 0.375rem;
   border: 1px solid ${({ theme }) => theme.colors.borderDefault};
   border-radius: 0.35rem;
@@ -57,13 +62,20 @@ const Popover = styled.div`
 `;
 
 const VelocityReadout = styled.div`
-  height: 1rem;
-  font-size: 0.72rem;
+  min-height: 1.5rem;
+  font-size: 1rem;
   font-weight: bold;
-  line-height: 1rem;
+  line-height: 1;
   text-align: center;
   letter-spacing: 0;
   user-select: none;
+`;
+
+const VelocityPercent = styled.div`
+  margin-top: 0.15rem;
+  font-size: 0.65rem;
+  font-weight: normal;
+  opacity: 0.72;
 `;
 
 const SliderSlot = styled.div`
@@ -118,7 +130,7 @@ export const NoteVelocityPopover = ({
   onChangeVelocity,
   onResetVelocity,
 }: NoteVelocityPopoverProps) => {
-  const velocityText = formatVelocity(velocity);
+  const velocityPercent = formatVelocityPercent(velocity);
 
   return (
     <Popover
@@ -130,15 +142,16 @@ export const NoteVelocityPopover = ({
       onContextMenu={preventContextMenu}
     >
       <VelocityReadout aria-live="polite">
-        {velocityText}
+        {velocity}
+        <VelocityPercent>{velocityPercent}</VelocityPercent>
       </VelocityReadout>
       <SliderSlot>
         <VerticalRange
-          min={MIN_NOTE_VELOCITY}
+          min={MIN_AUDIBLE_MIDI_VELOCITY}
           max={MAX_NOTE_VELOCITY}
           step={VELOCITY_STEP}
-          value={velocity}
-          aria-label={`beat ${beat} velocity multiplier`}
+          value={Math.max(MIN_AUDIBLE_MIDI_VELOCITY, velocity)}
+          aria-label={`beat ${beat} MIDI velocity`}
           onChange={(event) => {
             onChangeVelocity(Number(event.currentTarget.value));
           }}
@@ -147,10 +160,10 @@ export const NoteVelocityPopover = ({
       <ResetButton
         type="button"
         disabled={velocity === DEFAULT_NOTE_VELOCITY}
-        aria-label={`reset beat ${beat} velocity to 100 percent`}
+        aria-label={`reset beat ${beat} velocity to 64`}
         onClick={onResetVelocity}
       >
-        100%
+        64
       </ResetButton>
     </Popover>
   );

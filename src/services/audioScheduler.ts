@@ -1,5 +1,10 @@
 import { LOOKAHEAD } from './audioEngine.config';
 import { DEFAULT_NOTE_VELOCITY, normalizeNoteVelocity } from '../common/sequencerModel';
+import {
+  getVelocityLayerForVelocity,
+  MAX_MIDI_VELOCITY,
+  SILENT_MIDI_VELOCITY,
+} from '../common/velocityLayers';
 import { getAudioContext } from './audioContext';
 import { playNote } from './audioRouter';
 import { notifyChannelTriggered } from './channelTriggerEvents';
@@ -16,6 +21,16 @@ type NoteChannel = PitchInput & {
   id: string;
   sample?: string;
   alignmentOffset?: number;
+  velocityLayers?: NoteChannelVelocityLayer[];
+};
+
+type NoteChannelVelocityLayer = {
+  id: string;
+  sampleId: string;
+  sample?: string;
+  maxVelocity: number;
+  alignmentOffset: number;
+  trimDb: number;
 };
 
 type ChannelNote = {
@@ -68,16 +83,51 @@ type ScheduledSource = {
 const schedule: Record<string, ScheduledSource> = {};
 const visualTriggerSchedule: Record<string, ReturnType<typeof globalThis.setTimeout>> = {};
 
-const getSampleBuffer = (noteChannel: NoteChannel): AudioBuffer | undefined => (
-  typeof noteChannel.sample === 'undefined'
+const getSampleBuffer = (sampleUrl?: string): AudioBuffer | undefined => (
+  typeof sampleUrl === 'undefined'
     ? undefined
-    : sampleStore[noteChannel.sample]
+    : sampleStore[sampleUrl]
 );
 
-const getAlignmentOffset = (noteChannel: NoteChannel): number => (
-  typeof noteChannel.alignmentOffset === 'number' && Number.isFinite(noteChannel.alignmentOffset)
-    ? Math.max(0, noteChannel.alignmentOffset)
+const normalizeAlignmentOffset = (alignmentOffset: unknown): number => (
+  typeof alignmentOffset === 'number' && Number.isFinite(alignmentOffset)
+    ? Math.max(0, alignmentOffset)
     : 0
+);
+
+const getPlaybackLayer = (
+  noteChannel: NoteChannel,
+  velocity: number,
+): NoteChannelVelocityLayer | undefined => {
+  const effectiveVelocity = normalizeNoteVelocity(velocity);
+  if (effectiveVelocity === SILENT_MIDI_VELOCITY) {
+    return undefined;
+  }
+  if (noteChannel.velocityLayers?.length) {
+    return getVelocityLayerForVelocity(
+      noteChannel.velocityLayers,
+      effectiveVelocity,
+    );
+  }
+  return {
+    id: `${noteChannel.id}:legacy-layer`,
+    sampleId: '',
+    sample: noteChannel.sample,
+    maxVelocity: MAX_MIDI_VELOCITY,
+    alignmentOffset: normalizeAlignmentOffset(noteChannel.alignmentOffset),
+    trimDb: 0,
+  };
+};
+
+export const getMaxAlignmentOffset = (noteChannel: NoteChannel): number => (
+  noteChannel.velocityLayers?.length
+    ? Math.max(
+      0,
+      ...noteChannel.velocityLayers.map(layer => (
+        normalizeAlignmentOffset(layer.alignmentOffset)
+      )),
+    )
+    : normalizeAlignmentOffset(noteChannel.alignmentOffset)
 );
 
 export const pitchToCents = ({ pitchCoarse = 0, pitchFine = 0 }: PitchInput): number => Math.round(
@@ -85,8 +135,19 @@ export const pitchToCents = ({ pitchCoarse = 0, pitchFine = 0 }: PitchInput): nu
 );
 
 export const playNoteNow = (noteChannel: NoteChannel): void => {
+  const playbackLayer = getPlaybackLayer(noteChannel, DEFAULT_NOTE_VELOCITY);
+  if (!playbackLayer) {
+    return;
+  }
   const pitch = pitchToCents(noteChannel);
-  playNote(null, getSampleBuffer(noteChannel), noteChannel.id, pitch);
+  playNote(
+    null,
+    getSampleBuffer(playbackLayer.sample),
+    noteChannel.id,
+    pitch,
+    DEFAULT_NOTE_VELOCITY,
+    playbackLayer.trimDb,
+  );
   notifyChannelTriggered(noteChannel.id);
 };
 
@@ -124,8 +185,13 @@ export const scheduleNote = (
   noteVelocity = DEFAULT_NOTE_VELOCITY,
 ): void => {
   if (typeof schedule[noteId] === 'undefined') {
+    const effectiveVelocity = normalizeNoteVelocity(noteVelocity);
+    const playbackLayer = getPlaybackLayer(noteChannel, effectiveVelocity);
+    if (!playbackLayer) {
+      return;
+    }
     const pitch = pitchToCents(noteChannel);
-    const alignmentOffset = getAlignmentOffset(noteChannel);
+    const alignmentOffset = normalizeAlignmentOffset(playbackLayer.alignmentOffset);
     const playbackTime = Math.max(
       getAudioContext().currentTime,
       noteTime - alignmentOffset,
@@ -133,10 +199,11 @@ export const scheduleNote = (
     schedule[noteId] = {
       source: playNote(
         playbackTime,
-        getSampleBuffer(noteChannel),
+        getSampleBuffer(playbackLayer.sample),
         noteChannel.id,
         pitch,
-        noteVelocity,
+        effectiveVelocity,
+        playbackLayer.trimDb,
       ),
       playbackTime,
     };
@@ -224,7 +291,7 @@ export const getScheduledNotes = ({
   (note) => {
     const lookaheadBeats = LOOKAHEAD * (tempo.bpm / 60);
     const secondsPerBeat = 60 / tempo.bpm;
-    const alignmentBeats = getAlignmentOffset(channel) / secondsPerBeat;
+    const alignmentBeats = getMaxAlignmentOffset(channel) / secondsPerBeat;
 
     if (!isBeatInPattern(note.beat, patternLengthInBeats)) {
       return getUnscheduledNote(note, channel);

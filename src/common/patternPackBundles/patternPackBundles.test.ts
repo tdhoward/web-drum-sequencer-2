@@ -25,7 +25,7 @@ const patternPack: PatternPack = {
   }],
   notes: {
     kick: [[
-      { id: 'kick-1', beat: 1, velocity: 1.2 },
+      { id: 'kick-1', beat: 1, velocity: 80 },
       { id: 'hidden-kick', beat: 5 },
     ]],
   },
@@ -67,7 +67,7 @@ describe('pattern pack export bundles', () => {
 
   test('rejects pattern content changed after export', async () => {
     const bundle = await createPatternPackExportBundle(patternPack);
-    bundle.manifest.patternPack.notes.kick[0][0].velocity = 0.5;
+    bundle.manifest.patternPack.notes.kick[0][0].velocity = 32;
 
     await expect(verifyPatternPackExportBundle(bundle)).rejects.toThrow(
       'content hash verification failed',

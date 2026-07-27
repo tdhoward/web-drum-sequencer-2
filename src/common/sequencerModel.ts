@@ -1,9 +1,14 @@
 import { PERCUSSION_TYPES } from './percussion';
 import {
+  DEFAULT_MIDI_VELOCITY,
   getVelocityLayerSampleReferences,
+  legacyVelocityToMidiVelocity,
+  MAX_MIDI_VELOCITY,
+  normalizeMidiVelocity,
   normalizeVelocityLayerInputs,
   normalizeVelocityLayers,
   sampleIdFromUrl,
+  SILENT_MIDI_VELOCITY,
 } from './velocityLayers';
 import type {
   VelocityLayer,
@@ -17,9 +22,9 @@ export { sampleIdFromUrl };
 export const DEFAULT_SONG_ID = 'song-1';
 export const DEFAULT_KIT_ID = 'default-kit';
 export const DEFAULT_PATTERN_COUNT = 8;
-export const DEFAULT_NOTE_VELOCITY = 1;
-export const MIN_NOTE_VELOCITY = 0;
-export const MAX_NOTE_VELOCITY = 2;
+export const DEFAULT_NOTE_VELOCITY = DEFAULT_MIDI_VELOCITY;
+export const MIN_NOTE_VELOCITY = SILENT_MIDI_VELOCITY;
+export const MAX_NOTE_VELOCITY = MAX_MIDI_VELOCITY;
 
 export type EntityState<TEntity> = {
   ids: string[];
@@ -322,15 +327,9 @@ export const createPatternIds = (patternCount = DEFAULT_PATTERN_COUNT): string[]
   Array.from({ length: patternCount }, (_, index) => patternIndexToId(index))
 );
 
-const clamp = (value: number, min: number, max: number): number => (
-  Math.min(max, Math.max(min, value))
-);
-
-export const normalizeNoteVelocity = (velocity: unknown = DEFAULT_NOTE_VELOCITY): number => (
-  typeof velocity === 'number' && Number.isFinite(velocity)
-    ? clamp(velocity, MIN_NOTE_VELOCITY, MAX_NOTE_VELOCITY)
-    : DEFAULT_NOTE_VELOCITY
-);
+export const normalizeNoteVelocity = (
+  velocity: unknown = DEFAULT_NOTE_VELOCITY,
+): number => normalizeMidiVelocity(velocity, DEFAULT_NOTE_VELOCITY);
 
 type CreateSongStateArgs = {
   id?: string;
@@ -606,7 +605,7 @@ export const notesStateToLegacyNotes = ({
           if (note.pitch !== 0) {
             legacyNote.pitch = note.pitch;
           }
-          if (note.velocity !== 1) {
+          if (note.velocity !== DEFAULT_NOTE_VELOCITY) {
             legacyNote.velocity = note.velocity;
           }
 
@@ -828,5 +827,66 @@ export const migrateToVelocityLayerSequencerState = (
         })),
       }
       : state.presets,
+  };
+};
+
+type MidiVelocityMigrationPatternPacksState = {
+  userPatternPacks?: PatternPack[];
+  [key: string]: unknown;
+};
+
+const migrateLegacyPatternPackNoteVelocities = (
+  notes: PatternPackNotes,
+): PatternPackNotes => Object.entries(notes).reduce<PatternPackNotes>(
+  (migratedNotes, [laneId, lanePatterns]) => {
+    migratedNotes[laneId] = lanePatterns.map(patternNotes => patternNotes.map((note) => {
+      if (typeof note.velocity === 'undefined') {
+        return { ...note };
+      }
+      return {
+        ...note,
+        velocity: legacyVelocityToMidiVelocity(note.velocity),
+      };
+    }));
+    return migratedNotes;
+  },
+  {},
+);
+
+export const migrateToMidiVelocitySequencerState = (
+  state: LegacySequencerState = {},
+) => {
+  const legacyNotesState = isNotesState(state.notes) ? state.notes : undefined;
+  const notes = legacyNotesState
+    ? {
+      ids: [...legacyNotesState.ids],
+      entities: legacyNotesState.ids.reduce<Record<string, Note>>((entities, noteId) => {
+        const note = legacyNotesState.entities[noteId];
+        if (note) {
+          entities[noteId] = {
+            ...note,
+            velocity: legacyVelocityToMidiVelocity(note.velocity),
+          };
+        }
+        return entities;
+      }, {}),
+    }
+    : state.notes;
+  const patternPacks = state.patternPacks as
+    | MidiVelocityMigrationPatternPacksState
+    | undefined;
+
+  return {
+    ...state,
+    notes,
+    patternPacks: patternPacks
+      ? {
+        ...patternPacks,
+        userPatternPacks: (patternPacks.userPatternPacks || []).map(patternPack => ({
+          ...patternPack,
+          notes: migrateLegacyPatternPackNoteVelocities(patternPack.notes),
+        })),
+      }
+      : state.patternPacks,
   };
 };

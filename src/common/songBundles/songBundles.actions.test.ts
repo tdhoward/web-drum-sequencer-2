@@ -116,7 +116,7 @@ const createState = () => {
       },
     },
     notes: normalizeNotesState({
-      'kick-lane': [[{ id: 'live-note-id', beat: 2, velocity: 0.75 }]],
+      'kick-lane': [[{ id: 'live-note-id', beat: 2, velocity: 48 }]],
     }, ['pattern-0']),
     playbackSession: {
       playing: false,

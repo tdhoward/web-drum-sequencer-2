@@ -51,7 +51,7 @@ describe('addNote', () => {
       patternId: 'pattern-0',
       step: 4,
       pitch: 0,
-      velocity: 1,
+      velocity: DEFAULT_NOTE_VELOCITY,
     }));
     expect(state.ids).toContain('new-note');
     expect(state.entities['new-note']).not.toBeUndefined();
@@ -69,19 +69,19 @@ describe('removeNote', () => {
 });
 
 describe('setNoteVelocity', () => {
-  test('updates a note velocity multiplier', () => {
+  test('updates a note MIDI velocity', () => {
     const state = notesReducer(testNotes, setNoteVelocity({
       id: 'bing',
-      velocity: 1.25,
+      velocity: 80,
     }));
 
-    expect(state.entities.bing.velocity).toBe(1.25);
+    expect(state.entities.bing.velocity).toBe(80);
   });
 
-  test('resets a note to the default velocity multiplier', () => {
+  test('resets a note to MIDI velocity 64', () => {
     const accentedNotes = notesReducer(testNotes, setNoteVelocity({
       id: 'bing',
-      velocity: 0.5,
+      velocity: 32,
     }));
     const resetNotes = notesReducer(accentedNotes, setNoteVelocity({
       id: 'bing',
@@ -91,10 +91,10 @@ describe('setNoteVelocity', () => {
     expect(resetNotes.entities.bing.velocity).toBe(DEFAULT_NOTE_VELOCITY);
   });
 
-  test('clamps note velocity multipliers to the supported authored range', () => {
+  test('clamps note velocity to the supported MIDI range', () => {
     const state = notesReducer(testNotes, setNoteVelocity({
       id: 'bing',
-      velocity: 10,
+      velocity: 500,
     }));
 
     expect(state.entities.bing.velocity).toBe(MAX_NOTE_VELOCITY);
@@ -103,7 +103,7 @@ describe('setNoteVelocity', () => {
   test('ignores unknown note ids', () => {
     const state = notesReducer(testNotes, setNoteVelocity({
       id: 'unknown-note',
-      velocity: 0.5,
+      velocity: 32,
     }));
 
     expect(state).toEqual(testNotes);

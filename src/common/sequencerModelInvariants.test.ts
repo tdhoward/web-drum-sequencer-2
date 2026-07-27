@@ -57,7 +57,7 @@ describe('sequencer model invariants', () => {
       laneId: 'missing-lane',
       step: 0,
       pitch: 0,
-      velocity: 1,
+      velocity: 64,
     };
 
     expect(validateSequencerModelState(state)).toContain(
@@ -76,7 +76,7 @@ describe('sequencer model invariants', () => {
       laneId: state.patterns.entities[state.song.selectedPatternId].laneIds[0],
       step: 0,
       pitch: 0,
-      velocity: 1,
+      velocity: 64,
     };
 
     expect(validateSequencerModelState(state)).toContain(
@@ -94,6 +94,26 @@ describe('sequencer model invariants', () => {
     expect(validateSequencerModelState(state)).toContain(
       `kitChannel ${kitChannelId} velocityLayer ${layer.id} `
       + 'references missing sampleId: missing-sample',
+    );
+  });
+
+  test('detects notes outside the integer MIDI velocity domain', () => {
+    const state = clone(createDefaultSequencerState());
+    const patternId = state.song.patternIds[0];
+    const laneId = state.patterns.entities[patternId].laneIds[0];
+    const noteId = 'fractional-velocity';
+    state.notes.ids.push(noteId);
+    state.notes.entities[noteId] = {
+      id: noteId,
+      patternId,
+      laneId,
+      step: 0,
+      pitch: 0,
+      velocity: 64.5,
+    };
+
+    expect(validateSequencerModelState(state)).toContain(
+      `note ${noteId} velocity must be an integer from 0 to 127`,
     );
   });
 

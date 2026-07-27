@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import * as ss from 'styled-system';
 import { Box } from '../design-system';
 import { NoteVelocityPopover } from './NoteVelocityPopover.component';
+import { DEFAULT_NOTE_VELOCITY } from '../../common/sequencerModel';
+import { noteVelocityToGain } from '../../common/velocityLayers';
 import type {
   BorderRadiusProps,
   BordersProps,
@@ -52,11 +54,15 @@ const getVelocityScale = (isActive: boolean, velocity: number): number => {
     return 1;
   }
 
-  if (velocity <= 1) {
-    return MIN_VELOCITY_SCALE + (velocity * (1 - MIN_VELOCITY_SCALE));
+  const velocityGain = noteVelocityToGain(velocity);
+  if (velocityGain <= 1) {
+    return MIN_VELOCITY_SCALE + (velocityGain * (1 - MIN_VELOCITY_SCALE));
   }
 
-  return Math.min(MAX_VELOCITY_SCALE, 1 + ((velocity - 1) * (MAX_VELOCITY_SCALE - 1)));
+  return Math.min(
+    MAX_VELOCITY_SCALE,
+    1 + ((velocityGain - 1) * (MAX_VELOCITY_SCALE - 1)),
+  );
 };
 
 const ToggleRoot = styled.div`
@@ -85,7 +91,9 @@ const BeatButton = styled.button.attrs<BeatButtonDefaultProps>(({
   touch-action: manipulation;
   user-select: none;
   -webkit-touch-callout: none;
-  z-index: ${({ $isActive, $velocity }) => ($isActive && $velocity > 1 ? 2 : 1)};
+  z-index: ${({ $isActive, $velocity }) => (
+    $isActive && $velocity > DEFAULT_NOTE_VELOCITY ? 2 : 1
+  )};
   transform: scale(${({ $velocityScale }) => $velocityScale});
   transform-origin: center;
   background: ${({ $isActive, theme }) => ($isActive
@@ -120,7 +128,7 @@ export const Toggle = ({
   const longPressTimerRef = React.useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const longPressTriggeredRef = React.useRef(false);
   const pointerStartRef = React.useRef<{ x: number; y: number } | null>(null);
-  const velocityPercent = Math.round(velocity * 100);
+  const velocityPercent = Math.round(noteVelocityToGain(velocity) * 100);
   const velocityScale = getVelocityScale(isActive, velocity);
 
   React.useEffect(() => () => {
@@ -221,7 +229,7 @@ export const Toggle = ({
         aria-haspopup="dialog"
         aria-expanded={isVelocityEditorOpen}
         aria-label={isActive
-          ? `disable beat ${beat}, velocity ${velocityPercent} percent`
+          ? `disable beat ${beat}, MIDI velocity ${velocity}, ${velocityPercent} percent`
           : `enable beat ${beat}`}
       >
         <Box

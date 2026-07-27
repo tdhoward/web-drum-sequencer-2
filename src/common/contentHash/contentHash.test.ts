@@ -29,7 +29,7 @@ const patternPack = (): PatternPack => ({
   }],
   notes: {
     'kick-a': [[
-      { id: 'note-a', beat: 2, velocity: 0.75 },
+      { id: 'note-a', beat: 2, velocity: 48 },
       { id: 'note-b', beat: 1 },
     ]],
   },
@@ -69,7 +69,7 @@ describe('canonical content hashes', () => {
       notes: {
         'imported-kick': [[
           { id: 'new-note-2', beat: 1 },
-          { id: 'new-note-1', beat: 2, velocity: 0.75 },
+          { id: 'new-note-1', beat: 2, velocity: 48 },
         ]],
       },
     };

@@ -11,6 +11,10 @@ import type {
   SamplesState,
   SequencerModelState,
 } from './sequencerModel';
+import {
+  MAX_NOTE_VELOCITY,
+  MIN_NOTE_VELOCITY,
+} from './sequencerModel';
 
 const hasEntity = <TEntity>(
   collection: EntityState<TEntity> | undefined,
@@ -182,6 +186,17 @@ export const validateSequencerModelState = (state: SequencerModelStateInput = {}
     const note = notes?.entities[noteId];
     if (!note) {
       return;
+    }
+    if (
+      !Number.isInteger(note.velocity)
+      || note.velocity < MIN_NOTE_VELOCITY
+      || note.velocity > MAX_NOTE_VELOCITY
+    ) {
+      addError(
+        errors,
+        `note ${noteId} velocity must be an integer from `
+        + `${MIN_NOTE_VELOCITY} to ${MAX_NOTE_VELOCITY}`,
+      );
     }
     const pattern = patterns?.entities?.[note.patternId];
     if (!pattern) {

@@ -128,14 +128,13 @@ note
   velocity
 ```
 
-`velocity` is an authored per-note emphasis multiplier, not a kit-channel
-setting. The default is `1`, meaning 100% of the selected kit channel's level.
-Values below or above `1` can create ghost notes and accents, such as `0.5`
-for 50% or `1.25` for 125%. The supported authored range is currently clamped
-to `0` through `2`.
+`velocity` is an authored MIDI-style integer, not a kit-channel setting. The
+default is `64`, which preserves the prior 100% level. Values 1 through 127 are
+audible and select one velocity layer; 0 is reserved for silent migrated data.
+The Pattern editor authors values from 1 through 127.
 
-Pattern data may omit `velocity` when it is `1`. The normalized in-memory note
-state keeps `velocity: 1` so reducers and selectors can use a simple shape.
+Pattern data may omit `velocity` when it is `64`. The normalized in-memory note
+state keeps `velocity: 64` so reducers and selectors can use a simple shape.
 
 `note.id` is local normalized-state identity used by reducers, rendering, and
 audio scheduling. It is not musical content and is not portable. Serialized
@@ -160,10 +159,11 @@ velocity variation for each note occurrence. `humanize: 0` is an exact bypass.
 The current maximum setting uses a 20ms timing standard deviation and a 12%
 velocity standard deviation, with bounded output.
 
-Per-note authored velocity is applied as the input to the humanize velocity
-transform. In effect, playback uses the note's authored multiplier first and
-then applies deterministic humanize variation before the audio router sets the
-per-voice gain.
+Per-note authored velocity is the input to the humanize transform. Humanize
+clamps and rounds the effective velocity to 0-127. Playback uses that same
+integer to select exactly one channel velocity layer and to calculate the
+per-voice gain. Layer trim is multiplied into that voice gain before channel
+gain and before the channel's dry and reverb paths.
 
 ## Pattern packs
 
@@ -315,10 +315,11 @@ identity. A legacy one-sample channel normalizes deterministically to
 `<channel-id>:layer:1`, covering 1-127.
 
 The layer containing velocity 64 is the reference layer used by the current
-single-sample compatibility UI and playback selectors. Channel-level `sample`,
-`sampleId`, and `alignmentOffset` fields are accepted only at normalization,
-migration, and v1 serialization boundaries; normalized Redux channels do not
-store those fields.
+single-sample compatibility UI and Hit-button audition. Playback selectors
+also resolve every layer so scheduled notes can choose from the complete
+partition. Channel-level `sample`, `sampleId`, and `alignmentOffset` fields are
+accepted only at normalization, migration, and v1 serialization boundaries;
+normalized Redux channels do not store those fields.
 
 `sample` is reusable normalized asset metadata referenced by velocity layers.
 It does not contain channel-specific alignment. `userSample` is the persisted
@@ -336,6 +337,9 @@ For a note whose beat time is `T`, playback begins at `T - alignmentOffset` so
 the marker lands on the beat. The scheduler expands its lookahead by the offset;
 at transport startup it clamps source start times to the current Web Audio time
 instead of passing a negative or already elapsed scheduling time.
+For layered channels, scheduler lookahead uses the maximum alignment offset
+across all layers, while the actual source start uses only the selected layer's
+offset. Hit-button audition uses velocity 64 and therefore the reference layer.
 
 Sample loading status is runtime-only state keyed by sample ID. It is excluded
 from persistence and musical-content hashes; reloading the application starts

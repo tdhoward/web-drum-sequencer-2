@@ -45,7 +45,7 @@ const sourcePatternPack: PatternPack = {
     percussionType: PERCUSSION_TYPES.BASS_DRUM,
   }],
   notes: {
-    'travel-kick': [[{ id: 'travel-note', beat: 1, velocity: 1.2 }]],
+    'travel-kick': [[{ id: 'travel-note', beat: 1, velocity: 80 }]],
   },
 };
 
@@ -91,7 +91,7 @@ const createState = (userPatternPacks: PatternPack[] = []) => {
     tempo: { bpm: 112, swing: 0.3, humanize: 0 },
     patterns,
     notes: normalizeNotesState({
-      kick: [[{ id: 'local-note', beat: 2, velocity: 0.8 }]],
+      kick: [[{ id: 'local-note', beat: 2, velocity: 51 }]],
       orphan: [[{ id: 'orphan-note', beat: 1 }]],
     }, patterns.ids, patterns),
     kits: {
@@ -154,7 +154,7 @@ describe('pattern pack bundle actions', () => {
       swing: 0.3,
       patternNames: ['Edited Main'],
     }));
-    expect(exported.notes.kick[0][0]).toEqual(expect.objectContaining({ velocity: 0.8 }));
+    expect(exported.notes.kick[0][0]).toEqual(expect.objectContaining({ velocity: 51 }));
     expect(exported.notes.kick[0][0].id).toBeUndefined();
     expect(exported.lanes.map(lane => lane.laneId)).toEqual(['kick']);
     expect(exported.notes.orphan).toBeUndefined();

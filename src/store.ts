@@ -20,6 +20,7 @@ import {
   DEFAULT_KIT_ID,
   normalizeArrangementPatternIds,
   normalizeTempoChanges,
+  migrateToMidiVelocitySequencerState,
   migrateToVelocityLayerSequencerState,
 } from './common/sequencerModel';
 import type { LegacySequencerState } from './common/sequencerModel';
@@ -136,11 +137,14 @@ export const migrations = {
   10: (state: LegacySequencerState = {}) => (
     migrateToVelocityLayerSequencerState(state)
   ),
+  11: (state: LegacySequencerState = {}) => (
+    migrateToMidiVelocitySequencerState(state)
+  ),
 };
 
 const persistConfig = {
   key: 'root',
-  version: 10,
+  version: 11,
   storage,
   blacklist: [
     'playbackSession',

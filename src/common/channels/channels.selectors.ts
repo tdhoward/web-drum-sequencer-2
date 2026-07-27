@@ -8,6 +8,7 @@ import {
   sampleLoadStatusSelector,
 } from '../sampleLoadStatus';
 import { getReferenceVelocityLayer } from '../velocityLayers';
+import type { VelocityLayer } from '../velocityLayers';
 import type {
   KitChannel,
   KitChannelsState,
@@ -21,9 +22,16 @@ type ChannelsRootState = SequencerRootState & {
   kitChannels?: KitChannelsState;
 };
 
+export type PlaybackVelocityLayer = VelocityLayer & {
+  sample?: string;
+  sampleContentHash?: string;
+  sampleLoaded?: boolean;
+};
+
 export type LegacyChannel = KitChannel & {
   id: string;
   kitChannelId: string;
+  velocityLayers: PlaybackVelocityLayer[];
   sampleId: string;
   referenceVelocityLayerId: string;
   sample?: string;
@@ -53,23 +61,34 @@ export const channelsSelector = createSelector(
         .map(id => channels.entities[id])
         .filter((channel): channel is KitChannel => Boolean(channel));
     return resolvedChannels.reduce<LegacyChannel[]>((result, channel) => {
-      const referenceLayer = getReferenceVelocityLayer(channel.velocityLayers);
+      const velocityLayers = channel.velocityLayers.map((layer) => {
+        const layerSample = samples.entities[layer.sampleId];
+        return {
+          ...layer,
+          sample: layerSample?.url,
+          sampleContentHash: layerSample?.contentHash,
+          sampleLoaded: sampleLoadStatus[layer.sampleId]
+            === SAMPLE_LOAD_STATUSES.LOADED,
+        };
+      });
+      const referenceLayer = getReferenceVelocityLayer(
+        velocityLayers,
+      ) as PlaybackVelocityLayer | undefined;
       if (!referenceLayer) {
         return result;
       }
-      const sample = samples.entities[referenceLayer.sampleId];
       const assignment = assignments.entities[channel.id];
       result.push({
         ...channel,
+        velocityLayers,
         id: assignment?.laneId || channel.laneId || channel.id,
         kitChannelId: channel.id,
         sampleId: referenceLayer.sampleId,
         referenceVelocityLayerId: referenceLayer.id,
-        sample: sample?.url,
-        sampleContentHash: sample?.contentHash,
+        sample: referenceLayer.sample,
+        sampleContentHash: referenceLayer.sampleContentHash,
         alignmentOffset: referenceLayer.alignmentOffset,
-        sampleLoaded: sampleLoadStatus[referenceLayer.sampleId]
-          === SAMPLE_LOAD_STATUSES.LOADED,
+        sampleLoaded: referenceLayer.sampleLoaded,
       });
       return result;
     }, []);

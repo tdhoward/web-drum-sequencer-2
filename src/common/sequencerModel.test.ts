@@ -7,6 +7,7 @@ import {
   MAX_NOTE_VELOCITY,
   MIN_NOTE_VELOCITY,
   migrateToKitSequencerState,
+  migrateToMidiVelocitySequencerState,
   migrateToNormalizedSequencerState,
   migrateToVelocityLayerSequencerState,
   normalizeArrangementPatternIds,
@@ -16,7 +17,12 @@ import {
   sampleIdFromUrl,
   stepToBeat,
 } from './sequencerModel';
-import type { KitChannelInput, LegacyNotes, LegacySequencerState } from './sequencerModel';
+import type {
+  KitChannelInput,
+  LegacyNotes,
+  LegacySequencerState,
+  PatternPackNotes,
+} from './sequencerModel';
 import { PERCUSSION_TYPES } from './percussion';
 import { channelsSelector } from './channels';
 import { notesSelector } from './notes';
@@ -73,11 +79,11 @@ describe('time-signature grid helpers', () => {
 });
 
 describe('note velocity helpers', () => {
-  test('normalizes authored note velocity multipliers', () => {
-    expect(normalizeNoteVelocity(0.5)).toBe(0.5);
-    expect(normalizeNoteVelocity(1.25)).toBe(1.25);
+  test('normalizes authored note velocity to MIDI-style integers', () => {
+    expect(normalizeNoteVelocity(32)).toBe(32);
+    expect(normalizeNoteVelocity(80.4)).toBe(80);
     expect(normalizeNoteVelocity(-1)).toBe(MIN_NOTE_VELOCITY);
-    expect(normalizeNoteVelocity(3)).toBe(MAX_NOTE_VELOCITY);
+    expect(normalizeNoteVelocity(300)).toBe(MAX_NOTE_VELOCITY);
     expect(normalizeNoteVelocity(Number.NaN)).toBe(DEFAULT_NOTE_VELOCITY);
     expect(normalizeNoteVelocity(undefined)).toBe(DEFAULT_NOTE_VELOCITY);
   });
@@ -89,7 +95,7 @@ describe('portable note normalization', () => {
     const notes = normalizeNotesState({
       kick: [[
         { beat: 1 },
-        { beat: 2, velocity: 0.5 },
+        { beat: 2, velocity: 32 },
       ]],
     }, patterns.ids, patterns);
 
@@ -101,7 +107,7 @@ describe('portable note normalization', () => {
       id: 'pattern-note:kick:pattern-0:1',
       laneId: 'kick',
       patternId: 'pattern-0',
-      velocity: 0.5,
+      velocity: 32,
     }));
   });
 });
@@ -227,7 +233,7 @@ describe('compatibility selectors', () => {
         kick: [[{
           id: 'accent',
           beat: 1,
-          velocity: 0.7,
+          velocity: 80,
         }]],
       }, patterns.ids, patterns),
     };
@@ -235,7 +241,7 @@ describe('compatibility selectors', () => {
     expect(notesSelector(state).kick[0][0]).toEqual({
       id: 'accent',
       beat: 1,
-      velocity: 0.7,
+      velocity: 80,
     });
   });
 
@@ -337,7 +343,7 @@ describe('redux-persist migration', () => {
       patternId: 'pattern-0',
       step: 0,
       pitch: 0,
-      velocity: 1,
+      velocity: 64,
     });
     expect(migrated.master).toEqual({
       selectedChannel: 'kick',
@@ -530,5 +536,93 @@ describe('velocity-layer persistence migration', () => {
     expect(migrateToVelocityLayerSequencerState(
       migrated as unknown as LegacySequencerState,
     ).kitChannels).toEqual(migrated.kitChannels);
+  });
+});
+
+describe('MIDI velocity persistence migration', () => {
+  test('converts normalized notes and saved user Pattern Packs from multipliers', () => {
+    const migrated = migrateToMidiVelocitySequencerState(legacyState({
+      notes: {
+        ids: ['silent', 'ghost', 'main', 'accent', 'maximum'],
+        entities: {
+          silent: {
+            id: 'silent',
+            laneId: 'kick',
+            patternId: 'pattern-0',
+            step: 0,
+            pitch: 0,
+            velocity: 0,
+          },
+          ghost: {
+            id: 'ghost',
+            laneId: 'kick',
+            patternId: 'pattern-0',
+            step: 1,
+            pitch: 0,
+            velocity: 0.5,
+          },
+          main: {
+            id: 'main',
+            laneId: 'kick',
+            patternId: 'pattern-0',
+            step: 2,
+            pitch: 0,
+            velocity: 1,
+          },
+          accent: {
+            id: 'accent',
+            laneId: 'kick',
+            patternId: 'pattern-0',
+            step: 3,
+            pitch: 0,
+            velocity: 1.25,
+          },
+          maximum: {
+            id: 'maximum',
+            laneId: 'kick',
+            patternId: 'pattern-0',
+            step: 4,
+            pitch: 0,
+            velocity: 2,
+          },
+        },
+      },
+      patternPacks: {
+        selectedPatternPackId: 'saved-pack',
+        userPatternPacks: [{
+          id: 'saved-pack',
+          name: 'Saved Pack',
+          bpm: 120,
+          swing: 0,
+          lanes: [{ id: 'kick' }],
+          notes: {
+            kick: [[
+              { beat: 1 },
+              { beat: 2, velocity: 0.5 },
+              { beat: 3, velocity: 1.25 },
+            ]],
+          },
+        }],
+      },
+    }));
+    const notes = migrated.notes as {
+      entities: Record<string, { velocity: number }>;
+    };
+    const patternPacks = migrated.patternPacks as {
+      userPatternPacks: Array<{ notes: PatternPackNotes }>;
+    };
+
+    expect([
+      notes.entities.silent.velocity,
+      notes.entities.ghost.velocity,
+      notes.entities.main.velocity,
+      notes.entities.accent.velocity,
+      notes.entities.maximum.velocity,
+    ]).toEqual([0, 32, 64, 80, 127]);
+    expect(patternPacks.userPatternPacks[0].notes.kick[0]).toEqual([
+      { beat: 1 },
+      { beat: 2, velocity: 32 },
+      { beat: 3, velocity: 80 },
+    ]);
   });
 });
