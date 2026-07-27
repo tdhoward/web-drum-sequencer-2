@@ -1,4 +1,5 @@
 import {
+  deleteSampleBuffer,
   replaceUserSampleBuffer,
   saveEditedSampleBuffer,
   saveRecordedSampleBuffer,
@@ -8,10 +9,13 @@ import factorySamples from '../../samples.config';
 import {
   createRecordedUserSample,
   createUploadedUserSample,
+  deleteSavedUserSample,
   saveEditedUserSample,
   saveRecordedUserSample,
   saveUserSample,
 } from './userSamples.actions';
+import { normalizeKitChannelsState } from '../sequencerModel';
+import { FLASH_MESSAGES } from '../window';
 
 jest.mock('../../services/sampleStore', () => ({
   deleteSampleBuffer: jest.fn(),
@@ -30,6 +34,9 @@ const fingerprint = {
 
 const mockedReplaceUserSampleBuffer = (
   replaceUserSampleBuffer as jest.MockedFunction<typeof replaceUserSampleBuffer>
+);
+const mockedDeleteSampleBuffer = (
+  deleteSampleBuffer as jest.MockedFunction<typeof deleteSampleBuffer>
 );
 const mockedSaveEditedSampleBuffer = (
   saveEditedSampleBuffer as jest.MockedFunction<typeof saveEditedSampleBuffer>
@@ -165,6 +172,13 @@ describe('saveEditedUserSample', () => {
         name: 'My Kick',
       },
     }));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'sampleLoadStatus/setSampleLoadStatus',
+      payload: {
+        sampleId: 'sample:user-kick.wav',
+        status: 'loaded',
+      },
+    });
     expect(dispatch.mock.calls.some(([action]) => typeof action === 'function')).toBe(false);
     expect(dispatch).toHaveBeenCalledWith({
       type: 'kitChannels/transformChannelSampleAlignments',
@@ -255,5 +269,70 @@ describe('saveEditedUserSample', () => {
       action?.type === 'kitChannels/transformChannelSampleAlignments'
       || action?.type === 'presets/transformPresetSampleAlignments'
     ))).toBe(false);
+  });
+});
+
+describe('deleteSavedUserSample', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('does not delete a sample used only by a non-reference velocity layer', async () => {
+    const dispatch = jest.fn();
+    const kitChannels = normalizeKitChannelsState([{
+      id: 'snare',
+      velocityLayers: [
+        {
+          id: 'snare:main',
+          sample: 'main.wav',
+          maxVelocity: 100,
+        },
+        {
+          id: 'snare:hard',
+          sample: 'protected.wav',
+          maxVelocity: 127,
+        },
+      ],
+    }]);
+
+    const deleted = await deleteSavedUserSample('protected.wav')(
+      dispatch,
+      () => ({ kitChannels }),
+    );
+
+    expect(deleted).toBe(false);
+    expect(mockedDeleteSampleBuffer).not.toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'window/showFlashMessage',
+      payload: FLASH_MESSAGES.SAMPLE_DELETE_IN_USE,
+    });
+  });
+
+  test('deletes a sample with no active layer references', async () => {
+    const dispatch = jest.fn();
+    mockedDeleteSampleBuffer.mockResolvedValue('unused.wav');
+
+    const deleted = await deleteSavedUserSample('unused.wav')(
+      dispatch,
+      () => ({
+        kitChannels: normalizeKitChannelsState([{
+          id: 'kick',
+          sample: 'kick.wav',
+        }]),
+      }),
+    );
+
+    expect(deleted).toBe(true);
+    expect(mockedDeleteSampleBuffer).toHaveBeenCalledWith('unused.wav');
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'userSamples/removeUserSample',
+      payload: 'unused.wav',
+    });
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'samples/removeSampleFromUrl',
+      payload: {
+        sampleURL: 'unused.wav',
+      },
+    });
   });
 });

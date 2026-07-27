@@ -1,8 +1,9 @@
 import { calculateSampleFingerprint } from '../common/contentHash';
-import { saveToDB } from './database';
+import { getSampleRecordFromDB, saveToDB } from './database';
 import { decodeAudio } from './fileUtils';
 import {
   getSampleBuffer,
+  loadSample,
   replaceUserSampleBuffer,
   saveImportedSampleBytes,
 } from './sampleStore';
@@ -27,6 +28,34 @@ jest.mock('./sampleEditing', () => ({
 describe('sample store imports', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  test('shares one decode for concurrent loads of the same sample', async () => {
+    const audioData = Uint8Array.from([5, 10, 15, 20]).buffer;
+    const fingerprint = await calculateSampleFingerprint(audioData);
+    let resolveRecord: ((record: {
+      audioData: ArrayBuffer;
+      fingerprint: typeof fingerprint;
+    }) => void) | undefined;
+    const recordPromise = new Promise<{
+      audioData: ArrayBuffer;
+      fingerprint: typeof fingerprint;
+    }>((resolve) => {
+      resolveRecord = resolve;
+    });
+    (getSampleRecordFromDB as jest.MockedFunction<typeof getSampleRecordFromDB>)
+      .mockReturnValue(recordPromise);
+
+    const firstLoad = loadSample('concurrent-layer-sample.wav');
+    const secondLoad = loadSample('concurrent-layer-sample.wav');
+
+    expect(firstLoad).toBe(secondLoad);
+    expect(getSampleRecordFromDB).toHaveBeenCalledTimes(1);
+
+    resolveRecord?.({ audioData, fingerprint });
+    await expect(firstLoad).resolves.toBe(true);
+    await expect(secondLoad).resolves.toBe(true);
+    expect(decodeAudio).toHaveBeenCalledTimes(1);
   });
 
   test('decodes a copy and preserves verified bytes for IndexedDB', async () => {

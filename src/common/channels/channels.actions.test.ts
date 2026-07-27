@@ -4,6 +4,7 @@ import {
   getNextNewChannelName,
   loadAndSetChannelSample,
   loadChannels,
+  loadCurrentKitSamples,
   newChannel,
 } from './channels.actions';
 import { FLASH_MESSAGES } from '../window';
@@ -133,6 +134,83 @@ describe('loadChannels', () => {
       sampleURL: 'hard.wav',
       sourceType: 'factory',
     });
+  });
+
+  test('loads every unique sample in the current Kit, including non-reference layers', () => {
+    const actions: DispatchedAction[] = [];
+    const kitChannels = normalizeKitChannelsState([{
+      id: 'layered-snare',
+      velocityLayers: [
+        {
+          id: 'soft',
+          sample: 'shared.wav',
+          maxVelocity: 55,
+        },
+        {
+          id: 'medium',
+          sample: 'medium.wav',
+          maxVelocity: 100,
+        },
+        {
+          id: 'hard',
+          sample: 'shared.wav',
+          maxVelocity: 127,
+        },
+      ],
+    }]);
+    const state = {
+      song: {
+        selectedKitId: DEFAULT_KIT_ID,
+      },
+      kits: {
+        ids: [DEFAULT_KIT_ID],
+        entities: {
+          [DEFAULT_KIT_ID]: {
+            id: DEFAULT_KIT_ID,
+            name: 'Layered Kit',
+            channelIds: kitChannels.ids,
+          },
+        },
+      },
+      kitChannels,
+      samples: {
+        ids: ['sample:shared.wav', 'sample:medium.wav'],
+        entities: {
+          'sample:shared.wav': {
+            id: 'sample:shared.wav',
+            url: 'shared.wav',
+            sourceType: 'user',
+          },
+          'sample:medium.wav': {
+            id: 'sample:medium.wav',
+            url: 'medium.wav',
+            sourceType: 'user',
+          },
+        },
+      },
+      sampleLoadStatus: {},
+    };
+
+    loadCurrentKitSamples()(
+      (action) => {
+        actions.push(action as DispatchedAction);
+        return action;
+      },
+      () => state as never,
+    );
+
+    expect(actions.filter(action => (
+      action.type === 'sampleLoadStatus/setSampleLoadStatus'
+    )).map(action => action.payload)).toEqual([
+      {
+        sampleId: 'sample:shared.wav',
+        status: 'loading',
+      },
+      {
+        sampleId: 'sample:medium.wav',
+        status: 'loading',
+      },
+    ]);
   });
 });
 

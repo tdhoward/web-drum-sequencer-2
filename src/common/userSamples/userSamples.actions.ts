@@ -23,16 +23,25 @@ import {
   sampleIdFromUrl,
   type SampleAlignmentTransform,
 } from '../velocityLayers';
+import type {
+  KitChannel,
+  SequencerRootState,
+} from '../sequencerModel';
+import {
+  SAMPLE_LOAD_STATUSES,
+  setSampleLoadStatus,
+} from '../sampleLoadStatus';
 import {
   getUserSampleId,
   normalizeUserSample,
   userSamplesSlice,
   type UserSamplesState,
 } from './userSamples.reducer';
+import { isSampleInUse } from './userSamples.usage';
 
 type Dispatch = (action: unknown) => unknown;
 
-type UserSamplesRootState = {
+type UserSamplesRootState = SequencerRootState & {
   userSamples?: UserSamplesState;
 };
 
@@ -123,6 +132,10 @@ export const saveEditedUserSample = (
       }));
       if (existingUserSampleRecord) {
         dispatch(renameSampleFromUrl(sampleURL, displayName));
+        dispatch(setSampleLoadStatus({
+          sampleId: sampleIdFromUrl(sampleURL),
+          status: SAMPLE_LOAD_STATUSES.LOADED,
+        }));
         if (alignmentTransform) {
           const sampleId = sampleIdFromUrl(sampleURL);
           dispatch(transformChannelSampleAlignments({
@@ -210,12 +223,26 @@ export const renameSavedUserSample = (sampleId: string, name: string) => (
 
 export const deleteSavedUserSample = (sampleId: string) => (
   dispatch: Dispatch,
-): Promise<void> => deleteSampleBuffer(sampleId)
-  .then(() => {
-    dispatch(removeUserSample(sampleId));
-    dispatch(removeSampleFromUrl(sampleId));
-  })
-  .catch((error) => {
-    dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
-    return Promise.reject(error);
-  });
+  getState: () => UserSamplesRootState,
+): Promise<boolean> => {
+  const state = getState();
+  const channelState = state.kitChannels || state.channels;
+  const channels = Object.values(channelState?.entities || {})
+    .filter((channel): channel is KitChannel => Boolean(channel));
+
+  if (isSampleInUse(sampleId, channels)) {
+    dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_DELETE_IN_USE));
+    return Promise.resolve(false);
+  }
+
+  return deleteSampleBuffer(sampleId)
+    .then(() => {
+      dispatch(removeUserSample(sampleId));
+      dispatch(removeSampleFromUrl(sampleId));
+      return true;
+    })
+    .catch((error) => {
+      dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
+      return Promise.reject(error);
+    });
+};

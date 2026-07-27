@@ -358,6 +358,11 @@ offset. Hit-button audition uses velocity 64 and therefore the reference layer.
 Sample loading status is runtime-only state keyed by sample ID. It is excluded
 from persistence and musical-content hashes; reloading the application starts
 with an empty status map even though reusable sample metadata remains stored.
+Startup and reconnect loading scan every unique velocity-layer sample in the
+active Kit. Preset and import loading do the same for incoming channels.
+Concurrent requests for one sample share the same IndexedDB/fetch/decode
+operation, while each resolved layer exposes the status of its own sample so a
+failure in one layer does not change another layer's result.
 
 Sample editing defaults to non-destructive save-copy behavior. Trimming or
 normalizing a factory sample creates a new `userSample` and a corresponding
@@ -376,7 +381,9 @@ does not commit that draft.
 Trim applies a tiny fade only at the end boundary to avoid blunting drum
 attacks. User samples can be renamed, previewed, and deleted through the Kit
 workspace sample manager, but deletion is disabled while the sample is assigned
-to a layer.
+to a layer. Usage text includes every matching active channel layer and its
+inclusive velocity range, and the deletion action repeats the usage check so
+stale UI state cannot remove a referenced sample.
 
 Recorded device-audio samples are user samples. The recording dialog stores the
 final sample as WAV data in IndexedDB and assigns it to the selected channel's

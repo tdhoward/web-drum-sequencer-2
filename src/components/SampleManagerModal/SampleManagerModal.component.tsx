@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { playNote, stopAllNotes } from '../../services/audioRouter';
 import { loadSampleBuffer } from '../../services/sampleStore';
 import {
+  getSampleUsageLabels,
   getUserSampleDisplayName,
   getUserSampleId,
   normalizeUserSample,
@@ -17,7 +18,7 @@ const SAMPLE_MANAGER_PREVIEW_CHANNEL_ID = 'sample-manager-preview';
 type SampleManagerModalProps = {
   channels: LegacyChannel[];
   onClose: () => void;
-  onDeleteSample: (sampleId: string) => Promise<void> | void;
+  onDeleteSample: (sampleId: string) => Promise<unknown> | void;
   onRenameSample: (sampleId: string, name: string) => void;
   show: boolean;
   userSamples: UserSample[];
@@ -169,17 +170,6 @@ const EmptyState = styled.div`
   font-size: 0.82rem;
   padding: 1rem;
 `;
-
-const getChannelLabel = (channel: LegacyChannel): string => (
-  channel.name || channel.kitChannelId || channel.id
-);
-
-const getSampleUsageLabels = (
-  sampleId: string,
-  channels: LegacyChannel[],
-): string[] => channels
-  .filter(channel => channel.sample === sampleId)
-  .map(getChannelLabel);
 
 const getDraftNames = (userSamples: UserSample[]): Record<string, string> => (
   userSamples.reduce<Record<string, string>>((draftNames, userSample) => {
@@ -347,7 +337,7 @@ export const SampleManagerModalComponent = ({
                   <DeleteButton
                     disabled={isInUse || deletingSampleId === sample.id}
                     onClick={() => deleteSample(sample)}
-                    title={isInUse ? 'Sample is currently assigned to a channel' : undefined}
+                    title={isInUse ? 'Sample is currently assigned to a velocity layer' : undefined}
                     type="button"
                   >
                     Delete

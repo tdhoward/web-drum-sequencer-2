@@ -22,6 +22,11 @@ const TOAST_MESSAGES: Record<string, ToastMessage> = {
     detail: 'Check the sample file and try again.',
     tone: 'error',
   },
+  [FLASH_MESSAGES.SAMPLE_DELETE_IN_USE]: {
+    title: 'Sample is still in use',
+    detail: 'Remove it from every velocity layer before deleting it.',
+    tone: 'error',
+  },
   [FLASH_MESSAGES.PRESET_SAVED]: {
     title: 'Kit saved',
     detail: 'Your user kit is ready to use.',

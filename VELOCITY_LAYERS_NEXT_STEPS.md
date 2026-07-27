@@ -362,8 +362,8 @@ half-migrated behavior.
 
 As of July 27, 2026:
 
-- Phases 1 through 6 are complete.
-- Phase 7, Sample loading, lifecycle, and management, is the next phase.
+- Phases 1 through 7 are complete.
+- Phase 8, Presets, hashes, and bundle import/export, is the next phase.
 - Phase 4 also completed some groundwork originally listed under Phase 6:
   - Dirty waveform edits are guarded when switching layers.
   - Edited copies can be created as library assets without assigning the
@@ -393,6 +393,19 @@ As of July 27, 2026:
   - User-sample replacement transforms alignment for every active layer and
     saved user Kit layer that references the replaced asset.
   - Failed sample persistence leaves the channel draft uncommitted.
+- Phase 7 completed sample loading, lifecycle, and management:
+  - Startup and reconnect loading scan every velocity layer in the active Kit,
+    while preset and import paths load every unique sample in incoming layers.
+  - Runtime loading state remains keyed by sample ID and resolved layers expose
+    their exact loading, loaded, or error status independently.
+  - Concurrent requests for one sample share one IndexedDB/fetch/decode
+    operation.
+  - Upload, recording, import, and edited-sample paths leave the saved asset
+    loaded and refresh its shared fingerprint metadata.
+  - The Sample Manager reports every active channel layer and inclusive range
+    using a sample, including non-reference layers.
+  - In-use deletion is blocked both in the Sample Manager and in the deletion
+    action so stale UI state cannot remove a referenced sample.
 
 ### Phase 1: Pure velocity and layer domain
 
@@ -731,7 +744,7 @@ Implementation notes:
 
 ### Phase 7: Sample loading, lifecycle, and management
 
-**Status:** Next.
+**Status:** Complete.
 
 **Goal:** Ensure every layer's sample is loaded, tracked, protected, and
 recoverable.
@@ -769,6 +782,8 @@ Acceptance criteria:
 - Shared samples are loaded once and may be used by multiple layers.
 
 ### Phase 8: Presets, hashes, and bundle import/export
+
+**Status:** Next.
 
 **Goal:** Make layered kits and integer velocities fully portable and
 deterministically hashable.
@@ -928,7 +943,7 @@ end. Before declaring the feature complete, cover at least:
 - [x] Main-selector scoped-change notification.
 - [x] Shared Audio Edit/Beat Alignment waveform modes.
 - [x] Transactional Apply/Save Copy/Replace routing.
-- [ ] Multi-layer sample loading and Sample Manager usage protection.
+- [x] Multi-layer sample loading and Sample Manager usage protection.
 - [ ] Kit/Pattern Pack/Song preset and bundle portability.
 - [ ] Content-hash schema updates.
 - [ ] Documentation and full static verification.

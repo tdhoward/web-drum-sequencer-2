@@ -7,6 +7,7 @@ import {
   SAMPLE_LOAD_STATUSES,
   sampleLoadStatusSelector,
 } from '../sampleLoadStatus';
+import type { SampleLoadStatus } from '../sampleLoadStatus';
 import {
   getReferenceVelocityLayer,
   getVelocityLayerRange,
@@ -31,6 +32,7 @@ type ChannelsRootState = SequencerRootState & {
 export type PlaybackVelocityLayer = VelocityLayer & {
   sample?: string;
   sampleContentHash?: string;
+  sampleLoadStatus?: SampleLoadStatus;
   sampleLoaded?: boolean;
 };
 
@@ -45,6 +47,7 @@ export type LegacyChannel = KitChannel & {
   referenceVelocityLayerRange: VelocityLayerRange;
   referenceSampleUrl?: string;
   referenceSampleContentHash?: string;
+  referenceSampleLoadStatus?: SampleLoadStatus;
   referenceSampleLoaded?: boolean;
   referenceAlignmentOffset: number;
   sample?: string;
@@ -80,8 +83,8 @@ export const channelsSelector = createSelector(
           ...layer,
           sample: layerSample?.url,
           sampleContentHash: layerSample?.contentHash,
-          sampleLoaded: sampleLoadStatus[layer.sampleId]
-            === SAMPLE_LOAD_STATUSES.LOADED,
+          sampleLoadStatus: sampleLoadStatus[layer.sampleId],
+          sampleLoaded: sampleLoadStatus[layer.sampleId] === SAMPLE_LOAD_STATUSES.LOADED,
         };
       });
       const referenceLayer = getReferenceVelocityLayer(
@@ -113,6 +116,7 @@ export const channelsSelector = createSelector(
         referenceVelocityLayerRange,
         referenceSampleUrl: referenceLayer.sample,
         referenceSampleContentHash: referenceLayer.sampleContentHash,
+        referenceSampleLoadStatus: referenceLayer.sampleLoadStatus,
         referenceSampleLoaded: referenceLayer.sampleLoaded,
         referenceAlignmentOffset: referenceLayer.alignmentOffset,
         sample: referenceLayer.sample,

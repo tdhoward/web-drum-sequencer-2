@@ -19,6 +19,7 @@ import {
 } from '../velocityLayers';
 import {
   SAMPLE_LOAD_STATUSES,
+  type SampleLoadStatusState,
   setSampleLoadStatus,
 } from '../sampleLoadStatus';
 import { channelsSlice } from './channels.reducer';
@@ -27,7 +28,11 @@ const NEW_CHANNEL_NAME_PREFIX = 'New channel';
 
 type Dispatch = (action: unknown) => unknown;
 
-type Thunk = (dispatch: Dispatch, getState: () => SequencerRootState) => unknown;
+type ChannelActionsState = SequencerRootState & {
+  sampleLoadStatus?: SampleLoadStatusState;
+};
+
+type Thunk = (dispatch: Dispatch, getState: () => ChannelActionsState) => unknown;
 
 type NamedChannel = {
   name?: string;
@@ -40,6 +45,10 @@ type SampleChannel = KitChannelInput & {
 type LoadableSample = {
   sample: string;
   sampleId?: string;
+};
+
+type LoadVelocityLayerSamplesOptions = {
+  force?: boolean;
 };
 
 type DeletableChannel = {
@@ -115,12 +124,11 @@ const getSelectedKitId = (state: SequencerRootState): string => (
   state.song?.selectedKitId || DEFAULT_KIT_ID
 );
 
-export const loadChannels = (
-  channels: KitChannelInput[],
-  targetKitId?: string,
+export const loadVelocityLayerSamples = (
+  channels: readonly KitChannelInput[],
+  { force = false }: LoadVelocityLayerSamplesOptions = {},
 ): Thunk => (dispatch, getState) => {
   const state = getState();
-  const kitId = targetKitId || getSelectedKitId(state);
   const loadedSampleIds = new Set<string>();
   channels.forEach((channel) => {
     getVelocityLayerSampleReferences(channel).forEach((reference) => {
@@ -132,13 +140,52 @@ export const loadChannels = (
         return;
       }
       loadedSampleIds.add(reference.sampleId);
-      dispatch(addSampleFromUrl(sample, channel.sourceType || 'factory'));
+      const registeredSample = state.samples?.entities?.[reference.sampleId];
+      if (registeredSample?.url !== sample) {
+        dispatch(addSampleFromUrl(sample, channel.sourceType || 'factory'));
+      }
+      const loadStatus = state.sampleLoadStatus?.[reference.sampleId];
+      if (
+        !force
+        && (
+          loadStatus === SAMPLE_LOAD_STATUSES.LOADING
+          || loadStatus === SAMPLE_LOAD_STATUSES.LOADED
+        )
+      ) {
+        return;
+      }
       loadSampleStatefully(dispatch, {
         sample,
         sampleId: reference.sampleId,
       });
     });
   });
+};
+
+export const loadCurrentKitSamples = (
+  options?: LoadVelocityLayerSamplesOptions,
+): Thunk => (dispatch, getState) => {
+  const state = getState();
+  const channelState = state.kitChannels || state.channels;
+  if (!channelState) {
+    return;
+  }
+
+  const selectedKit = state.kits?.entities?.[getSelectedKitId(state)];
+  const channelIds = selectedKit?.channelIds || channelState.ids;
+  const channels = channelIds
+    .map(channelId => channelState.entities[channelId])
+    .filter((channel): channel is KitChannel => Boolean(channel));
+  loadVelocityLayerSamples(channels, options)(dispatch, getState);
+};
+
+export const loadChannels = (
+  channels: KitChannelInput[],
+  targetKitId?: string,
+): Thunk => (dispatch, getState) => {
+  const state = getState();
+  const kitId = targetKitId || getSelectedKitId(state);
+  loadVelocityLayerSamples(channels)(dispatch, getState);
   dispatch(replaceKitChannels(channels, kitId));
 };
 

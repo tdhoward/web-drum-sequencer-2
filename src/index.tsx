@@ -6,9 +6,8 @@ import App from './components/App';
 import { initializeAudio } from './services/audioLoop';
 import { store, persistor } from './store';
 import {
-  channelsSelector,
   getUserSampleId,
-  loadSampleStatefully,
+  loadCurrentKitSamples,
   setSampleFingerprint,
   setUserSampleFingerprint,
   userSamplesSelector,
@@ -16,46 +15,35 @@ import {
 import { startAnimations } from './services/animations';
 import { initializePwaInstall } from './services/pwaInstall';
 import { initializeDB } from './services/database';
-import type { LegacyChannel } from './common';
 import { ensureSampleFingerprint } from './services/sampleStore';
 
 type LegacyDispatch = (action: unknown) => unknown;
 
 const dispatchLegacyAction = store.dispatch as LegacyDispatch;
 
-const getChannels = () => channelsSelector(
-  store.getState() as unknown as Parameters<typeof channelsSelector>[0],
-);
-
-type LoadChannelSampleOptions = {
-  force?: boolean;
-};
-
-type LegacyChannelWithSample = LegacyChannel & {
-  sample: string;
-};
-
-const hasSample = (channel: LegacyChannel): channel is LegacyChannelWithSample => (
-  typeof channel.sample === 'string' && channel.sample.length > 0
-);
-
-const loadChannelSample = (
-  channel: LegacyChannel,
-  { force = false }: LoadChannelSampleOptions = {},
-): void => {
-  if (!hasSample(channel)) {
+const waitForPersistedState = (): Promise<void> => new Promise((resolve) => {
+  if (persistor.getState().bootstrapped) {
+    resolve();
     return;
   }
 
-  if (force || !channel.sampleLoaded) {
-    loadSampleStatefully(dispatchLegacyAction, channel);
-  }
-};
+  const unsubscribe = persistor.subscribe(() => {
+    if (persistor.getState().bootstrapped) {
+      unsubscribe();
+      resolve();
+    }
+  });
+});
+
+const samplePersistenceReady = Promise.all([
+  initializeDB(),
+  waitForPersistedState(),
+]);
 
 window.addEventListener('online', () => {
-  const channels = getChannels();
-
-  channels.forEach(channel => loadChannelSample(channel));
+  samplePersistenceReady.then(() => {
+    dispatchLegacyAction(loadCurrentKitSamples());
+  });
 });
 
 const rootElement = document.getElementById('root');
@@ -80,13 +68,11 @@ startAnimations(store);
 
 initializePwaInstall(store);
 
-initializeDB()
+samplePersistenceReady
   .then(() => {
-    const channels = getChannels();
-
     // sampleStore is memory-only after a refresh, so rebuild it even though
     // reusable sample metadata remains persisted.
-    channels.forEach(channel => loadChannelSample(channel, { force: true }));
+    dispatchLegacyAction(loadCurrentKitSamples({ force: true }));
 
     const userSamples = userSamplesSelector(store.getState()) || [];
     userSamples.forEach((userSample) => {

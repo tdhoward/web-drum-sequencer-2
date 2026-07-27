@@ -12,6 +12,7 @@ import {
 
 export const sampleStore: Record<string, AudioBuffer> = {};
 export const sampleFingerprintStore: Record<string, SampleFingerprint> = {};
+const sampleLoadPromises = new Map<string, Promise<boolean>>();
 
 export type StoredSample = {
   id: string;
@@ -46,7 +47,12 @@ export const loadSample = (url: string): Promise<boolean> => {
     return Promise.resolve(true);
   }
 
-  return getSampleRecordFromDB(url)
+  const pendingLoad = sampleLoadPromises.get(url);
+  if (pendingLoad) {
+    return pendingLoad;
+  }
+
+  const loadAttempt = getSampleRecordFromDB(url)
     .then(async (record) => {
       await fingerprintAndDecode(url, record.audioData, record.fingerprint);
       if (!record.fingerprint) {
@@ -61,6 +67,14 @@ export const loadSample = (url: string): Promise<boolean> => {
         return true;
       })
       .catch(() => false));
+
+  const trackedLoad = loadAttempt.finally(() => {
+    if (sampleLoadPromises.get(url) === trackedLoad) {
+      sampleLoadPromises.delete(url);
+    }
+  });
+  sampleLoadPromises.set(url, trackedLoad);
+  return trackedLoad;
 };
 
 export const loadSampleBuffer = (url: string): Promise<AudioBuffer | null> => loadSample(url)

@@ -72,6 +72,7 @@ describe('channelsSelector', () => {
       contentHash: 'soft-hash',
     };
     state.sampleLoadStatus[softSampleId] = SAMPLE_LOAD_STATUSES.LOADED;
+    state.sampleLoadStatus[referenceLayer.sampleId] = SAMPLE_LOAD_STATUSES.ERROR;
     channel.velocityLayers = [
       {
         ...referenceLayer,
@@ -92,11 +93,14 @@ describe('channelsSelector', () => {
         id: `${firstChannelId}:soft`,
         sample: 'soft.wav',
         sampleContentHash: 'soft-hash',
+        sampleLoadStatus: SAMPLE_LOAD_STATUSES.LOADED,
         sampleLoaded: true,
       }),
       expect.objectContaining({
         id: `${firstChannelId}:hard`,
         sample: state.samples.entities[referenceLayer.sampleId].url,
+        sampleLoadStatus: SAMPLE_LOAD_STATUSES.ERROR,
+        sampleLoaded: false,
       }),
     ]);
     expect(resolvedChannel.sampleId).toBe(referenceLayer.sampleId);
