@@ -127,7 +127,11 @@ export const SamplePicker = ({
   const currentOption = getSampleOption(sample, userSamples);
   const includeCreationOptions = Boolean(onChooseFile || onRecordSample);
   const selectStyles: StylesConfig<SampleSelectOption, false, GroupBase<SampleSelectOption>> = {
-    ...createSelectStyles<SampleSelectOption>(theme),
+    ...createSelectStyles<SampleSelectOption>(theme, {
+      menuFontSize: '0.8rem',
+      menuWidth: '16rem',
+      optionPadding: '0.2em 1em',
+    }),
     container: styles => ({
       ...styles,
       height: '3rem',
@@ -136,16 +140,6 @@ export const SamplePicker = ({
       ...styles,
       color: theme.colors.textPrimary,
       opacity: sampleLoaded === false ? 0.3 : 1,
-    }),
-    menu: styles => ({
-      ...styles,
-      fontSize: '0.8rem',
-      width: '16rem',
-    }),
-    option: styles => ({
-      ...styles,
-      paddingTop: '0.2em',
-      paddingBottom: '0.2em',
     }),
   };
 

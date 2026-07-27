@@ -797,7 +797,7 @@ export const SampleEditorModal = ({
     const resizeObserver = new ResizeObserver(updateSize);
     resizeObserver.observe(frame);
     return () => resizeObserver.disconnect();
-  }, [channel]);
+  }, [channel, selectedLayerId]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -811,7 +811,7 @@ export const SampleEditorModal = ({
     }
 
     const sourceAudioBuffer = getSourceAudioBuffer();
-    if (sourceAudioBuffer && canvasSize.width > 0 && canvasSize.height > 0) {
+    if (sourceAudioBuffer) {
       const drawBuffer = cloneAudioBuffer(sourceAudioBuffer);
       drawWaveform(
         canvas,
