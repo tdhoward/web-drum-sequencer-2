@@ -358,7 +358,26 @@ half-migrated behavior.
 
 ## Implementation phases
 
+### Current implementation status
+
+As of July 27, 2026:
+
+- Phases 1 through 4 are complete.
+- Phase 5, Main Kit-row waveform and selector integration, is the next phase.
+- Phase 4 also completed some groundwork originally listed under Phase 6:
+  - Dirty waveform edits are guarded when switching layers.
+  - Edited copies can be created as library assets without assigning the
+    channel before the layer draft is applied.
+  - Replacement eligibility and naming follow the selected layer.
+  - Selected-layer preview includes layer trim.
+  - The correct waveform is refreshed after an edited asset is saved.
+- Phase 6 is not complete. The shared Audio Edit/Beat Alignment modes,
+  alignment transformation, upload/record support inside the editor, and the
+  combined `Save Copy & Apply` / `Replace & Apply` actions remain pending.
+
 ### Phase 1: Pure velocity and layer domain
+
+**Status:** Complete.
 
 **Goal:** Establish tested types, constants, normalization, selection, gain,
 and range operations without changing UI behavior.
@@ -396,6 +415,8 @@ Acceptance criteria:
 - Invalid inputs normalize or fail according to one documented policy.
 
 ### Phase 2: Normalized Redux model and persistence
+
+**Status:** Complete.
 
 **Goal:** Make layers the single source of sample assignment in normalized
 state.
@@ -441,6 +462,8 @@ Acceptance criteria:
 - Model invariants pass after add, remove, preset load, and migration.
 
 ### Phase 3: Note velocity UI, humanize, and playback
+
+**Status:** Complete.
 
 **Goal:** Play exactly one correct layer with preserved gain and timing.
 
@@ -492,6 +515,8 @@ Acceptance criteria:
 
 ### Phase 4: Unified editor shell and layer configuration
 
+**Status:** Complete.
+
 **Goal:** Turn the existing Sample Editor into a draft-based channel sample
 editor with one selected-layer context.
 
@@ -537,7 +562,20 @@ Acceptance criteria:
 - Essential layer operations work without hover or precision dragging.
 - The 1/127 boundary cases and a three-layer example are covered by tests.
 
+Implementation notes:
+
+- The editor retains the existing Audio Edit controls while configuration
+  changes remain in a complete local layer draft until Apply.
+- Saving or replacing edited audio currently updates the selected layer draft,
+  after which Apply commits the complete partition. Phase 6 will combine these
+  into the specified dynamic primary actions.
+- Phase 4 QA corrected the deferred canvas-sizing lifecycle so the waveform
+  draws after draft initialization, and completed theme-aware open-menu styling
+  for the reusable sample picker.
+
 ### Phase 5: Main Kit-row waveform and selector integration
+
+**Status:** Next.
 
 **Goal:** Expose the feature without adding persistent clutter to the Kit row.
 
@@ -577,6 +615,8 @@ Acceptance criteria:
 - No overflow or additional small touch control is added to the waveform.
 
 ### Phase 6: Unified waveform modes and transactional save workflow
+
+**Status:** Pending, with the groundwork identified above already complete.
 
 **Goal:** Integrate Beat Alignment and waveform audio editing into the unified
 draft editor with clear save semantics.
@@ -828,11 +868,11 @@ end. Before declaring the feature complete, cover at least:
 
 ## Feature-complete checklist
 
-- [ ] Pure velocity/layer domain and invariants.
-- [ ] Normalized Redux model and persistence migrations.
-- [ ] MIDI-style note velocity UI and playback.
-- [ ] Correct layer selection, trim, and alignment scheduling.
-- [ ] Unified sample and velocity editor with draft layer configuration.
+- [x] Pure velocity/layer domain and invariants.
+- [x] Normalized Redux model and persistence migrations.
+- [x] MIDI-style note velocity UI and playback.
+- [x] Correct layer selection, trim, and alignment scheduling.
+- [x] Unified sample and velocity editor with draft layer configuration.
 - [ ] Main waveform `×N` badge, reference alignment indicator, and touch
       behavior.
 - [ ] Main-selector scoped-change notification.
