@@ -16,6 +16,7 @@ import type {
   Sample,
   SavedSong,
 } from '../sequencerModel';
+import { getReferenceVelocityLayer } from '../velocityLayers';
 import {
   getPatternPackPatternCount,
   getPatternPackPatternSettings,
@@ -221,7 +222,11 @@ export const createKitCanonicalContent = ({ kit, channels, samples }: KitContent
 
   return {
     channels: orderedChannels.map((channel) => {
-      const sample = samples[channel.sampleId];
+      const referenceLayer = getReferenceVelocityLayer(channel.velocityLayers);
+      if (!referenceLayer) {
+        throw new Error(`Kit channel ${channel.id} has no reference velocity layer`);
+      }
+      const sample = samples[referenceLayer.sampleId];
       return {
         percussionType: channel.percussionType || PERCUSSION_TYPES.GENERIC_PERCUSSION,
         articulation: typeof channel.articulation === 'string' ? channel.articulation : '',
@@ -236,7 +241,7 @@ export const createKitCanonicalContent = ({ kit, channels, samples }: KitContent
         pitchFine: finiteNumber(channel.pitchFine, 0),
         sample: {
           contentHash: requireSampleHash(sample, channel),
-          alignmentOffset: finiteNumber(sample?.alignmentOffset, 0),
+          alignmentOffset: finiteNumber(referenceLayer.alignmentOffset, 0),
         },
       };
     }),

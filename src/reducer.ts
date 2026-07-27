@@ -18,6 +18,7 @@ import {
   uiPreferencesReducer,
   songLibraryReducer,
   mappingReviewReducer,
+  sampleLoadStatusReducer,
 } from './common';
 
 const rootReducer = combineReducers({
@@ -39,6 +40,7 @@ const rootReducer = combineReducers({
   userSamples: userSamplesReducer,
   workspace: workspaceReducer,
   mappingReview: mappingReviewReducer,
+  sampleLoadStatus: sampleLoadStatusReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

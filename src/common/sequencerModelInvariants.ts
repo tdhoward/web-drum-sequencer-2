@@ -1,4 +1,5 @@
 import { isValidPercussionType } from './percussion';
+import { validateVelocityLayers } from './velocityLayers';
 import type {
   EntityState,
   Kit,
@@ -120,9 +121,18 @@ export const validateSequencerModelState = (state: SequencerModelStateInput = {}
     if (!kits?.entities?.[kitChannel.kitId]?.channelIds?.includes(channelId)) {
       addError(errors, `kitChannel ${channelId} is not listed by kit ${kitChannel.kitId}`);
     }
-    if (!hasEntity(samples, kitChannel.sampleId)) {
-      addError(errors, `kitChannel ${channelId} references missing sampleId: ${kitChannel.sampleId}`);
-    }
+    validateVelocityLayers(kitChannel.velocityLayers || []).forEach((error) => {
+      addError(errors, `kitChannel ${channelId} ${error}`);
+    });
+    (kitChannel.velocityLayers || []).forEach((layer) => {
+      if (!hasEntity(samples, layer.sampleId)) {
+        addError(
+          errors,
+          `kitChannel ${channelId} velocityLayer ${layer.id} `
+          + `references missing sampleId: ${layer.sampleId}`,
+        );
+      }
+    });
     if (!isValidPercussionType(kitChannel.percussionType)) {
       addError(errors, `kitChannel ${channelId} has invalid percussionType: ${kitChannel.percussionType}`);
     }

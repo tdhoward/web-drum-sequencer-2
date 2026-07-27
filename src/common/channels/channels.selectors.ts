@@ -3,6 +3,11 @@ import { createSelector } from 'reselect';
 import { selectedKitSelector } from '../kits';
 import { kitChannelAssignmentsSelector } from '../kitChannelAssignments';
 import { samplesSelector } from '../samples';
+import {
+  SAMPLE_LOAD_STATUSES,
+  sampleLoadStatusSelector,
+} from '../sampleLoadStatus';
+import { getReferenceVelocityLayer } from '../velocityLayers';
 import type {
   KitChannel,
   KitChannelsState,
@@ -19,9 +24,12 @@ type ChannelsRootState = SequencerRootState & {
 export type LegacyChannel = KitChannel & {
   id: string;
   kitChannelId: string;
+  sampleId: string;
+  referenceVelocityLayerId: string;
   sample?: string;
   sampleContentHash?: string;
   alignmentOffset?: number;
+  sampleLoaded?: boolean;
 };
 
 export const channelsStateSelector = (state: ChannelsRootState): KitChannelsState => (
@@ -33,7 +41,8 @@ export const channelsSelector = createSelector(
   selectedKitSelector,
   kitChannelAssignmentsSelector,
   samplesSelector,
-  (channels, selectedKit, assignments, samples): LegacyChannel[] => {
+  sampleLoadStatusSelector,
+  (channels, selectedKit, assignments, samples, sampleLoadStatus): LegacyChannel[] => {
     const channelIds = selectedKit?.channelIds || channels.ids;
     const selectedKitChannels = channelIds
       .map(id => channels.entities[id])
@@ -43,18 +52,26 @@ export const channelsSelector = createSelector(
       : (channels.ids || [])
         .map(id => channels.entities[id])
         .filter((channel): channel is KitChannel => Boolean(channel));
-    return resolvedChannels
-      .map((channel) => {
-        const sample = samples.entities[channel.sampleId];
-        const assignment = assignments.entities[channel.id];
-        return {
-          ...channel,
-          id: assignment?.laneId || channel.laneId || channel.id,
-          kitChannelId: channel.id,
-          sample: sample?.url || channel.sample,
-          sampleContentHash: sample?.contentHash,
-          alignmentOffset: sample?.alignmentOffset || 0,
-        };
+    return resolvedChannels.reduce<LegacyChannel[]>((result, channel) => {
+      const referenceLayer = getReferenceVelocityLayer(channel.velocityLayers);
+      if (!referenceLayer) {
+        return result;
+      }
+      const sample = samples.entities[referenceLayer.sampleId];
+      const assignment = assignments.entities[channel.id];
+      result.push({
+        ...channel,
+        id: assignment?.laneId || channel.laneId || channel.id,
+        kitChannelId: channel.id,
+        sampleId: referenceLayer.sampleId,
+        referenceVelocityLayerId: referenceLayer.id,
+        sample: sample?.url,
+        sampleContentHash: sample?.contentHash,
+        alignmentOffset: referenceLayer.alignmentOffset,
+        sampleLoaded: sampleLoadStatus[referenceLayer.sampleId]
+          === SAMPLE_LOAD_STATUSES.LOADED,
       });
+      return result;
+    }, []);
   },
 );

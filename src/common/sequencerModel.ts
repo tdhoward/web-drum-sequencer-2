@@ -1,4 +1,18 @@
 import { PERCUSSION_TYPES } from './percussion';
+import {
+  getVelocityLayerSampleReferences,
+  normalizeVelocityLayerInputs,
+  normalizeVelocityLayers,
+  sampleIdFromUrl,
+} from './velocityLayers';
+import type {
+  VelocityLayer,
+  VelocityLayerInput,
+  VelocityLayerSampleLookup,
+} from './velocityLayers';
+
+export type { VelocityLayer, VelocityLayerInput };
+export { sampleIdFromUrl };
 
 export const DEFAULT_SONG_ID = 'song-1';
 export const DEFAULT_KIT_ID = 'default-kit';
@@ -125,10 +139,8 @@ export type Kit = {
 
 export type KitsState = EntityState<Kit>;
 
-export type KitChannelInput = {
+type KitChannelSettings = {
   id: string;
-  sample?: string;
-  sampleId?: string;
   kitId?: string;
   laneId?: string;
   name?: string;
@@ -139,11 +151,19 @@ export type KitChannelInput = {
   [key: string]: unknown;
 };
 
-export type KitChannel = KitChannelInput & {
+export type KitChannelInput = KitChannelSettings & {
+  sample?: string;
+  sampleId?: string;
+  alignmentOffset?: number;
+  sampleLoaded?: boolean;
+  velocityLayers?: VelocityLayerInput[];
+};
+
+export type KitChannel = KitChannelSettings & {
   kitId: string;
   laneId: string;
-  sampleId: string;
   percussionType: string;
+  velocityLayers: VelocityLayer[];
 };
 
 export type KitChannelsState = EntityState<KitChannel>;
@@ -165,7 +185,6 @@ export type Sample = {
   url?: string;
   sourceType: string;
   fileName?: string;
-  alignmentOffset?: number;
   byteLength?: number;
 } & Partial<ContentHashMetadata>;
 
@@ -303,8 +322,6 @@ export const createPatternIds = (patternCount = DEFAULT_PATTERN_COUNT): string[]
   Array.from({ length: patternCount }, (_, index) => patternIndexToId(index))
 );
 
-export const sampleIdFromUrl = (url?: string): string => `sample:${url}`;
-
 const clamp = (value: number, min: number, max: number): number => (
   Math.min(max, Math.max(min, value))
 );
@@ -387,42 +404,54 @@ export const createKitsState = (
 
 export const createSamplesState = (channels: KitChannelInput[] = []): SamplesState => (
   channels.reduce<SamplesState>((state, channel) => {
-    const sampleUrl = channel.sample;
-    const sampleId = channel.sampleId || sampleIdFromUrl(sampleUrl);
-    if (!state.entities[sampleId]) {
-      state.ids.push(sampleId);
-    }
-    state.entities[sampleId] = {
-      id: sampleId,
-      name: channel.name || sampleUrl,
-      url: sampleUrl,
-      sourceType: channel.sourceType || 'factory',
-      fileName: channel.fileName || undefined,
-      alignmentOffset: typeof channel.alignmentOffset === 'number'
-        && Number.isFinite(channel.alignmentOffset)
-        ? Math.max(0, channel.alignmentOffset)
-        : 0,
-    };
+    getVelocityLayerSampleReferences(channel).forEach(({ sampleId, sample }) => {
+      if (!state.entities[sampleId]) {
+        state.ids.push(sampleId);
+      }
+      state.entities[sampleId] = {
+        ...state.entities[sampleId],
+        id: sampleId,
+        name: state.entities[sampleId]?.name || channel.name || sample || sampleId,
+        url: sample || state.entities[sampleId]?.url,
+        sourceType: channel.sourceType || state.entities[sampleId]?.sourceType || 'factory',
+        fileName: channel.fileName || state.entities[sampleId]?.fileName,
+      };
+    });
     return state;
   }, { ids: [], entities: {} })
 );
 
+const omitLegacyKitChannelFields = (channel: KitChannelInput): KitChannelSettings => {
+  const channelSettings = { ...channel } as Record<string, unknown>;
+  [
+    'sample',
+    'sampleId',
+    'alignmentOffset',
+    'sampleLoaded',
+    'velocityLayers',
+  ].forEach((field) => {
+    delete channelSettings[field];
+  });
+  return channelSettings as KitChannelSettings;
+};
+
 export const normalizeKitChannelsState = (
   channels: KitChannelInput[] = [],
   kitId = DEFAULT_KIT_ID,
+  samples?: VelocityLayerSampleLookup,
 ): KitChannelsState => ({
   ids: channels.map(channel => channel.id),
   entities: channels.reduce<Record<string, KitChannel>>((entities, channel) => {
-    const sampleUrl = channel.sample;
     const laneId = channelToLaneId(channel);
+    const channelSettings = omitLegacyKitChannelFields(channel);
     return {
       ...entities,
       [channel.id]: {
-        ...channel,
+        ...channelSettings,
         kitId: channel.kitId || kitId,
         laneId,
         percussionType: channel.percussionType || PERCUSSION_TYPES.GENERIC_PERCUSSION,
-        sampleId: channel.sampleId || sampleIdFromUrl(sampleUrl),
+        velocityLayers: normalizeVelocityLayers(channel, samples),
       },
     };
   }, {}),
@@ -699,6 +728,9 @@ export const migrateToKitSequencerState = (
     ...normalizedState.song,
     selectedKitId: kitId,
   };
+  const samples = normalizedState.samples || createSamplesState(
+    Array.isArray(state.channels) ? state.channels : fallbackPreset.channels,
+  );
   const patterns = migratePatternsToLanes(
     normalizedState.patterns,
     channels.map(channelToLaneId),
@@ -709,10 +741,92 @@ export const migrateToKitSequencerState = (
     song,
     patterns,
     kits: normalizedState.kits || createKitsState(channels, kitId),
-    kitChannels: normalizedState.kitChannels || normalizeKitChannelsState(channels, kitId),
+    kitChannels: normalizedState.kitChannels || normalizeKitChannelsState(
+      channels,
+      kitId,
+      samples,
+    ),
     kitChannelAssignments: normalizedState.kitChannelAssignments
       || createKitChannelAssignmentsState(channels, kitId),
-    samples: normalizedState.samples || createSamplesState(channels),
+    samples,
     notes: normalizeExistingNotesStateToLanes(normalizedState.notes),
+  };
+};
+
+type VelocityLayerMigrationPresetsState = {
+  userPresets?: Array<Record<string, unknown> & {
+    channels?: KitChannelInput[];
+  }>;
+  [key: string]: unknown;
+};
+
+const removeSampleAlignmentOffsets = (
+  samples: SamplesState | undefined,
+): SamplesState | undefined => {
+  if (!samples) {
+    return samples;
+  }
+
+  return {
+    ids: [...samples.ids],
+    entities: samples.ids.reduce<Record<string, Sample>>((entities, sampleId) => {
+      const sample = samples.entities[sampleId] as Sample & { alignmentOffset?: number };
+      if (!sample) {
+        return entities;
+      }
+      const sampleMetadata = { ...sample } as Sample & { alignmentOffset?: number };
+      delete sampleMetadata.alignmentOffset;
+      entities[sampleId] = sampleMetadata;
+      return entities;
+    }, {}),
+  };
+};
+
+const migratePresetChannelToVelocityLayers = (
+  channel: KitChannelInput,
+  samples?: SamplesState,
+): KitChannelInput => {
+  const channelSettings = omitLegacyKitChannelFields(channel);
+  return {
+    ...channelSettings,
+    velocityLayers: normalizeVelocityLayerInputs(channel, samples),
+  };
+};
+
+export const migrateToVelocityLayerSequencerState = (
+  state: LegacySequencerState = {},
+) => {
+  const legacyKitChannels = state.kitChannels as unknown as
+    | EntityState<KitChannelInput>
+    | undefined;
+  const legacySamples = state.samples;
+  const presetsState = state.presets as VelocityLayerMigrationPresetsState | undefined;
+  const kitChannels = legacyKitChannels
+    ? normalizeKitChannelsState(
+      legacyKitChannels.ids
+        .map(channelId => legacyKitChannels.entities[channelId])
+        .filter((channel): channel is KitChannelInput => Boolean(channel)),
+      DEFAULT_KIT_ID,
+      legacySamples,
+    )
+    : state.kitChannels;
+
+  return {
+    ...state,
+    kitChannels,
+    samples: removeSampleAlignmentOffsets(legacySamples),
+    presets: presetsState
+      ? {
+        ...presetsState,
+        userPresets: (presetsState.userPresets || []).map(preset => ({
+          ...preset,
+          channels: Array.isArray(preset.channels)
+            ? preset.channels.map(channel => (
+              migratePresetChannelToVelocityLayers(channel, legacySamples)
+            ))
+            : preset.channels,
+        })),
+      }
+      : state.presets,
   };
 };

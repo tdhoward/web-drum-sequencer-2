@@ -261,7 +261,7 @@ kitChannel
   articulation
   register
   tags[]
-  sampleId
+  velocityLayers[]
   gain
   pan
   muted
@@ -270,13 +270,19 @@ kitChannel
   pitchCoarse
   pitchFine
 
+velocityLayer
+  id
+  sampleId
+  maxVelocity (inclusive)
+  alignmentOffset (seconds, defaults to 0)
+  trimDb (defaults to 0)
+
 sample
   id
   name
   url
   sourceType
   fileName
-  alignmentOffset (seconds, defaults to 0)
   byteLength
   contentHashAlgorithm
   contentHashVersion
@@ -301,37 +307,57 @@ User-created channels can start as `generic_percussion` and be corrected later.
 Factory kits should provide explicit `name` and `percussionType` values so
 patterns can be remapped to another kit without rewriting note data.
 
-`sample` is the normalized entity used by kit channels. `userSample` is the
-persisted user-facing library metadata used by the sample selector and sample
-manager. The audio payload for uploaded, edited, and recorded samples is stored in
+Every normalized Kit channel has at least one velocity layer. Layer order is
+velocity order, the first range starts at 1, and each later range starts one
+above the preceding layer's inclusive `maxVelocity`. Boundaries are strictly
+increasing and the final layer always ends at 127. Layer IDs are stable local
+identity. A legacy one-sample channel normalizes deterministically to
+`<channel-id>:layer:1`, covering 1-127.
+
+The layer containing velocity 64 is the reference layer used by the current
+single-sample compatibility UI and playback selectors. Channel-level `sample`,
+`sampleId`, and `alignmentOffset` fields are accepted only at normalization,
+migration, and v1 serialization boundaries; normalized Redux channels do not
+store those fields.
+
+`sample` is reusable normalized asset metadata referenced by velocity layers.
+It does not contain channel-specific alignment. `userSample` is the persisted
+user-facing library metadata used by the sample selector and sample manager.
+The audio payload for uploaded, edited, and recorded samples is stored in
 IndexedDB and mirrored in the in-memory sample store under `userSample.id`.
 Older persisted user-sample lists may contain bare string ids; reducers should
 continue to normalize those entries when they are renamed or otherwise edited.
 
-Each sample may store an `alignmentOffset` in seconds from its beginning. Zero
-preserves normal playback. The waveform's alignment mode clamps the value to the
-decoded sample duration and offers drag/tap placement, reset, and 10 ms steps.
+Each velocity layer stores an `alignmentOffset` in seconds from its sample
+beginning. Zero preserves normal playback. The waveform's alignment mode clamps
+the value to the decoded sample duration and offers drag/tap placement, reset,
+and 10 ms steps.
 For a note whose beat time is `T`, playback begins at `T - alignmentOffset` so
 the marker lands on the beat. The scheduler expands its lookahead by the offset;
 at transport startup it clamps source start times to the current Web Audio time
 instead of passing a negative or already elapsed scheduling time.
 
+Sample loading status is runtime-only state keyed by sample ID. It is excluded
+from persistence and musical-content hashes; reloading the application starts
+with an empty status map even though reusable sample metadata remains stored.
+
 Sample editing defaults to non-destructive save-copy behavior. Trimming or
 normalizing a factory sample creates a new `userSample` and a corresponding
 `sample` entity rather than mutating the source sample. An existing user sample
 may instead be explicitly replaced under its current ID, which updates every
-channel that references it. Replacement eligibility requires the ID to exist in
+layer that references it. Replacement eligibility requires the ID to exist in
 the user-sample registry and not in the factory catalog. The current editor
 supports waveform selection, auto-select, trim, normalize, original/edited
 preview, and save-as naming.
 Trim applies a tiny fade only at the end boundary to avoid blunting drum
 attacks. User samples can be renamed, previewed, and deleted through the Kit
 workspace sample manager, but deletion is disabled while the sample is assigned
-to a channel.
+to a layer.
 
 Recorded device-audio samples are user samples. The recording dialog stores the
-final sample as WAV data in IndexedDB and assigns it to the selected kit channel
-through the same channel-sample flow used by uploads and edited samples.
+final sample as WAV data in IndexedDB and assigns it to the selected channel's
+reference layer through the compatibility sample flow used by uploads and
+edited samples.
 
 ## Content hashes and duplicate imports
 

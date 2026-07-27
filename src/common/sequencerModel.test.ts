@@ -1,12 +1,14 @@
 import {
   beatToStep,
   createPatternsState,
+  createSamplesState,
   DEFAULT_KIT_ID,
   DEFAULT_NOTE_VELOCITY,
   MAX_NOTE_VELOCITY,
   MIN_NOTE_VELOCITY,
   migrateToKitSequencerState,
   migrateToNormalizedSequencerState,
+  migrateToVelocityLayerSequencerState,
   normalizeArrangementPatternIds,
   normalizeChannelsState,
   normalizeNoteVelocity,
@@ -368,7 +370,15 @@ describe('kit-aware migration', () => {
       kitChannelId: 'kick',
       confidence: 'manual',
     });
-    expect(migrated.kitChannels.entities.kick.sampleId).toBe('sample:kick.mp3');
+    expect(migrated.kitChannels.entities.kick.velocityLayers).toEqual([{
+      id: 'kick:layer:1',
+      sampleId: 'sample:kick.mp3',
+      maxVelocity: 127,
+      alignmentOffset: 0,
+      trimDb: 0,
+    }]);
+    expect(migrated.kitChannels.entities.kick).not.toHaveProperty('sampleId');
+    expect(migrated.kitChannels.entities.kick).not.toHaveProperty('sample');
     expect(migrated.samples.entities['sample:kick.mp3'].url).toBe('kick.mp3');
     expect(migrated.patterns.entities['pattern-0'].laneIds).toEqual(['kick']);
     expect(migrated.notes.entities['kick-1'].laneId).toBe('kick');
@@ -395,9 +405,130 @@ describe('kit channel normalization', () => {
     expect(normalized.entities.kick).toEqual(expect.objectContaining({
       percussionType: PERCUSSION_TYPES.BASS_DRUM,
       register: 'low',
-      sampleId: sampleIdFromUrl('kick.mp3'),
+      velocityLayers: [
+        expect.objectContaining({
+          sampleId: sampleIdFromUrl('kick.mp3'),
+          maxVelocity: 127,
+        }),
+      ],
     }));
+    expect(normalized.entities.kick).not.toHaveProperty('sampleId');
+    expect(normalized.entities.kick).not.toHaveProperty('alignmentOffset');
     expect(normalized.entities.mystery.percussionType)
       .toBe(PERCUSSION_TYPES.GENERIC_PERCUSSION);
+  });
+
+  test('normalizes layered inputs and creates metadata for every referenced sample', () => {
+    const input: KitChannelInput = {
+      id: 'snare',
+      sample: 'legacy-snare.wav',
+      sampleId: 'sample:legacy-snare.wav',
+      alignmentOffset: 0.5,
+      velocityLayers: [
+        {
+          id: 'soft',
+          sample: 'soft-snare.wav',
+          maxVelocity: 63,
+          alignmentOffset: 0.01,
+          trimDb: -2,
+        },
+        {
+          id: 'hard',
+          sample: 'hard-snare.wav',
+          maxVelocity: 127,
+          alignmentOffset: 0.02,
+          trimDb: 0,
+        },
+      ],
+    };
+    const samples = createSamplesState([input]);
+    const normalized = normalizeChannelsState([input]).entities.snare;
+
+    expect(samples.ids).toEqual([
+      'sample:soft-snare.wav',
+      'sample:hard-snare.wav',
+    ]);
+    expect(normalized.velocityLayers.map(layer => layer.sampleId)).toEqual(samples.ids);
+    expect(normalized).not.toHaveProperty('sample');
+    expect(normalized).not.toHaveProperty('sampleId');
+    expect(normalized).not.toHaveProperty('alignmentOffset');
+  });
+});
+
+describe('velocity-layer persistence migration', () => {
+  test('migrates active channels, sample alignment, and saved Kit presets', () => {
+    const versionNineState = legacyState({
+      kitChannels: {
+        ids: ['kick'],
+        entities: {
+          kick: {
+            id: 'kick',
+            kitId: DEFAULT_KIT_ID,
+            laneId: 'kick',
+            percussionType: PERCUSSION_TYPES.BASS_DRUM,
+            sampleId: 'sample:kick.wav',
+            sampleLoaded: true,
+          },
+        },
+      },
+      samples: {
+        ids: ['sample:kick.wav'],
+        entities: {
+          'sample:kick.wav': {
+            id: 'sample:kick.wav',
+            name: 'Kick',
+            url: 'kick.wav',
+            sourceType: 'user',
+            alignmentOffset: 0.045,
+          },
+        },
+      },
+      presets: {
+        preset: 'Saved Kit',
+        userPresets: [{
+          name: 'Saved Kit',
+          channels: [{
+            id: 'saved-kick',
+            sample: 'kick.wav',
+            sampleId: 'sample:kick.wav',
+            alignmentOffset: 0.08,
+          }],
+        }],
+      },
+    } as unknown);
+
+    const migrated = migrateToVelocityLayerSequencerState(versionNineState);
+    const activeChannel = migrated.kitChannels?.entities.kick;
+    const presets = migrated.presets as {
+      userPresets: Array<{ channels: KitChannelInput[] }>;
+    };
+
+    expect(activeChannel?.velocityLayers).toEqual([{
+      id: 'kick:layer:1',
+      sampleId: 'sample:kick.wav',
+      maxVelocity: 127,
+      alignmentOffset: 0.045,
+      trimDb: 0,
+    }]);
+    expect(activeChannel).not.toHaveProperty('sampleId');
+    expect(activeChannel).not.toHaveProperty('sampleLoaded');
+    expect(migrated.samples?.entities['sample:kick.wav']).not.toHaveProperty(
+      'alignmentOffset',
+    );
+    expect(presets.userPresets[0].channels[0]).toEqual(expect.objectContaining({
+      id: 'saved-kick',
+      velocityLayers: [{
+        id: 'saved-kick:layer:1',
+        sample: 'kick.wav',
+        sampleId: 'sample:kick.wav',
+        maxVelocity: 127,
+        alignmentOffset: 0.08,
+        trimDb: 0,
+      }],
+    }));
+    expect(presets.userPresets[0].channels[0]).not.toHaveProperty('sampleId');
+    expect(migrateToVelocityLayerSequencerState(
+      migrated as unknown as LegacySequencerState,
+    ).kitChannels).toEqual(migrated.kitChannels);
   });
 });

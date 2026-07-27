@@ -6,13 +6,18 @@ import { setSelectedChannel } from '../master';
 import { addSampleFromUrl, setSampleFingerprint } from '../samples';
 import { PERCUSSION_TYPES } from '../percussion';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
-import { DEFAULT_KIT_ID } from '../sequencerModel';
+import { DEFAULT_KIT_ID, sampleIdFromUrl } from '../sequencerModel';
 import type {
   KitChannel,
   KitChannelInput,
   KitChannelsState,
   SequencerRootState,
 } from '../sequencerModel';
+import { getVelocityLayerSampleReferences } from '../velocityLayers';
+import {
+  SAMPLE_LOAD_STATUSES,
+  setSampleLoadStatus,
+} from '../sampleLoadStatus';
 import { channelsSlice } from './channels.reducer';
 
 const NEW_CHANNEL_NAME_PREFIX = 'New channel';
@@ -27,6 +32,11 @@ type NamedChannel = {
 
 type SampleChannel = KitChannelInput & {
   sample: string;
+};
+
+type LoadableSample = {
+  sample: string;
+  sampleId?: string;
 };
 
 type DeletableChannel = {
@@ -65,20 +75,34 @@ export const {
   updateChannelOrder,
   replaceChannels,
   replaceKitChannels,
-  sampleLoaded,
   setChannelSample,
+  setVelocityLayerSample,
+  setVelocityLayerAlignment,
+  replaceChannelVelocityLayers,
   setChannelReverb,
 } = channelsSlice.actions;
 
-export const loadSampleStatefully = (dispatch: Dispatch, channel: SampleChannel): void => {
-  dispatch(sampleLoaded(channel.id, false));
+export const loadSampleStatefully = (dispatch: Dispatch, channel: LoadableSample): void => {
+  const sampleId = channel.sampleId || sampleIdFromUrl(channel.sample);
+  dispatch(setSampleLoadStatus({
+    sampleId,
+    status: SAMPLE_LOAD_STATUSES.LOADING,
+  }));
   loadSample(channel.sample).then((success: boolean) => {
     if (success) {
-      dispatch(sampleLoaded(channel.id, true));
+      dispatch(setSampleLoadStatus({
+        sampleId,
+        status: SAMPLE_LOAD_STATUSES.LOADED,
+      }));
       const fingerprint = getSampleFingerprint?.(channel.sample);
       if (fingerprint) {
         dispatch(setSampleFingerprint(channel.sample, fingerprint));
       }
+    } else {
+      dispatch(setSampleLoadStatus({
+        sampleId,
+        status: SAMPLE_LOAD_STATUSES.ERROR,
+      }));
     }
   });
 };
@@ -88,13 +112,28 @@ const getSelectedKitId = (state: SequencerRootState): string => (
 );
 
 export const loadChannels = (
-  channels: SampleChannel[],
+  channels: KitChannelInput[],
   targetKitId?: string,
 ): Thunk => (dispatch, getState) => {
-  const kitId = targetKitId || getSelectedKitId(getState());
+  const state = getState();
+  const kitId = targetKitId || getSelectedKitId(state);
+  const loadedSampleIds = new Set<string>();
   channels.forEach((channel) => {
-    dispatch(addSampleFromUrl(channel.sample, channel.sourceType || 'factory'));
-    loadSampleStatefully(dispatch, channel);
+    getVelocityLayerSampleReferences(channel).forEach((reference) => {
+      if (loadedSampleIds.has(reference.sampleId)) {
+        return;
+      }
+      const sample = reference.sample || state.samples?.entities?.[reference.sampleId]?.url;
+      if (!sample) {
+        return;
+      }
+      loadedSampleIds.add(reference.sampleId);
+      dispatch(addSampleFromUrl(sample, channel.sourceType || 'factory'));
+      loadSampleStatefully(dispatch, {
+        sample,
+        sampleId: reference.sampleId,
+      });
+    });
   });
   dispatch(replaceKitChannels(channels, kitId));
 };
@@ -130,15 +169,26 @@ export const newChannel = (): Thunk => (dispatch, getState) => {
 export const loadAndSetChannelSample = (channelId: string, sampleURL: string) => (
   dispatch: Dispatch,
 ): void => {
-  dispatch(sampleLoaded(channelId, false));
+  const sampleId = sampleIdFromUrl(sampleURL);
+  dispatch(setSampleLoadStatus({
+    sampleId,
+    status: SAMPLE_LOAD_STATUSES.LOADING,
+  }));
   loadSample(sampleURL).then((success: boolean) => {
     if (success) {
-      dispatch(sampleLoaded(channelId, true));
+      dispatch(setSampleLoadStatus({
+        sampleId,
+        status: SAMPLE_LOAD_STATUSES.LOADED,
+      }));
       const fingerprint = getSampleFingerprint?.(sampleURL);
       if (fingerprint) {
         dispatch(setSampleFingerprint(sampleURL, fingerprint));
       }
     } else {
+      dispatch(setSampleLoadStatus({
+        sampleId,
+        status: SAMPLE_LOAD_STATUSES.ERROR,
+      }));
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
     }
   });

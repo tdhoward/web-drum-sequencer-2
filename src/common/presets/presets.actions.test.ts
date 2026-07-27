@@ -151,7 +151,7 @@ describe('loadPreset', () => {
     expect(actions.map(action => action.type)).toEqual([
       'song/setSelectedKitId',
       'samples/addSampleFromUrl',
-      'kitChannels/sampleLoaded',
+      'sampleLoadStatus/setSampleLoadStatus',
       'kitChannels/replaceKitChannels',
       'kits/setKitName',
       'presets/setPreset',

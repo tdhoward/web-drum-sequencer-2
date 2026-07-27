@@ -51,6 +51,7 @@ const createState = () => {
     gain: 1,
   }], 'local-kit');
   const channel = kitChannels.entities['local-kit-kick'];
+  const sampleId = channel.velocityLayers[0].sampleId;
   return {
     song: {
       id: 'song-1',
@@ -83,10 +84,10 @@ const createState = () => {
       },
     },
     samples: {
-      ids: [channel.sampleId],
+      ids: [sampleId],
       entities: {
-        [channel.sampleId]: {
-          id: channel.sampleId,
+        [sampleId]: {
+          id: sampleId,
           name: 'Kick',
           url: 'local-kick.wav',
           sourceType: 'user',
@@ -140,7 +141,7 @@ const createImportBundle = async () => {
   const channel = channels.entities['source-kick'];
   const kit: Kit = { id: 'source-kit', name: 'Travel Kit', channelIds: [channel.id] };
   const sample: Sample = {
-    id: channel.sampleId,
+    id: channel.velocityLayers[0].sampleId,
     name: 'Source Kick',
     url: 'source-kick.wav',
     sourceType: 'user',

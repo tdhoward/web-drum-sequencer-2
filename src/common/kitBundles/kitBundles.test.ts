@@ -13,17 +13,17 @@ const createBundle = async () => {
     id: 'kick',
     name: 'Kick',
     sample: 'kick.wav',
+    alignmentOffset: 0.01,
     percussionType: 'bass_drum',
     gain: 0.9,
   }], 'kit-1');
   const channel = channelsState.entities.kick;
   const kit: Kit = { id: 'kit-1', name: 'Test Kit', channelIds: ['kick'] };
   const sample: Sample = {
-    id: channel.sampleId,
+    id: channel.velocityLayers[0].sampleId,
     name: 'Kick',
     url: 'kick.wav',
     sourceType: 'user',
-    alignmentOffset: 0.01,
   };
   return createKitExportBundle({
     kit,
@@ -39,6 +39,11 @@ describe('kit export bundles', () => {
     const parsed = parseKitExportBundle(serializeKitExportBundle(bundle));
     const verified = await verifyKitExportBundle(parsed);
 
+    expect(bundle.manifest.drumkit.channels[0]).toEqual(expect.objectContaining({
+      sampleId: 'sample:kick.wav',
+    }));
+    expect(bundle.manifest.drumkit.channels[0]).not.toHaveProperty('velocityLayers');
+    expect(bundle.manifest.drumkit.samples[0].alignmentOffset).toBe(0.01);
     expect(verified.kitHash.contentHash).toBe(bundle.manifest.drumkit.kit.contentHash);
     expect(new Uint8Array(Object.values(parsed.samplePayloads)[0])).toEqual(
       Uint8Array.from([10, 20, 30, 40]),

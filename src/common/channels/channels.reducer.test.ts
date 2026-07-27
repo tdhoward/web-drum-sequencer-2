@@ -9,11 +9,14 @@ import {
   removeChannel,
   replaceChannels,
   replaceKitChannels,
+  replaceChannelVelocityLayers,
   setChannelPitchCoarse,
   setChannelPitchFine,
   setChannelReverb,
   setChannelMuted,
   setChannelSolo,
+  setVelocityLayerAlignment,
+  setVelocityLayerSample,
 } from './channels.actions';
 import { PERCUSSION_TYPES } from '../percussion';
 import type { KitChannelsState } from '../sequencerModel';
@@ -38,12 +41,82 @@ const expectFirstChannelField = (
 };
 
 describe('setChannelSample', () => {
-  test('should change a sample', () => {
-    expectFirstChannelField(
+  test('changes only the reference layer sample', () => {
+    const state = channelsReducer(
+      channelsInitialState,
       setChannelSample(firstChannelId, testSample),
-      'sampleId',
-      `sample:${testSample}`,
     );
+
+    expect(getFirstChannel(state).velocityLayers[0].sampleId)
+      .toBe(`sample:${testSample}`);
+    expect(getFirstChannel(state)).not.toHaveProperty('sampleId');
+  });
+
+  test('delegates a compatibility update only to the velocity-64 layer', () => {
+    const original = getFirstChannel(channelsInitialState).velocityLayers[0];
+    const layered = channelsReducer(
+      channelsInitialState,
+      replaceChannelVelocityLayers({
+        channelId: firstChannelId,
+        velocityLayers: [
+          { ...original, id: 'soft', sampleId: 'sample:soft', maxVelocity: 63 },
+          { ...original, id: 'hard', sampleId: 'sample:hard', maxVelocity: 127 },
+        ],
+      }),
+    );
+    const updated = channelsReducer(
+      layered,
+      setChannelSample(firstChannelId, testSample),
+    );
+
+    expect(getFirstChannel(updated).velocityLayers.map(layer => layer.sampleId)).toEqual([
+      'sample:soft',
+      `sample:${testSample}`,
+    ]);
+  });
+});
+
+describe('velocity layer updates', () => {
+  test('targets sample and alignment updates by stable layer ID', () => {
+    const layerId = getFirstChannel(channelsInitialState).velocityLayers[0].id;
+    const sampled = channelsReducer(
+      channelsInitialState,
+      setVelocityLayerSample(firstChannelId, layerId, 'sample:replacement'),
+    );
+    const aligned = channelsReducer(
+      sampled,
+      setVelocityLayerAlignment(firstChannelId, layerId, 0.126),
+    );
+
+    expect(getFirstChannel(aligned).velocityLayers[0]).toEqual(expect.objectContaining({
+      sampleId: 'sample:replacement',
+      alignmentOffset: 0.126,
+    }));
+  });
+
+  test('replaces a complete valid partition atomically and rejects invalid partitions', () => {
+    const original = getFirstChannel(channelsInitialState);
+    const replacement = [
+      { ...original.velocityLayers[0], id: 'soft', maxVelocity: 63 },
+      { ...original.velocityLayers[0], id: 'hard', maxVelocity: 127 },
+    ];
+    const replaced = channelsReducer(
+      channelsInitialState,
+      replaceChannelVelocityLayers({
+        channelId: firstChannelId,
+        velocityLayers: replacement,
+      }),
+    );
+    const rejected = channelsReducer(
+      replaced,
+      replaceChannelVelocityLayers({
+        channelId: firstChannelId,
+        velocityLayers: [{ ...replacement[0], maxVelocity: 100 }],
+      }),
+    );
+
+    expect(getFirstChannel(replaced).velocityLayers).toEqual(replacement);
+    expect(getFirstChannel(rejected).velocityLayers).toEqual(replacement);
   });
 });
 
@@ -152,7 +225,14 @@ describe('addChannel', () => {
       }),
     );
     expect(state.ids.length).toEqual(channelsInitialState.ids.length + 1);
-    expect(state.entities['12345']).not.toBeUndefined();
+    expect(state.entities['12345'].velocityLayers).toEqual([
+      expect.objectContaining({
+        id: '12345:layer:1',
+        sampleId: 'sample:test.wav',
+        maxVelocity: 127,
+      }),
+    ]);
+    expect(state.entities['12345']).not.toHaveProperty('sampleId');
   });
 });
 

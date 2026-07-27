@@ -1,5 +1,10 @@
 import { DEFAULT_KIT_ID, normalizeKitChannelsState } from '../sequencerModel';
-import { deleteChannel, getNextNewChannelName, newChannel } from './channels.actions';
+import {
+  deleteChannel,
+  getNextNewChannelName,
+  loadChannels,
+  newChannel,
+} from './channels.actions';
 
 jest.mock('../../presets');
 jest.mock('../../samples.config');
@@ -73,6 +78,59 @@ describe('newChannel', () => {
         kitId: DEFAULT_KIT_ID,
         laneId: 'new-channel-id',
       }));
+  });
+});
+
+describe('loadChannels', () => {
+  test('registers and loads every unique layer sample', () => {
+    const actions: DispatchedAction[] = [];
+    const state = {
+      song: {
+        selectedKitId: DEFAULT_KIT_ID,
+      },
+      samples: {
+        ids: [],
+        entities: {},
+      },
+    };
+
+    loadChannels([{
+      id: 'layered-snare',
+      velocityLayers: [
+        {
+          id: 'soft',
+          sample: 'soft.wav',
+          maxVelocity: 63,
+        },
+        {
+          id: 'hard',
+          sample: 'hard.wav',
+          maxVelocity: 127,
+        },
+      ],
+    }])(
+      (action) => {
+        actions.push(action as DispatchedAction);
+        return action;
+      },
+      () => state as never,
+    );
+
+    expect(actions.map(action => action.type)).toEqual([
+      'samples/addSampleFromUrl',
+      'sampleLoadStatus/setSampleLoadStatus',
+      'samples/addSampleFromUrl',
+      'sampleLoadStatus/setSampleLoadStatus',
+      'kitChannels/replaceKitChannels',
+    ]);
+    expect(actions[0].payload).toEqual({
+      sampleURL: 'soft.wav',
+      sourceType: 'factory',
+    });
+    expect(actions[2].payload).toEqual({
+      sampleURL: 'hard.wav',
+      sourceType: 'factory',
+    });
   });
 });
 

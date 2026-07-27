@@ -5,9 +5,18 @@ import {
   normalizeKitChannelsState,
   sampleIdFromUrl,
 } from '../sequencerModel';
-import type { KitChannel, KitChannelInput, KitChannelsState } from '../sequencerModel';
-import { PERCUSSION_TYPES, isValidPercussionType } from '../percussion';
+import type {
+  KitChannel,
+  KitChannelInput,
+  KitChannelsState,
+  VelocityLayer,
+} from '../sequencerModel';
+import { isValidPercussionType } from '../percussion';
 import { createDefaultKitChannelsState } from '../defaultSequencerState';
+import {
+  getReferenceVelocityLayer,
+  validateVelocityLayers,
+} from '../velocityLayers';
 
 export const channelsInitialState = createDefaultKitChannelsState();
 
@@ -16,6 +25,23 @@ type ChannelIdPayload = string;
 type ChannelSamplePayload = {
   channel: string;
   sampleURL: string;
+};
+
+type VelocityLayerSamplePayload = {
+  channelId: string;
+  layerId: string;
+  sampleId: string;
+};
+
+type VelocityLayerAlignmentPayload = {
+  channelId: string;
+  layerId: string;
+  alignmentOffset: number;
+};
+
+type ReplaceChannelVelocityLayersPayload = {
+  channelId: string;
+  velocityLayers: VelocityLayer[];
 };
 
 type ChannelNumberPayload<TField extends string> = {
@@ -34,11 +60,6 @@ type ChannelNamePayload = {
 type ChannelPercussionTypePayload = {
   channel: string;
   percussionType: string;
-};
-
-type SampleLoadedPayload = {
-  channelId: string;
-  isLoaded: boolean;
 };
 
 type UpdateChannelOrderPayload = {
@@ -82,12 +103,57 @@ export const channelsSlice = createSlice({
     setChannelSample: {
       reducer(state, action: PayloadAction<ChannelSamplePayload>) {
         updateChannel(state, action.payload.channel, (channel) => {
-          channel.sampleId = sampleIdFromUrl(action.payload.sampleURL);
+          const referenceLayer = getReferenceVelocityLayer(channel.velocityLayers);
+          if (referenceLayer) {
+            referenceLayer.sampleId = sampleIdFromUrl(action.payload.sampleURL);
+          }
         });
       },
       prepare(channel: string, sampleURL: string) {
         return { payload: { channel, sampleURL } };
       },
+    },
+    setVelocityLayerSample: {
+      reducer(state, action: PayloadAction<VelocityLayerSamplePayload>) {
+        updateChannel(state, action.payload.channelId, (channel) => {
+          const layer = channel.velocityLayers.find(
+            velocityLayer => velocityLayer.id === action.payload.layerId,
+          );
+          if (layer) {
+            layer.sampleId = action.payload.sampleId;
+          }
+        });
+      },
+      prepare(channelId: string, layerId: string, sampleId: string) {
+        return { payload: { channelId, layerId, sampleId } };
+      },
+    },
+    setVelocityLayerAlignment: {
+      reducer(state, action: PayloadAction<VelocityLayerAlignmentPayload>) {
+        updateChannel(state, action.payload.channelId, (channel) => {
+          const layer = channel.velocityLayers.find(
+            velocityLayer => velocityLayer.id === action.payload.layerId,
+          );
+          if (layer) {
+            const offset = action.payload.alignmentOffset;
+            layer.alignmentOffset = Number.isFinite(offset) ? Math.max(0, offset) : 0;
+          }
+        });
+      },
+      prepare(channelId: string, layerId: string, alignmentOffset: number) {
+        return { payload: { channelId, layerId, alignmentOffset } };
+      },
+    },
+    replaceChannelVelocityLayers(
+      state,
+      action: PayloadAction<ReplaceChannelVelocityLayersPayload>,
+    ) {
+      if (validateVelocityLayers(action.payload.velocityLayers).length > 0) {
+        return;
+      }
+      updateChannel(state, action.payload.channelId, (channel) => {
+        channel.velocityLayers = action.payload.velocityLayers.map(layer => ({ ...layer }));
+      });
     },
     setChannelGain: {
       reducer(state, action: PayloadAction<ChannelNumberPayload<'gain'>>) {
@@ -164,29 +230,16 @@ export const channelsSlice = createSlice({
       },
     },
     addChannel(state, action: PayloadAction<KitChannelInput>) {
-      const channel: KitChannel = {
-        ...action.payload,
-        kitId: action.payload.kitId || DEFAULT_KIT_ID,
-        laneId: action.payload.laneId || action.payload.id,
-        percussionType: action.payload.percussionType || PERCUSSION_TYPES.GENERIC_PERCUSSION,
-        sampleId: action.payload.sampleId || sampleIdFromUrl(action.payload.sample),
-      };
+      const channel = normalizeKitChannelsState(
+        [action.payload],
+        action.payload.kitId || DEFAULT_KIT_ID,
+      ).entities[action.payload.id];
       state.ids.push(channel.id);
       state.entities[channel.id] = channel;
     },
     removeChannel(state, action: PayloadAction<ChannelIdPayload>) {
       state.ids = state.ids.filter(id => id !== action.payload);
       delete state.entities[action.payload];
-    },
-    sampleLoaded: {
-      reducer(state, action: PayloadAction<SampleLoadedPayload>) {
-        updateChannel(state, action.payload.channelId, (channel) => {
-          channel.sampleLoaded = action.payload.isLoaded;
-        });
-      },
-      prepare(channelId: string, isLoaded: boolean) {
-        return { payload: { channelId, isLoaded } };
-      },
     },
     setChannelMuted: {
       reducer(state, action: PayloadAction<ChannelBooleanPayload<'muted'>>) {

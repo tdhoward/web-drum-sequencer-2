@@ -20,6 +20,7 @@ import {
   DEFAULT_KIT_ID,
   normalizeArrangementPatternIds,
   normalizeTempoChanges,
+  migrateToVelocityLayerSequencerState,
 } from './common/sequencerModel';
 import type { LegacySequencerState } from './common/sequencerModel';
 import presets from './presets';
@@ -129,16 +130,25 @@ export const migrations = {
               : selectedKitId,
           })),
         }
-        : state.songLibrary,
+      : state.songLibrary,
     };
   },
+  10: (state: LegacySequencerState = {}) => (
+    migrateToVelocityLayerSequencerState(state)
+  ),
 };
 
 const persistConfig = {
   key: 'root',
-  version: 9,
+  version: 10,
   storage,
-  blacklist: ['playbackSession', 'window', 'workspace', 'mappingReview'],
+  blacklist: [
+    'playbackSession',
+    'window',
+    'workspace',
+    'mappingReview',
+    'sampleLoadStatus',
+  ],
   migrate: createMigrate(migrations as unknown as MigrationManifest, { debug: import.meta.env.DEV }),
 };
 

@@ -84,7 +84,8 @@ initializeDB()
   .then(() => {
     const channels = getChannels();
 
-    // Redux can persist sampleLoaded=true, but sampleStore is memory-only after a refresh.
+    // sampleStore is memory-only after a refresh, so rebuild it even though
+    // reusable sample metadata remains persisted.
     channels.forEach(channel => loadChannelSample(channel, { force: true }));
 
     const userSamples = userSamplesSelector(store.getState()) || [];

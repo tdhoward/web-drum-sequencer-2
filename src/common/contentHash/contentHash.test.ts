@@ -83,29 +83,30 @@ describe('canonical content hashes', () => {
     const firstChannels = normalizeKitChannelsState([{
       id: 'kick-a',
       sample: 'first-name.wav',
+      alignmentOffset: 0.01,
       gain: 0.8,
       percussionType: 'bass_drum',
     }], 'kit-a');
     const secondChannels = normalizeKitChannelsState([{
       id: 'kick-b',
       sample: 'renamed.wav',
+      alignmentOffset: 0.01,
       gain: 0.8,
       percussionType: 'bass_drum',
     }], 'kit-b');
     const firstKit: Kit = { id: 'kit-a', name: 'First', channelIds: ['kick-a'] };
     const secondKit: Kit = { id: 'kit-b', name: 'Renamed', channelIds: ['kick-b'] };
     const firstSample: Sample = {
-      id: firstChannels.entities['kick-a'].sampleId,
+      id: firstChannels.entities['kick-a'].velocityLayers[0].sampleId,
       sourceType: 'user',
       name: 'First sample',
       contentHash: hash,
       contentHashAlgorithm: 'sha256',
       contentHashVersion: 1,
-      alignmentOffset: 0.01,
     };
     const secondSample: Sample = {
       ...firstSample,
-      id: secondChannels.entities['kick-b'].sampleId,
+      id: secondChannels.entities['kick-b'].velocityLayers[0].sampleId,
       name: 'Renamed sample',
       url: 'somewhere-else.wav',
     };

@@ -2,18 +2,23 @@ import { createSelector } from 'reselect';
 import { channelsStateSelector } from '../channels';
 import { selectedKitSelector } from '../kits';
 import { samplesSelector } from '../samples';
-import { normalizeKitChannelsState } from '../sequencerModel';
-import type { KitChannel, KitChannelInput, SequencerRootState } from '../sequencerModel';
+import {
+  createSamplesState,
+  normalizeKitChannelsState,
+} from '../sequencerModel';
+import type {
+  KitChannel,
+  KitChannelInput,
+  SamplesState,
+  SequencerRootState,
+} from '../sequencerModel';
 import type { PresetsState, UserPreset } from './presets.reducer';
 
 type PresetsRootState = SequencerRootState & {
   presets?: PresetsState;
 };
 
-type CurrentKitPresetChannel = Omit<KitChannel, 'sampleId' | 'kitId'> & {
-  id: string;
-  sample?: string;
-};
+type CurrentKitPresetChannel = KitChannelInput;
 
 export type CurrentKitPresetState = {
   channels: CurrentKitPresetChannel[];
@@ -23,13 +28,29 @@ export type KitPresetStateInput = {
   channels?: KitChannelInput[];
 };
 
-const transientChannelFields = ['sampleLoaded', 'noteIds', 'sampleId', 'kitId'];
+const transientChannelFields = [
+  'sampleLoaded',
+  'noteIds',
+  'sample',
+  'sampleId',
+  'alignmentOffset',
+  'kitId',
+];
 
-const omitTransientChannelFields = (channel: KitChannel): CurrentKitPresetChannel => {
+const channelToPresetInput = (
+  channel: KitChannel,
+  samples: SamplesState,
+): CurrentKitPresetChannel => {
   const presetChannel = { ...channel } as Record<string, unknown>;
   transientChannelFields.forEach((field) => {
     delete presetChannel[field];
   });
+  presetChannel.velocityLayers = channel.velocityLayers.map(layer => ({
+    ...layer,
+    ...(samples.entities[layer.sampleId]?.url
+      ? { sample: samples.entities[layer.sampleId].url }
+      : {}),
+  }));
   return presetChannel as CurrentKitPresetChannel;
 };
 
@@ -40,12 +61,13 @@ export const normalizeKitPresetState = (
     return undefined;
   }
 
-  const channels = normalizeKitChannelsState(preset.channels);
+  const samples = createSamplesState(preset.channels);
+  const channels = normalizeKitChannelsState(preset.channels, undefined, samples);
   return {
     channels: channels.ids
       .map(channelId => channels.entities[channelId])
       .filter((channel): channel is KitChannel => Boolean(channel))
-      .map(omitTransientChannelFields),
+      .map(channel => channelToPresetInput(channel, samples)),
   };
 };
 
@@ -65,16 +87,7 @@ export const currentKitPresetStateSelector = createSelector(
       channels: channelIds
         .map(channelId => channels.entities[channelId])
         .filter((channel): channel is KitChannel => Boolean(channel))
-        .map((channel) => {
-          const sample = samples.entities[channel.sampleId];
-          return omitTransientChannelFields({
-            ...channel,
-            sample: sample?.url || channel.sample,
-            ...(sample?.alignmentOffset
-              ? { alignmentOffset: sample.alignmentOffset }
-              : {}),
-          });
-        }),
+        .map(channel => channelToPresetInput(channel, samples)),
     };
   },
 );

@@ -18,7 +18,7 @@ const createBundle = async () => {
   const channel = channelsState.entities.kick;
   const kit: Kit = { id: 'kit-1', name: 'Kit', channelIds: ['kick'] };
   const sample: Sample = {
-    id: channel.sampleId,
+    id: channel.velocityLayers[0].sampleId,
     name: 'Kick',
     url: 'kick.wav',
     sourceType: 'user',
@@ -104,7 +104,15 @@ describe('song export bundles', () => {
     const bundle = await createSongExportBundle({
       song: source.manifest.song,
       kit: source.manifest.drumkit.kit,
-      channels: [channel],
+      channels: [
+        normalizeKitChannelsState(
+          [channel],
+          source.manifest.drumkit.kit.id,
+          {
+            entities: { [sample.id]: sample },
+          },
+        ).entities[channel.id],
+      ],
       samples: { [sample.id]: sample },
       patternPack,
       includedLaneIds: ['kick'],

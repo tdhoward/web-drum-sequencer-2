@@ -57,6 +57,8 @@ Current model baseline:
 
 * `src/common/percussion.ts` defines the controlled percussion vocabulary and the pure `resolveKitChannelMapping` resolver.
 * `kitChannel.percussionType` is required by invariant checks and defaults to `generic_percussion` for new/legacy channels.
+* Normalized Kit channels require a `velocityLayers` partition and no longer store channel-level `sample`, `sampleId`, or `alignmentOffset` fields. Legacy and factory one-sample inputs normalize to one deterministic 1-127 layer, while the current UI and playback compatibility selectors flatten the velocity-64 reference layer.
+* Sample metadata is reusable and alignment-free. Per-layer alignment lives on the Kit channel layer, and sample load status is runtime-only state keyed by sample ID.
 * `kitChannelAssignments` exists as the forward path for applying resolved lane-to-channel mappings.
 * `src/patternPacks/index.ts` exposes factory pattern packs with human-readable names. The Pattern workspace dropdown loads a pack; the existing 1-8 pattern buttons select slots within that pack.
 * Bundled factory presets use semantic channel IDs and explicit channel names/percussion metadata; `empty_channel` has been removed from factory preset data.

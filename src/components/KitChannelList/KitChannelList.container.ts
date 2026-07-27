@@ -10,7 +10,7 @@ import {
   setChannelPan,
   setChannelPitchCoarse,
   setChannelReverb,
-  setSampleAlignmentOffset,
+  setVelocityLayerAlignment,
   updateChannelOrder,
   userSamplesSelector,
 } from '../../common';
@@ -39,7 +39,11 @@ type KitChannelListDispatchProps = {
   setChannelPan: (channelId: string, pan: number) => void;
   setChannelPitchCoarse: (channelId: string, pitchCoarse: number) => void;
   setChannelReverb: (channelId: string, reverb: number) => void;
-  setSampleAlignmentOffset: (sampleId: string, alignmentOffset: number) => void;
+  setVelocityLayerAlignment: (
+    channelId: string,
+    layerId: string,
+    alignmentOffset: number,
+  ) => void;
   saveEditedUserSample: (
     channelId: string,
     audioBuffer: AudioBuffer,
@@ -91,8 +95,8 @@ const mapDispatchToProps = (dispatch: AppDispatch): KitChannelListDispatchProps 
   setChannelReverb: (channelId, reverb) => {
     dispatch(setChannelReverb(channelId, reverb));
   },
-  setSampleAlignmentOffset: (sampleId, alignmentOffset) => {
-    dispatch(setSampleAlignmentOffset({ sampleId, alignmentOffset }));
+  setVelocityLayerAlignment: (channelId, layerId, alignmentOffset) => {
+    dispatch(setVelocityLayerAlignment(channelId, layerId, alignmentOffset));
   },
   saveEditedUserSample: (
     channelId,
@@ -156,7 +160,11 @@ const mergeProps = (
     dispatchProps.setChannelReverb(getKitChannelId(channel), getEventNumber(event));
   },
   onSetSampleAlignment: (channel: LegacyChannel, alignmentOffset: number) => {
-    dispatchProps.setSampleAlignmentOffset(channel.sampleId, alignmentOffset);
+    dispatchProps.setVelocityLayerAlignment(
+      getKitChannelId(channel),
+      channel.referenceVelocityLayerId,
+      alignmentOffset,
+    );
   },
   onSaveEditedSample: (
     channel: LegacyChannel,

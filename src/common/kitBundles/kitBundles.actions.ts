@@ -15,7 +15,6 @@ import type { PresetsState, UserPreset } from '../presets';
 import type {
   ContentHashMetadata,
   Kit,
-  KitChannel,
   KitChannelInput,
   Sample,
   SequencerRootState,
@@ -34,7 +33,7 @@ import {
   serializeKitExportBundle,
   verifyKitExportBundle,
 } from './kitBundles';
-import type { ExportedSample } from './kitBundles';
+import type { ExportedSample, KitBundleChannel } from './kitBundles';
 
 export type KitTransferState = SequencerRootState & {
   song: SongState;
@@ -168,7 +167,7 @@ const createUniqueKitId = (state: KitTransferState): string => {
 };
 
 const createImportedChannel = (
-  channel: KitChannel,
+  channel: KitBundleChannel,
   kitId: string,
   importedSample: ExportedSample,
   localSampleUrl: string,
