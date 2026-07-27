@@ -6,7 +6,11 @@ import {
   saveToSampleStore,
 } from '../../services/sampleStore';
 import factorySamples from '../../samples.config';
-import { loadAndSetChannelSample, setChannelPitchCoarse } from '../channels';
+import {
+  loadAndSetChannelSample,
+  loadSampleAsset,
+  setChannelPitchCoarse,
+} from '../channels';
 import {
   removeSampleFromUrl,
   renameSampleFromUrl,
@@ -62,10 +66,11 @@ export const saveEditedUserSample = (
   sourceName?: string,
   sampleName?: string,
   replaceSampleId?: string,
+  assignToChannel = true,
 ) => (
   dispatch: Dispatch,
   getState: () => UserSamplesRootState,
-): Promise<void> => {
+): Promise<string> => {
   const displayName = sampleName?.trim() || sourceName?.trim() || 'Edited Sample';
   const isFactorySample = factorySamples.some(sample => sample.url === replaceSampleId);
   const existingUserSample = replaceSampleId && !isFactorySample
@@ -92,10 +97,13 @@ export const saveEditedUserSample = (
       }));
       if (existingUserSampleRecord) {
         dispatch(renameSampleFromUrl(sampleURL, displayName));
-      } else {
+      } else if (assignToChannel) {
         dispatch(loadAndSetChannelSample(channel, sampleURL));
+      } else {
+        dispatch(loadSampleAsset(sampleURL));
       }
       dispatch(setSampleFingerprint(sampleURL, fingerprint));
+      return sampleURL;
     })
     .catch((error) => {
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));

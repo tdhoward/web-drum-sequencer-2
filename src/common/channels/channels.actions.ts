@@ -169,6 +169,16 @@ export const newChannel = (): Thunk => (dispatch, getState) => {
 export const loadAndSetChannelSample = (channelId: string, sampleURL: string) => (
   dispatch: Dispatch,
 ): void => {
+  dispatch(loadSampleAsset(sampleURL));
+  dispatch(setChannelSample(channelId, sampleURL));
+};
+
+export const loadSampleAsset = (
+  sampleURL: string,
+  sourceType = 'user',
+) => (
+  dispatch: Dispatch,
+): void => {
   const sampleId = sampleIdFromUrl(sampleURL);
   dispatch(setSampleLoadStatus({
     sampleId,
@@ -192,8 +202,7 @@ export const loadAndSetChannelSample = (channelId: string, sampleURL: string) =>
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
     }
   });
-  dispatch(addSampleFromUrl(sampleURL, 'user'));
-  dispatch(setChannelSample(channelId, sampleURL));
+  dispatch(addSampleFromUrl(sampleURL, sourceType));
 };
 
 const getKitChannelId = (channel: DeletableChannel): string => channel.kitChannelId || channel.id;

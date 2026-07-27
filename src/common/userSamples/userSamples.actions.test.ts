@@ -155,4 +155,28 @@ describe('saveEditedUserSample', () => {
     );
     expect(dispatch.mock.calls.some(([action]) => typeof action === 'function')).toBe(true);
   });
+
+  test('can create an edited asset without assigning it before the editor applies its draft', async () => {
+    const dispatch = jest.fn(action => action);
+    const editedBuffer = {} as AudioBuffer;
+    const thunk = saveEditedUserSample(
+      'channel-1',
+      editedBuffer,
+      'Factory Kick',
+      'Layer Copy',
+      undefined,
+      false,
+    );
+
+    const sampleUrl = await thunk(dispatch, () => ({ userSamples: [] }));
+    const dispatchedThunks = dispatch.mock.calls
+      .map(([action]) => action)
+      .filter(action => typeof action === 'function');
+
+    expect(sampleUrl).toBe('kick-copy.wav');
+    expect(dispatchedThunks).toHaveLength(1);
+    expect(dispatch.mock.calls.some(([action]) => (
+      action?.type === 'kitChannels/setChannelSample'
+    ))).toBe(false);
+  });
 });

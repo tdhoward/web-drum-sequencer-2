@@ -1,10 +1,19 @@
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 import styled, { useTheme } from 'styled-components';
+import {
+  getReferenceVelocityLayer,
+  getUserSampleDisplayName,
+  getUserSampleId,
+  sampleIdFromUrl,
+  type UserSample,
+  type VelocityLayer,
+} from '../../common';
 import { playNote, stopAllNotes } from '../../services/audioRouter';
 import { pitchToCents } from '../../services/audioScheduler';
 import { notifyChannelTriggered } from '../../services/channelTriggerEvents';
@@ -16,28 +25,61 @@ import {
   renderEditedSampleBuffer,
   type SampleRange,
 } from '../../services/sampleEditing';
+import factorySamples from '../../samples.config';
 import { Modal } from '../Modal.component';
+import {
+  SamplePicker,
+  getSampleDisplayName,
+  type SampleSelectOption,
+} from '../SampleSelect';
 import { drawWaveform } from '../SampleWaveform.component';
+import {
+  MAX_EDITOR_VELOCITY_LAYERS,
+  MAX_LAYER_TRIM_DB,
+  MIN_LAYER_TRIM_DB,
+  addDraftVelocityLayer,
+  getInitialVelocityLayerId,
+  getLayerWorkspaceAriaLabel,
+  getVelocityLayerPresentation,
+  isValidVelocityLayerDraft,
+  removeDraftVelocityLayer,
+  setDraftLayerMaxVelocity,
+  setDraftLayerMinVelocity,
+  setDraftLayerSample,
+  setDraftLayerTrim,
+} from './SampleEditorModal.draft';
 
-type SampleEditorChannel = {
+export type SampleEditorLayer = VelocityLayer & {
+  sample?: string;
+  sampleContentHash?: string;
+  sampleLoaded?: boolean;
+};
+
+export type SampleEditorChannel = {
   id: string;
   kitChannelId?: string;
   name?: string;
-  sample?: string;
   pitchCoarse?: number;
   pitchFine?: number;
+  referenceVelocityLayerId?: string;
+  velocityLayers: SampleEditorLayer[];
 };
 
-type SampleEditorModalProps = {
-  canReplaceExisting?: boolean;
+export type SampleEditorModalProps = {
   channel: SampleEditorChannel | null;
-  existingSampleName?: string;
+  initialSelectedLayerId?: string;
+  onApplyVelocityLayers: (
+    layers: VelocityLayer[],
+    sampleUrlsByLayerId: Record<string, string>,
+  ) => Promise<void> | void;
   onClose: () => void;
   onSaveEditedSample: (
     audioBuffer: AudioBuffer,
+    sourceName: string,
     sampleName: string,
-    replaceExisting: boolean,
-  ) => Promise<void> | void;
+    replaceSampleId?: string,
+  ) => Promise<string | void> | string | void;
+  userSamples: UserSample[];
 };
 
 type CanvasSize = {
@@ -56,7 +98,16 @@ type ToggleButtonProps = {
   $active?: boolean;
 };
 
+type LayerButtonProps = {
+  $selected: boolean;
+};
+
+type EditorLayoutProps = {
+  $singleLayer: boolean;
+};
+
 const MIN_SELECTION_SAMPLES = 8;
+const SAMPLE_ID_PREFIX = 'sample:';
 
 const Dialog = styled.div`
   background: ${({ theme }) => theme.colors.surfacePanelRaised};
@@ -72,7 +123,15 @@ const Dialog = styled.div`
   overflow-x: hidden;
   overflow-y: auto;
   padding: 1rem;
-  width: min(56rem, calc(100vw - 2rem));
+  width: min(64rem, calc(100vw - 2rem));
+
+  @media (max-width: 680px) {
+    border-radius: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+    padding: 0.75rem;
+    width: 100vw;
+  }
 `;
 
 const Header = styled.div`
@@ -102,15 +161,191 @@ const CloseButton = styled.button`
   display: flex;
   flex: 0 0 auto;
   font-size: 1.4rem;
-  height: 2rem;
+  height: 2.75rem;
   justify-content: center;
   line-height: 1;
   padding: 0;
-  width: 2rem;
+  width: 2.75rem;
 
   &:hover, &:focus-visible {
     color: ${({ theme }) => theme.colors.textPrimary};
   }
+`;
+
+const EditorLayout = styled.div<EditorLayoutProps>`
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: ${({ $singleLayer }) => (
+    $singleLayer ? 'minmax(0, 1fr)' : '14rem minmax(0, 1fr)'
+  )};
+  min-height: 0;
+
+  @media (max-width: 680px) {
+    display: block;
+  }
+`;
+
+const LayerRail = styled.aside`
+  background: ${({ theme }) => theme.colors.surfaceControl};
+  border: 2px solid ${({ theme }) => theme.colors.borderDefault};
+  border-radius: 0.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.65rem;
+
+  @media (max-width: 680px) {
+    display: none;
+  }
+`;
+
+const RailHeading = styled.h3`
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.15rem;
+  text-transform: uppercase;
+`;
+
+const LayerList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+`;
+
+const LayerButton = styled.button<LayerButtonProps>`
+  background: ${({ $selected, theme }) => (
+    $selected ? theme.colors.borderSubtle : 'transparent'
+  )};
+  border: 2px solid ${({ $selected, theme }) => (
+    $selected ? theme.colors.accentPrimary : 'transparent'
+  )};
+  border-radius: 0.3rem;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  cursor: pointer;
+  display: grid;
+  gap: 0.15rem 0.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 3.5rem;
+  padding: 0.45rem 0.5rem;
+  text-align: left;
+  width: 100%;
+
+  &:hover, &:focus-visible {
+    border-color: ${({ theme }) => theme.colors.borderHover};
+  }
+`;
+
+const LayerName = styled.span`
+  font-size: 0.78rem;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const LayerRange = styled.span`
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 0.72rem;
+`;
+
+const LayerSampleName = styled.span`
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 0.66rem;
+  grid-column: 1 / -1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const RailActions = styled.div`
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: 1fr 1fr;
+  margin-top: auto;
+`;
+
+const CompactLayerBar = styled.div`
+  align-items: center;
+  background: ${({ theme }) => theme.colors.surfaceControl};
+  border: 2px solid ${({ theme }) => theme.colors.borderDefault};
+  border-radius: 0.3rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 0.55rem 0.65rem;
+`;
+
+const CompactLayerText = styled.span`
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 0.76rem;
+  font-weight: 700;
+`;
+
+const MobileLayerControls = styled.div`
+  display: none;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+
+  @media (max-width: 680px) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 2.75rem 2.75rem;
+  }
+`;
+
+const MobileLayerSelect = styled.select`
+  background: ${({ theme }) => theme.colors.surfaceControl};
+  border: 2px solid ${({ theme }) => theme.colors.borderDefault};
+  border-radius: 0.3rem;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font: inherit;
+  font-size: 0.78rem;
+  min-height: 2.75rem;
+  min-width: 0;
+  padding: 0.45rem;
+`;
+
+const Workspace = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-width: 0;
+`;
+
+const SelectedSummary = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  line-height: 1.3;
+`;
+
+const SummaryLead = styled.strong`
+  color: ${({ theme }) => theme.colors.nearWhite};
+  font-size: 0.84rem;
+`;
+
+const SummarySample = styled.span`
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 0.8rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const SampleRow = styled.div`
+  align-items: center;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+`;
+
+const FieldLabel = styled.span`
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
 `;
 
 const WaveformFrame = styled.div`
@@ -118,8 +353,8 @@ const WaveformFrame = styled.div`
   border: 2px solid ${({ theme }) => theme.colors.borderDefault};
   border-radius: 0.3rem;
   box-sizing: border-box;
-  height: min(15rem, 42vh);
-  min-height: 10rem;
+  height: min(9.5rem, 30vh);
+  min-height: 8rem;
   overflow: hidden;
   position: relative;
   touch-action: none;
@@ -150,12 +385,68 @@ const ControlBar = styled.div`
   gap: 0.5rem;
 `;
 
+const LayerSettings = styled.div`
+  background: ${({ theme }) => theme.colors.borderSubtle};
+  border-radius: 0.3rem;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(7rem, 1fr));
+  padding: 0.7rem;
+
+  @media (max-width: 540px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const NumberField = styled.label`
+  color: ${({ theme }) => theme.colors.textMuted};
+  display: flex;
+  flex-direction: column;
+  font-size: 0.68rem;
+  font-weight: 700;
+  gap: 0.3rem;
+  text-transform: uppercase;
+`;
+
+const NumberInput = styled.input`
+  background: ${({ theme }) => theme.colors.surfaceControl};
+  border: 2px solid ${({ theme }) => theme.colors.borderDefault};
+  border-radius: 0.25rem;
+  box-sizing: border-box;
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font: inherit;
+  font-size: 0.82rem;
+  min-height: 2.75rem;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
+  width: 100%;
+
+  &:disabled {
+    opacity: 0.5;
+  }
+`;
+
+const TrimValue = styled.span`
+  color: ${({ theme }) => theme.colors.textPrimary};
+  font-size: 0.72rem;
+  text-transform: none;
+`;
+
 const ActionRow = styled.div`
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   justify-content: space-between;
+
+  @media (max-width: 680px) {
+    background: ${({ theme }) => theme.colors.surfacePanelRaised};
+    bottom: -0.75rem;
+    margin: 0 -0.75rem -0.75rem;
+    padding: 0.7rem 0.75rem;
+    position: sticky;
+    z-index: 5;
+  }
 `;
 
 const NameRow = styled.label`
@@ -167,13 +458,6 @@ const NameRow = styled.label`
   width: 100%;
 `;
 
-const NameLabel = styled.span`
-  color: ${({ theme }) => theme.colors.textMuted};
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-`;
-
 const NameInput = styled.input`
   background: ${({ theme }) => theme.colors.surfaceControl};
   border: 2px solid ${({ theme }) => theme.colors.borderDefault};
@@ -182,6 +466,7 @@ const NameInput = styled.input`
   color: ${({ theme }) => theme.colors.textPrimary};
   font: inherit;
   font-size: 0.82rem;
+  min-height: 2.75rem;
   min-width: 0;
   padding: 0.55rem 0.65rem;
   width: 100%;
@@ -206,7 +491,9 @@ const ReplaceOption = styled.label`
   max-width: 32rem;
 
   input {
-    margin: 0.15rem 0 0;
+    height: 1.25rem;
+    margin: 0.1rem 0 0;
+    width: 1.25rem;
   }
 `;
 
@@ -237,7 +524,7 @@ const ControlButton = styled.button<ToggleButtonProps>`
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1;
-  min-height: 2.25rem;
+  min-height: 2.75rem;
   padding: 0.6rem 0.75rem;
 
   &:disabled {
@@ -250,8 +537,13 @@ const ControlButton = styled.button<ToggleButtonProps>`
   }
 `;
 
+const SquareButton = styled(ControlButton)`
+  padding: 0;
+  width: 2.75rem;
+`;
+
 const PrimaryButton = styled(ControlButton)`
-  min-width: 4rem;
+  min-width: 5rem;
 `;
 
 const ErrorText = styled.div`
@@ -287,9 +579,28 @@ const getDefaultEditedSampleName = (sourceName = 'Sample'): string => {
   return `${safeSourceName} Edit`;
 };
 
-const isFullSelection = (audioBuffer: AudioBuffer | null, selection: SelectionState): boolean => (
+const isFullSelection = (
+  audioBuffer: AudioBuffer | null,
+  selection: SelectionState,
+): boolean => (
   !audioBuffer || (selection.startSample <= 0 && selection.endSample >= audioBuffer.length)
 );
+
+const getSampleUrlFromId = (sampleId: string): string | undefined => (
+  sampleId.startsWith(SAMPLE_ID_PREFIX)
+    ? sampleId.slice(SAMPLE_ID_PREFIX.length)
+    : undefined
+);
+
+const getInitialSampleUrls = (
+  layers: readonly SampleEditorLayer[],
+): Record<string, string> => layers.reduce<Record<string, string>>((result, layer) => {
+  const sampleUrl = layer.sample || getSampleUrlFromId(layer.sampleId);
+  if (sampleUrl) {
+    result[layer.id] = sampleUrl;
+  }
+  return result;
+}, {});
 
 const drawSelectionOverlay = (
   canvas: HTMLCanvasElement,
@@ -345,17 +656,21 @@ const getNearestHandle = (
 };
 
 export const SampleEditorModal = ({
-  canReplaceExisting = false,
   channel,
-  existingSampleName,
+  initialSelectedLayerId,
+  onApplyVelocityLayers,
   onClose,
   onSaveEditedSample,
+  userSamples,
 }: SampleEditorModalProps) => {
   const theme = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const activeHandleRef = useRef<SelectionHandle | null>(null);
   const originalAudioBufferRef = useRef<AudioBuffer | null>(null);
+  const [draftLayers, setDraftLayers] = useState<VelocityLayer[]>([]);
+  const [selectedLayerId, setSelectedLayerId] = useState('');
+  const [sampleUrlsByLayerId, setSampleUrlsByLayerId] = useState<Record<string, string>>({});
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
   const [selection, setSelection] = useState<SelectionState>({
@@ -366,57 +681,75 @@ export const SampleEditorModal = ({
   });
   const [sampleName, setSampleName] = useState('');
   const [replaceExisting, setReplaceExisting] = useState(false);
+  const [assetRevision, setAssetRevision] = useState(0);
+  const [isApplying, setIsApplying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sampleUrl = channel?.sample;
+  useEffect(() => {
+    const nextLayers = channel?.velocityLayers.map(layer => ({
+      id: layer.id,
+      sampleId: layer.sampleId,
+      maxVelocity: layer.maxVelocity,
+      alignmentOffset: layer.alignmentOffset,
+      trimDb: layer.trimDb,
+    })) || [];
+    setDraftLayers(nextLayers);
+    setSelectedLayerId(getInitialVelocityLayerId(
+      nextLayers,
+      initialSelectedLayerId || channel?.referenceVelocityLayerId,
+    ));
+    setSampleUrlsByLayerId(getInitialSampleUrls(channel?.velocityLayers || []));
+    setIsApplying(false);
+    setError(null);
+  }, [channel, initialSelectedLayerId]);
+
+  const selectedLayerIndex = draftLayers.findIndex(layer => layer.id === selectedLayerId);
+  const selectedLayer = draftLayers[selectedLayerIndex];
+  const selectedPresentation = getVelocityLayerPresentation(draftLayers, selectedLayerId);
+  const selectedSampleUrl = selectedLayer
+    ? sampleUrlsByLayerId[selectedLayer.id] || getSampleUrlFromId(selectedLayer.sampleId)
+    : undefined;
+  const selectedSampleName = getSampleDisplayName(selectedSampleUrl, userSamples);
   const channelName = channel?.name || channel?.kitChannelId || channel?.id || 'Sample';
+  const referenceLayerId = getReferenceVelocityLayer(draftLayers)?.id;
+  const isFactorySample = factorySamples.some(sample => sample.url === selectedSampleUrl);
+  const selectedUserSample = !isFactorySample
+    ? userSamples.find(userSample => getUserSampleId(userSample) === selectedSampleUrl)
+    : undefined;
+  const canReplaceExisting = Boolean(selectedUserSample);
+  const existingSampleName = selectedUserSample
+    ? getUserSampleDisplayName(selectedUserSample)
+    : undefined;
   const getSourceAudioBuffer = (): AudioBuffer | null => (
     originalAudioBufferRef.current || audioBuffer
   );
 
-  const logDiagnostics = (
-    eventName: string,
-    extra: Record<string, unknown> = {},
-    buffers: Record<string, AudioBuffer | null | undefined> = {},
-  ) => {
-    void eventName;
-    void extra;
-    void buffers;
-  };
-
   useEffect(() => {
     let isCancelled = false;
     originalAudioBufferRef.current = null;
+    activeHandleRef.current = null;
     setAudioBuffer(null);
     setError(null);
     setIsSaving(false);
     setReplaceExisting(false);
-    setSampleName(getDefaultEditedSampleName(channelName));
+    setSampleName(getDefaultEditedSampleName(selectedSampleName));
 
-    if (!sampleUrl) {
+    if (!selectedSampleUrl) {
       setError('Sample unavailable');
       return undefined;
     }
 
-    loadSampleBuffer(sampleUrl)
+    loadSampleBuffer(selectedSampleUrl)
       .then((buffer) => {
         if (isCancelled) {
           return;
         }
 
         if (buffer) {
-          logDiagnostics('load:decoded-store-buffer', {}, {
-            decodedStoreBuffer: buffer,
-          });
           const originalBuffer = cloneAudioBuffer(buffer);
           const editableBuffer = cloneAudioBuffer(originalBuffer);
           originalAudioBufferRef.current = originalBuffer;
-          logDiagnostics('load:cloned-editor-buffers', {}, {
-            decodedStoreBuffer: buffer,
-            originalBuffer,
-            editableBuffer,
-          });
           setAudioBuffer(editableBuffer);
           setSelection(createFullSelection(editableBuffer));
         } else {
@@ -432,7 +765,7 @@ export const SampleEditorModal = ({
     return () => {
       isCancelled = true;
     };
-  }, [sampleUrl, channelName]);
+  }, [assetRevision, selectedSampleName, selectedSampleUrl]);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -478,7 +811,6 @@ export const SampleEditorModal = ({
     }
 
     const sourceAudioBuffer = getSourceAudioBuffer();
-
     if (sourceAudioBuffer && canvasSize.width > 0 && canvasSize.height > 0) {
       const drawBuffer = cloneAudioBuffer(sourceAudioBuffer);
       drawWaveform(
@@ -496,8 +828,8 @@ export const SampleEditorModal = ({
     }
   }, [
     audioBuffer,
-    canvasSize.width,
     canvasSize.height,
+    canvasSize.width,
     selection,
     theme,
   ]);
@@ -507,7 +839,6 @@ export const SampleEditorModal = ({
     sampleIndex: number,
   ) => {
     const sourceAudioBuffer = originalAudioBufferRef.current || audioBuffer;
-
     if (!sourceAudioBuffer) {
       return;
     }
@@ -553,10 +884,6 @@ export const SampleEditorModal = ({
     const handle = getNearestHandle(event, audioBuffer, selection);
     activeHandleRef.current = handle;
     event.currentTarget.setPointerCapture(event.pointerId);
-    logDiagnostics('pointer:down', {
-      handle,
-      sampleIndex: getSampleFromPointer(event, audioBuffer),
-    });
     setSelectionHandle(handle, getSampleFromPointer(event, audioBuffer));
   };
 
@@ -564,90 +891,119 @@ export const SampleEditorModal = ({
     if (!audioBuffer || !activeHandleRef.current) {
       return;
     }
-
     setSelectionHandle(activeHandleRef.current, getSampleFromPointer(event, audioBuffer));
   };
 
   const handlePointerEnd = (event: React.PointerEvent<HTMLCanvasElement>) => {
-    logDiagnostics('pointer:end', {
-      hadCapture: event.currentTarget.hasPointerCapture(event.pointerId),
-      pointerId: event.pointerId,
-    });
     activeHandleRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
   };
 
+  const sourceAudioBuffer = getSourceAudioBuffer();
   const hasTrimEdit = Boolean(
-    getSourceAudioBuffer()
+    sourceAudioBuffer
       && selection.trimEnabled
-      && !isFullSelection(getSourceAudioBuffer(), selection),
+      && !isFullSelection(sourceAudioBuffer, selection),
   );
   const hasEdits = hasTrimEdit || selection.normalizeEnabled;
   const willReplaceExisting = canReplaceExisting && replaceExisting;
-  const sourceAudioBuffer = getSourceAudioBuffer();
   const selectedDuration = sourceAudioBuffer
     ? formatSeconds(selection.endSample - selection.startSample, sourceAudioBuffer.sampleRate)
     : '0.000 s';
 
+  const confirmDiscardAudioEdits = (): boolean => (
+    !hasEdits
+    || window.confirm('Discard the unsaved waveform edits for this layer?')
+  );
+
+  const selectLayer = (layerId: string) => {
+    if (layerId === selectedLayerId || !confirmDiscardAudioEdits()) {
+      return;
+    }
+    setSelectedLayerId(layerId);
+  };
+
+  const handleAddLayer = () => {
+    if (!confirmDiscardAudioEdits()) {
+      return;
+    }
+    const transition = addDraftVelocityLayer(draftLayers, selectedLayerId);
+    setDraftLayers(transition.layers);
+    setSelectedLayerId(transition.selectedLayerId);
+    const newLayer = transition.layers.find(layer => layer.id === transition.selectedLayerId);
+    if (newLayer && !sampleUrlsByLayerId[newLayer.id] && selectedSampleUrl) {
+      setSampleUrlsByLayerId(previous => ({
+        ...previous,
+        [newLayer.id]: selectedSampleUrl,
+      }));
+    }
+  };
+
+  const handleRemoveLayer = () => {
+    if (!confirmDiscardAudioEdits()) {
+      return;
+    }
+    const transition = removeDraftVelocityLayer(draftLayers, selectedLayerId);
+    setDraftLayers(transition.layers);
+    setSelectedLayerId(transition.selectedLayerId);
+    setSampleUrlsByLayerId(previous => {
+      const nextUrls = { ...previous };
+      delete nextUrls[selectedLayerId];
+      return nextUrls;
+    });
+  };
+
+  const handleSelectSample = (option: SampleSelectOption) => {
+    if (!selectedLayer || !confirmDiscardAudioEdits()) {
+      return;
+    }
+    setDraftLayers(previous => (
+      setDraftLayerSample(previous, selectedLayer.id, sampleIdFromUrl(option.value))
+    ));
+    setSampleUrlsByLayerId(previous => ({
+      ...previous,
+      [selectedLayer.id]: option.value,
+    }));
+  };
+
   const renderCurrentEditedBuffer = (): AudioBuffer | null => {
     const originalBuffer = originalAudioBufferRef.current;
-
     if (!originalBuffer || !hasEdits) {
-      logDiagnostics('render-edited:skipped', {
-        hasOriginalBuffer: Boolean(originalBuffer),
-        hasEdits,
-      });
       return null;
     }
 
-    logDiagnostics('render-edited:before', {
-      hasTrimEdit,
-      hasEdits,
-    }, {
-      originalBuffer,
-    });
-    const editedBuffer = renderEditedSampleBuffer(originalBuffer, {
+    return renderEditedSampleBuffer(originalBuffer, {
       startSample: selection.trimEnabled ? selection.startSample : 0,
       endSample: selection.trimEnabled ? selection.endSample : originalBuffer.length,
       normalize: selection.normalizeEnabled,
       fadeSeconds: DEFAULT_TRIM_FADE_SECONDS,
     });
-    logDiagnostics('render-edited:after', {
-      hasTrimEdit,
-      hasEdits,
-    }, {
-      originalBuffer,
-      editedBuffer,
-    });
-    return editedBuffer;
   };
 
   const previewBuffer = (buffer: AudioBuffer | null) => {
-    if (!buffer || !channel) {
+    if (!buffer || !channel || !selectedLayer) {
       return;
     }
 
     stopAllNotes();
-    playNote(null, buffer, channel.id, pitchToCents(channel));
+    playNote(
+      null,
+      buffer,
+      channel.id,
+      pitchToCents(channel),
+      64,
+      selectedLayer.trimDb,
+    );
     notifyChannelTriggered(channel.id);
   };
 
   const handlePreviewOriginal = () => {
     const originalBuffer = originalAudioBufferRef.current;
-
-    if (!originalBuffer) {
-      logDiagnostics('preview-original:missing-original');
-      return;
+    if (originalBuffer) {
+      previewBuffer(cloneAudioBuffer(originalBuffer));
     }
-
-    const previewOriginalBuffer = cloneAudioBuffer(originalBuffer);
-    logDiagnostics('preview-original:clone', {}, {
-      originalBuffer,
-      previewOriginalBuffer,
-    });
-    previewBuffer(previewOriginalBuffer);
   };
 
   const handlePreviewEdited = () => {
@@ -656,25 +1012,13 @@ export const SampleEditorModal = ({
 
   const handleAutoSelect = () => {
     const originalBuffer = originalAudioBufferRef.current;
-
     if (!originalBuffer) {
-      logDiagnostics('auto-select:missing-original');
       return;
     }
-
-    logDiagnostics('auto-select:before', {}, {
-      originalBuffer,
-    });
     const detectedRange = detectAudibleRange(originalBuffer);
-    logDiagnostics('auto-select:detected-range', {
-      detectedRange,
-    }, {
-      originalBuffer,
-    });
-    setSelection((previousSelection) => {
+    setSelection(previousSelection => {
       const selectionChanged = detectedRange.startSample !== previousSelection.startSample
         || detectedRange.endSample !== previousSelection.endSample;
-
       return {
         ...previousSelection,
         ...detectedRange,
@@ -685,72 +1029,90 @@ export const SampleEditorModal = ({
 
   const handleReset = () => {
     const originalBuffer = originalAudioBufferRef.current;
-
     if (!originalBuffer) {
-      logDiagnostics('reset:missing-original');
       return;
     }
-
-    logDiagnostics('reset:before', {}, {
-      originalBuffer,
-    });
     const resetBuffer = cloneAudioBuffer(originalBuffer);
     setError(null);
     setAudioBuffer(resetBuffer);
     setSelection(createFullSelection(resetBuffer));
-    logDiagnostics('reset:after', {}, {
-      originalBuffer,
-      resetBuffer,
-    });
   };
 
   const handleSave = () => {
     const editedBuffer = renderCurrentEditedBuffer();
     const nextSampleName = sampleName.trim();
-
-    if (!channel || !editedBuffer || isSaving || !nextSampleName) {
-      logDiagnostics('save:skipped', {
-        hasChannel: Boolean(channel),
-        hasEditedBuffer: Boolean(editedBuffer),
-        hasSampleName: Boolean(nextSampleName),
-        isSaving,
-      }, {
-        editedBuffer,
-      });
-
+    if (
+      !selectedLayer
+      || !editedBuffer
+      || isSaving
+      || !nextSampleName
+    ) {
       if (!nextSampleName) {
         setError('Name required');
       }
-
       return;
     }
 
-    logDiagnostics('save:before', {
-      isSaving,
-    }, {
-      editedBuffer,
-    });
     setIsSaving(true);
     setError(null);
     Promise.resolve(onSaveEditedSample(
       editedBuffer,
+      selectedSampleName,
       nextSampleName,
-      willReplaceExisting,
+      willReplaceExisting ? selectedSampleUrl : undefined,
+    ))
+      .then((savedSampleUrl) => {
+        const nextSampleUrl = savedSampleUrl || (
+          willReplaceExisting ? selectedSampleUrl : undefined
+        );
+        if (!nextSampleUrl) {
+          throw new Error('Saved sample URL unavailable');
+        }
+        setDraftLayers(previous => (
+          setDraftLayerSample(previous, selectedLayer.id, sampleIdFromUrl(nextSampleUrl))
+        ));
+        setSampleUrlsByLayerId(previous => ({
+          ...previous,
+          [selectedLayer.id]: nextSampleUrl,
+        }));
+        setAssetRevision(previous => previous + 1);
+        setIsSaving(false);
+      })
+      .catch(() => {
+        setIsSaving(false);
+        setError('Could not save sample');
+      });
+  };
+
+  const handleApply = () => {
+    if (
+      !isValidVelocityLayerDraft(draftLayers)
+      || isApplying
+      || isSaving
+      || hasEdits
+    ) {
+      if (hasEdits) {
+        setError('Save or reset waveform edits before applying');
+      } else if (!isValidVelocityLayerDraft(draftLayers)) {
+        setError('Velocity ranges are invalid');
+      }
+      return;
+    }
+
+    setIsApplying(true);
+    setError(null);
+    Promise.resolve(onApplyVelocityLayers(
+      draftLayers.map(layer => ({ ...layer })),
+      { ...sampleUrlsByLayerId },
     ))
       .then(() => {
-        logDiagnostics('save:success', {}, {
-          editedBuffer,
-        });
-        setIsSaving(false);
+        setIsApplying(false);
         stopAllNotes();
         onClose();
       })
       .catch(() => {
-        logDiagnostics('save:error', {}, {
-          editedBuffer,
-        });
-        setIsSaving(false);
-        setError('Could not save sample');
+        setIsApplying(false);
+        setError('Could not apply sample layers');
       });
   };
 
@@ -759,146 +1121,372 @@ export const SampleEditorModal = ({
     onClose();
   };
 
-  if (!channel) {
+  const layerPresentations = useMemo(() => draftLayers.map(layer => ({
+    layer,
+    presentation: getVelocityLayerPresentation(draftLayers, layer.id),
+  })), [draftLayers]);
+
+  if (!channel || !selectedLayer || !selectedPresentation) {
     return null;
   }
+
+  const previousBoundary = draftLayers[selectedLayerIndex - 2]?.maxVelocity || 0;
+  const nextBoundary = draftLayers[selectedLayerIndex + 1]?.maxVelocity || 127;
+  const selectedLayerSummary = (
+    `${selectedPresentation.label} · ${selectedPresentation.rangeLabel}`
+  );
+  const waveformAriaLabel = getLayerWorkspaceAriaLabel(
+    selectedPresentation.label,
+    selectedPresentation.rangeLabel,
+  );
+  const isSingleLayer = draftLayers.length === 1;
+  const canAddLayer = draftLayers.length < MAX_EDITOR_VELOCITY_LAYERS
+    && selectedPresentation.minVelocity < selectedPresentation.maxVelocity;
+  const canRemoveLayer = draftLayers.length > 1;
 
   return (
     <Modal show>
       <Dialog
-        aria-label={`Edit ${channelName} sample`}
+        aria-label={`Edit ${channelName} samples`}
         aria-modal="true"
         role="dialog"
       >
         <Header>
-          <Title>{`Edit ${channelName}`}</Title>
+          <Title>{`Edit ${channelName} Samples`}</Title>
           <CloseButton aria-label="Close sample editor" onClick={handleClose} type="button">
-            x
+            ×
           </CloseButton>
         </Header>
-        <WaveformFrame ref={frameRef}>
-          <WaveformCanvas
-            ref={canvasRef}
-            aria-label="Sample trim selection"
-            onPointerCancel={handlePointerEnd}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerEnd}
-          />
-          {!audioBuffer && !error && (
-            <LoadingText>Loading</LoadingText>
-          )}
-        </WaveformFrame>
-        <SelectionInfo>
-          <span>
-            {audioBuffer
-              ? `${formatSeconds(selection.startSample, audioBuffer.sampleRate)} - ${formatSeconds(selection.endSample, audioBuffer.sampleRate)}`
-              : '0.000 s - 0.000 s'}
-          </span>
-          <span>{selectedDuration}</span>
-        </SelectionInfo>
-        <ControlBar>
-          <ControlButton disabled={!audioBuffer} onClick={handleAutoSelect} type="button">
-            Auto Select
-          </ControlButton>
-          <ControlButton
-            $active={selection.trimEnabled}
-            disabled={!audioBuffer}
-            onClick={() => {
-              setSelection(previousSelection => ({
-                ...previousSelection,
-                trimEnabled: !previousSelection.trimEnabled,
-              }));
-            }}
-            type="button"
-          >
-            Trim to Selection
-          </ControlButton>
-          <ControlButton
-            $active={selection.normalizeEnabled}
-            disabled={!audioBuffer}
-            onClick={() => {
-              setSelection(previousSelection => ({
-                ...previousSelection,
-                normalizeEnabled: !previousSelection.normalizeEnabled,
-              }));
-            }}
-            type="button"
-          >
-            Normalize
-          </ControlButton>
-          <ControlButton disabled={!audioBuffer} onClick={handleReset} type="button">
-            Reset
-          </ControlButton>
-        </ControlBar>
-        <NameRow>
-          <NameLabel>{willReplaceExisting ? 'Name' : 'Save As'}</NameLabel>
-          <NameInput
-            aria-label="Edited sample name"
-            disabled={!audioBuffer || isSaving}
-            onChange={(event) => {
-              setSampleName(event.target.value);
-              if (error === 'Name required') {
-                setError(null);
-              }
-            }}
-            value={sampleName}
-          />
-        </NameRow>
-        {canReplaceExisting && (
-          <ReplaceOption>
-            <input
-              checked={replaceExisting}
-              disabled={!audioBuffer || isSaving}
-              onChange={(event) => {
-                const shouldReplace = event.target.checked;
-                setReplaceExisting(shouldReplace);
-                setSampleName(shouldReplace
-                  ? existingSampleName?.trim() || channelName
-                  : getDefaultEditedSampleName(channelName));
-              }}
-              type="checkbox"
-            />
-            <span>
-              Replace existing user sample
-              <ReplaceHint>
-                Keeps this sample in place and updates every channel that uses it.
-              </ReplaceHint>
-            </span>
-          </ReplaceOption>
+
+        {isSingleLayer && (
+          <CompactLayerBar>
+            <CompactLayerText>Velocity Layers: 1</CompactLayerText>
+            <ControlButton
+              disabled={!canAddLayer || isSaving || isApplying}
+              onClick={handleAddLayer}
+              type="button"
+            >
+              Add Layer
+            </ControlButton>
+          </CompactLayerBar>
         )}
+
+        {!isSingleLayer && (
+          <MobileLayerControls>
+            <MobileLayerSelect
+              aria-label="Selected velocity layer"
+              onChange={event => selectLayer(event.target.value)}
+              value={selectedLayerId}
+            >
+              {layerPresentations.map(({ layer, presentation }) => (
+                presentation && (
+                  <option key={layer.id} value={layer.id}>
+                    {`Layer ${presentation.index + 1} of ${draftLayers.length} · `}
+                    {`${presentation.label} · ${presentation.rangeLabel}`}
+                  </option>
+                )
+              ))}
+            </MobileLayerSelect>
+            <SquareButton
+              aria-label="Add velocity layer"
+              disabled={!canAddLayer || isSaving || isApplying}
+              onClick={handleAddLayer}
+              type="button"
+            >
+              +
+            </SquareButton>
+            <SquareButton
+              aria-label="Remove selected velocity layer"
+              disabled={!canRemoveLayer || isSaving || isApplying}
+              onClick={handleRemoveLayer}
+              type="button"
+            >
+              −
+            </SquareButton>
+          </MobileLayerControls>
+        )}
+
+        <EditorLayout $singleLayer={isSingleLayer}>
+          {!isSingleLayer && (
+            <LayerRail aria-label="Velocity layers">
+              <RailHeading>Velocity Layers</RailHeading>
+              <LayerList>
+                {layerPresentations.map(({ layer, presentation }) => {
+                  if (!presentation) {
+                    return null;
+                  }
+                  const layerSampleUrl = sampleUrlsByLayerId[layer.id]
+                    || getSampleUrlFromId(layer.sampleId);
+                  const isSelected = layer.id === selectedLayerId;
+                  return (
+                    <LayerButton
+                      key={layer.id}
+                      $selected={isSelected}
+                      aria-label={
+                        `${presentation.label}, velocities ${presentation.rangeLabel}, `
+                        + `${getSampleDisplayName(layerSampleUrl, userSamples)}, `
+                        + `${layer.trimDb.toFixed(1)} dB`
+                      }
+                      aria-pressed={isSelected}
+                      onClick={() => selectLayer(layer.id)}
+                      type="button"
+                    >
+                      <LayerName>
+                        {presentation.label}
+                        {layer.id === referenceLayerId ? ' •' : ''}
+                      </LayerName>
+                      <LayerRange>{presentation.rangeLabel}</LayerRange>
+                      <LayerSampleName>
+                        {`${getSampleDisplayName(layerSampleUrl, userSamples)} · `}
+                        {`${layer.trimDb.toFixed(1)} dB`}
+                      </LayerSampleName>
+                    </LayerButton>
+                  );
+                })}
+              </LayerList>
+              <RailActions>
+                <ControlButton
+                  disabled={!canAddLayer || isSaving || isApplying}
+                  onClick={handleAddLayer}
+                  type="button"
+                >
+                  Add Layer
+                </ControlButton>
+                <ControlButton
+                  disabled={!canRemoveLayer || isSaving || isApplying}
+                  onClick={handleRemoveLayer}
+                  type="button"
+                >
+                  Remove Layer
+                </ControlButton>
+              </RailActions>
+            </LayerRail>
+          )}
+
+          <Workspace aria-label={`${selectedLayerSummary} settings`}>
+            <SelectedSummary>
+              <SummaryLead>{`Selected: ${selectedLayerSummary}`}</SummaryLead>
+              <SummarySample>{`· ${selectedSampleName}`}</SummarySample>
+            </SelectedSummary>
+
+            <SampleRow>
+              <FieldLabel>Sample</FieldLabel>
+              <SamplePicker
+                ariaLabel={`Select sample for ${selectedLayerSummary}`}
+                onSelectSample={handleSelectSample}
+                sample={selectedSampleUrl}
+                sampleLoaded={
+                  channel.velocityLayers.find(layer => layer.id === selectedLayer.id)
+                    ?.sampleLoaded
+                }
+                userSamples={userSamples}
+              />
+            </SampleRow>
+
+            <WaveformFrame ref={frameRef}>
+              <WaveformCanvas
+                ref={canvasRef}
+                aria-label={waveformAriaLabel}
+                onPointerCancel={handlePointerEnd}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerEnd}
+              />
+              {!audioBuffer && !error && (
+                <LoadingText>Loading</LoadingText>
+              )}
+            </WaveformFrame>
+
+            <SelectionInfo>
+              <span>
+                {audioBuffer
+                  ? `${formatSeconds(selection.startSample, audioBuffer.sampleRate)} - `
+                    + `${formatSeconds(selection.endSample, audioBuffer.sampleRate)}`
+                  : '0.000 s - 0.000 s'}
+              </span>
+              <span>{selectedDuration}</span>
+            </SelectionInfo>
+
+            <ControlBar>
+              <ControlButton disabled={!audioBuffer} onClick={handleAutoSelect} type="button">
+                Auto Select
+              </ControlButton>
+              <ControlButton
+                $active={selection.trimEnabled}
+                disabled={!audioBuffer}
+                onClick={() => {
+                  setSelection(previous => ({
+                    ...previous,
+                    trimEnabled: !previous.trimEnabled,
+                  }));
+                }}
+                type="button"
+              >
+                Trim to Selection
+              </ControlButton>
+              <ControlButton
+                $active={selection.normalizeEnabled}
+                disabled={!audioBuffer}
+                onClick={() => {
+                  setSelection(previous => ({
+                    ...previous,
+                    normalizeEnabled: !previous.normalizeEnabled,
+                  }));
+                }}
+                type="button"
+              >
+                Normalize
+              </ControlButton>
+              <ControlButton disabled={!audioBuffer} onClick={handleReset} type="button">
+                Reset
+              </ControlButton>
+            </ControlBar>
+
+            <LayerSettings aria-label="Selected layer settings">
+              <NumberField>
+                Range start
+                <NumberInput
+                  aria-label={`${selectedPresentation.label} minimum velocity`}
+                  disabled={selectedLayerIndex === 0}
+                  max={selectedLayer.maxVelocity - 1}
+                  min={previousBoundary + 2}
+                  onChange={event => {
+                    setDraftLayers(previous => setDraftLayerMinVelocity(
+                      previous,
+                      selectedLayer.id,
+                      Number(event.target.value),
+                    ));
+                  }}
+                  type="number"
+                  value={selectedPresentation.minVelocity}
+                />
+              </NumberField>
+              <NumberField>
+                Range end
+                <NumberInput
+                  aria-label={`${selectedPresentation.label} maximum velocity`}
+                  disabled={selectedLayerIndex === draftLayers.length - 1}
+                  max={nextBoundary - 1}
+                  min={selectedPresentation.minVelocity}
+                  onChange={event => {
+                    setDraftLayers(previous => setDraftLayerMaxVelocity(
+                      previous,
+                      selectedLayer.id,
+                      Number(event.target.value),
+                    ));
+                  }}
+                  type="number"
+                  value={selectedPresentation.maxVelocity}
+                />
+              </NumberField>
+              <NumberField>
+                <span>
+                  Layer trim <TrimValue>{`${selectedLayer.trimDb.toFixed(1)} dB`}</TrimValue>
+                </span>
+                <NumberInput
+                  aria-label={`${selectedPresentation.label} layer trim in decibels`}
+                  max={MAX_LAYER_TRIM_DB}
+                  min={MIN_LAYER_TRIM_DB}
+                  onChange={event => {
+                    setDraftLayers(previous => setDraftLayerTrim(
+                      previous,
+                      selectedLayer.id,
+                      Number(event.target.value),
+                    ));
+                  }}
+                  step="0.5"
+                  type="number"
+                  value={selectedLayer.trimDb}
+                />
+              </NumberField>
+            </LayerSettings>
+
+            <NameRow>
+              <FieldLabel>{willReplaceExisting ? 'Name' : 'Save As'}</FieldLabel>
+              <NameInput
+                aria-label="Edited sample name"
+                disabled={!audioBuffer || isSaving || isApplying}
+                onChange={(event) => {
+                  setSampleName(event.target.value);
+                  if (error === 'Name required') {
+                    setError(null);
+                  }
+                }}
+                value={sampleName}
+              />
+            </NameRow>
+
+            {canReplaceExisting && (
+              <ReplaceOption>
+                <input
+                  checked={replaceExisting}
+                  disabled={!audioBuffer || isSaving || isApplying}
+                  onChange={(event) => {
+                    const shouldReplace = event.target.checked;
+                    setReplaceExisting(shouldReplace);
+                    setSampleName(shouldReplace
+                      ? existingSampleName?.trim() || selectedSampleName
+                      : getDefaultEditedSampleName(selectedSampleName));
+                  }}
+                  type="checkbox"
+                />
+                <span>
+                  Replace existing user sample
+                  <ReplaceHint>
+                    Keeps this sample in place and updates every layer that uses it.
+                  </ReplaceHint>
+                </span>
+              </ReplaceOption>
+            )}
+
+            <ControlBar>
+              <ControlButton
+                disabled={!audioBuffer}
+                onClick={handlePreviewOriginal}
+                type="button"
+              >
+                Preview Original
+              </ControlButton>
+              <ControlButton
+                disabled={!audioBuffer || !hasEdits}
+                onClick={handlePreviewEdited}
+                type="button"
+              >
+                Preview Edited
+              </ControlButton>
+              <ControlButton
+                disabled={!audioBuffer || !hasEdits || isSaving || !sampleName.trim()}
+                onClick={handleSave}
+                type="button"
+              >
+                {isSaving ? 'Saving' : willReplaceExisting ? 'Replace Sample' : 'Save Copy'}
+              </ControlButton>
+            </ControlBar>
+          </Workspace>
+        </EditorLayout>
+
+        <ErrorText aria-live="polite">{error || ''}</ErrorText>
         <ActionRow>
+          <span />
           <ButtonGroup>
-            <ControlButton
-              disabled={!audioBuffer}
-              onClick={handlePreviewOriginal}
-              type="button"
-            >
-              Preview Original
-            </ControlButton>
-            <ControlButton
-              disabled={!audioBuffer || !hasEdits}
-              onClick={handlePreviewEdited}
-              type="button"
-            >
-              Preview Edited
-            </ControlButton>
-          </ButtonGroup>
-          <ButtonGroup>
-            <ControlButton onClick={handleClose} type="button">
+            <ControlButton disabled={isSaving || isApplying} onClick={handleClose} type="button">
               Cancel
             </ControlButton>
             <PrimaryButton
               $active
-              disabled={!audioBuffer || !hasEdits || isSaving || !sampleName.trim()}
-              onClick={handleSave}
+              disabled={
+                !isValidVelocityLayerDraft(draftLayers)
+                || hasEdits
+                || isSaving
+                || isApplying
+              }
+              onClick={handleApply}
               type="button"
             >
-              {isSaving ? 'Saving' : willReplaceExisting ? 'Replace' : 'Save Copy'}
+              {isApplying ? 'Applying' : 'Apply'}
             </PrimaryButton>
           </ButtonGroup>
         </ActionRow>
-        <ErrorText>{error || ''}</ErrorText>
       </Dialog>
     </Modal>
   );
