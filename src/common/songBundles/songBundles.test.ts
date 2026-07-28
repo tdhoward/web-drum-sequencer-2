@@ -1,4 +1,5 @@
 import {
+  SONG_BUNDLE_FORMAT,
   createSongExportBundle,
   parseSongExportBundle,
   resolveSongBundleImport,
@@ -59,6 +60,8 @@ describe('song export bundles', () => {
     expect(verified.patternPackHash.contentHash).toBe(bundle.manifest.patternPack.contentHash);
     expect(verified.songHash.contentHash).toBe(bundle.manifest.song.contentHash);
     expect(bundle.manifest.song.kitContentHash).toBe(verified.kitHash.contentHash);
+    expect(bundle.manifest.version).toBe(2);
+    expect(verified.songHash.contentHashVersion).toBe(2);
   });
 
   test('serializes and restores embedded sample payloads', async () => {
@@ -76,6 +79,9 @@ describe('song export bundles', () => {
     expect(() => parseSongExportBundle('{"manifest":{}}')).toThrow(
       'Unsupported song bundle format or version',
     );
+    expect(() => parseSongExportBundle(JSON.stringify({
+      manifest: { format: SONG_BUNDLE_FORMAT, version: 1 },
+    }))).toThrow('Unsupported song bundle format or version');
   });
 
   test('exports only represented lanes and active notes without note IDs', async () => {
@@ -157,4 +163,5 @@ describe('song export bundles', () => {
       patternPackId: 'existing-pack',
     }));
   });
+
 });

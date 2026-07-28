@@ -61,6 +61,61 @@ const createBundle = async () => {
   });
 };
 
+const createLayeredBundle = async () => {
+  const channels = normalizeKitChannelsState([{
+    id: 'exported-snare',
+    name: 'Exported Snare',
+    percussionType: 'snare_drum',
+    velocityLayers: [
+      {
+        id: 'soft',
+        sample: 'shared-snare.wav',
+        maxVelocity: 55,
+        alignmentOffset: 0.01,
+        trimDb: -3,
+      },
+      {
+        id: 'medium',
+        sample: 'medium-snare.wav',
+        maxVelocity: 100,
+        alignmentOffset: 0.02,
+        trimDb: 0,
+      },
+      {
+        id: 'hard',
+        sample: 'shared-snare.wav',
+        maxVelocity: 127,
+        alignmentOffset: 0.03,
+        trimDb: -1,
+      },
+    ],
+  }], 'exported-layered-kit');
+  const channel = channels.entities['exported-snare'];
+  const kit: Kit = {
+    id: 'exported-layered-kit',
+    name: 'Layered Travel Kit',
+    channelIds: [channel.id],
+  };
+  const samples = channel.velocityLayers.reduce<Record<string, Sample>>((result, layer) => {
+    const url = layer.sampleId.replace(/^sample:/, '');
+    result[layer.sampleId] = {
+      id: layer.sampleId,
+      name: url,
+      url,
+      sourceType: 'user',
+    };
+    return result;
+  }, {});
+  return createKitExportBundle({
+    kit,
+    channels: [channel],
+    samples,
+    getSampleBytes: async sample => Uint8Array.from(
+      sample.url === 'shared-snare.wav' ? [1, 2, 3] : [4, 5, 6],
+    ).buffer,
+  });
+};
+
 const createState = () => {
   const kitChannels = normalizeKitChannelsState([{
     id: 'local-kick',
@@ -170,11 +225,14 @@ describe('kit bundle actions', () => {
     ]));
     const savedPreset = actions.find(action => action.type === 'presets/savePresetAs')?.payload as {
       kitId: string;
-      channels: Array<{ id: string; sample: string }>;
+      channels: Array<{
+        id: string;
+        velocityLayers: Array<{ sample: string }>;
+      }>;
     };
     expect(savedPreset.kitId).toMatch(/^kit-import-/);
     expect(savedPreset.channels[0].id).not.toBe('exported-kick');
-    expect(savedPreset.channels[0].sample).toMatch(/-import-/);
+    expect(savedPreset.channels[0].velocityLayers[0].sample).toMatch(/-import-/);
   });
 
   test('reuses a user preset with matching musical content', async () => {
@@ -202,6 +260,30 @@ describe('kit bundle actions', () => {
     expect(actions.find(action => action.type === 'presets/savePresetAs')).toBeUndefined();
     expect(actions.find(action => action.type === 'song/setSelectedKitId')?.payload)
       .toBe('existing-kit');
+  });
+
+  test('imports and rewrites every v2 layer to local sample references', async () => {
+    const bundle = await createLayeredBundle();
+    (readKitFile as jest.MockedFunction<typeof readKitFile>)
+      .mockResolvedValue(serializeKitExportBundle(bundle));
+
+    const { actions, result } = await runThunk(importKitFile({} as File));
+    const savedPreset = actions.find(
+      action => action.type === 'presets/savePresetAs',
+    )?.payload as UserPreset;
+    const layers = savedPreset.channels?.[0].velocityLayers || [];
+
+    expect(result).toBe(true);
+    expect(saveImportedSampleBytes).toHaveBeenCalledTimes(2);
+    expect(layers).toHaveLength(3);
+    expect(layers.map(layer => layer.maxVelocity)).toEqual([55, 100, 127]);
+    expect(layers.map(layer => layer.alignmentOffset)).toEqual([0.01, 0.02, 0.03]);
+    expect(layers.map(layer => layer.trimDb)).toEqual([-3, 0, -1]);
+    expect(layers[0].sample).toBe(layers[2].sample);
+    expect(layers[0].sampleId).toBe(layers[2].sampleId);
+    expect(layers[0].sampleId).toMatch(/^sample:.*-import-/);
+    expect(savedPreset.channels?.[0]).not.toHaveProperty('sample');
+    expect(savedPreset.channels?.[0]).not.toHaveProperty('alignmentOffset');
   });
 
   test('rejects invalid files without changing kit or preset state', async () => {

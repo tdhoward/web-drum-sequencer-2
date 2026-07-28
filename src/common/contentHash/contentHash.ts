@@ -16,16 +16,22 @@ import type {
   Sample,
   SavedSong,
 } from '../sequencerModel';
-import { getReferenceVelocityLayer } from '../velocityLayers';
 import {
   getPatternPackPatternCount,
   getPatternPackPatternSettings,
 } from '../patternPacks/patternPacks.utils';
 
 export const CONTENT_HASH_ALGORITHM = 'sha256' as const;
-export const CONTENT_HASH_VERSION = 1;
+export const CONTENT_HASH_VERSION = 2;
 
 export type EntityContentHashType = 'sample' | 'kit' | 'pattern-pack' | 'song';
+
+export const CONTENT_HASH_VERSIONS: Record<EntityContentHashType, number> = {
+  sample: 1,
+  kit: CONTENT_HASH_VERSION,
+  'pattern-pack': CONTENT_HASH_VERSION,
+  song: CONTENT_HASH_VERSION,
+};
 
 type CanonicalPrimitive = null | boolean | number | string;
 type CanonicalValue = CanonicalPrimitive | CanonicalValue[] | { [key: string]: CanonicalValue };
@@ -95,24 +101,25 @@ const digestSha256 = async (bytes: Uint8Array<ArrayBuffer>): Promise<string> => 
   return bytesToHex(new Uint8Array(digest));
 };
 
-const markerFor = (type: EntityContentHashType): string => (
-  `wds:${type}:musical-content:v${CONTENT_HASH_VERSION}`
+const markerFor = (type: EntityContentHashType, version: number): string => (
+  `wds:${type}:musical-content:v${version}`
 );
 
 const combineMarkerAndBytes = (
   type: EntityContentHashType,
+  version: number,
   content: Uint8Array,
 ): Uint8Array<ArrayBuffer> => {
-  const marker = new TextEncoder().encode(`${markerFor(type)}\n`);
+  const marker = new TextEncoder().encode(`${markerFor(type, version)}\n`);
   const input = new Uint8Array(new ArrayBuffer(marker.byteLength + content.byteLength));
   input.set(marker, 0);
   input.set(content, marker.byteLength);
   return input;
 };
 
-const metadata = (contentHash: string): ContentHashMetadata => ({
+const metadata = (version: number, contentHash: string): ContentHashMetadata => ({
   contentHashAlgorithm: CONTENT_HASH_ALGORITHM,
-  contentHashVersion: CONTENT_HASH_VERSION,
+  contentHashVersion: version,
   contentHash,
 });
 
@@ -120,8 +127,9 @@ export const hashCanonicalContent = async (
   type: Exclude<EntityContentHashType, 'sample'>,
   value: unknown,
 ): Promise<ContentHashMetadata> => {
+  const version = CONTENT_HASH_VERSIONS[type];
   const content = new TextEncoder().encode(canonicalStringify(value));
-  return metadata(await digestSha256(combineMarkerAndBytes(type, content)));
+  return metadata(version, await digestSha256(combineMarkerAndBytes(type, version, content)));
 };
 
 export type SampleFingerprint = ContentHashMetadata & {
@@ -132,8 +140,12 @@ export const calculateSampleFingerprint = async (
   value: ArrayBuffer | ArrayBufferView,
 ): Promise<SampleFingerprint> => {
   const bytes = toOwnedBytes(value);
+  const version = CONTENT_HASH_VERSIONS.sample;
   return {
-    ...metadata(await digestSha256(combineMarkerAndBytes('sample', bytes))),
+    ...metadata(
+      version,
+      await digestSha256(combineMarkerAndBytes('sample', version, bytes)),
+    ),
     byteLength: bytes.byteLength,
   };
 };
@@ -200,9 +212,14 @@ export type KitContentInput = {
   samples: Record<string, Sample>;
 };
 
-const requireSampleHash = (sample: Sample | undefined, channel: KitChannel): string => {
+const requireSampleHash = (
+  sample: Sample | undefined,
+  channel: KitChannel,
+  layerId?: string,
+): string => {
   if (!sample?.contentHash) {
-    throw new Error(`Sample content hash is missing for kit channel ${channel.id}`);
+    const layer = layerId ? ` velocity layer ${layerId}` : '';
+    throw new Error(`Sample content hash is missing for kit channel ${channel.id}${layer}`);
   }
   return sample.contentHash;
 };
@@ -221,13 +238,7 @@ export const createKitCanonicalContent = ({ kit, channels, samples }: KitContent
   }
 
   return {
-    channels: orderedChannels.map((channel) => {
-      const referenceLayer = getReferenceVelocityLayer(channel.velocityLayers);
-      if (!referenceLayer) {
-        throw new Error(`Kit channel ${channel.id} has no reference velocity layer`);
-      }
-      const sample = samples[referenceLayer.sampleId];
-      return {
+    channels: orderedChannels.map(channel => ({
         percussionType: channel.percussionType || PERCUSSION_TYPES.GENERIC_PERCUSSION,
         articulation: typeof channel.articulation === 'string' ? channel.articulation : '',
         register: typeof channel.register === 'string' ? channel.register : '',
@@ -239,12 +250,17 @@ export const createKitCanonicalContent = ({ kit, channels, samples }: KitContent
         reverb: finiteNumber(channel.reverb, 0),
         pitchCoarse: finiteNumber(channel.pitchCoarse, 0),
         pitchFine: finiteNumber(channel.pitchFine, 0),
-        sample: {
-          contentHash: requireSampleHash(sample, channel),
-          alignmentOffset: finiteNumber(referenceLayer.alignmentOffset, 0),
-        },
-      };
-    }),
+        velocityLayers: channel.velocityLayers.map(layer => ({
+          sampleContentHash: requireSampleHash(
+            samples[layer.sampleId],
+            channel,
+            layer.id,
+          ),
+          maxVelocity: layer.maxVelocity,
+          alignmentOffset: finiteNumber(layer.alignmentOffset, 0),
+          trimDb: finiteNumber(layer.trimDb, 0),
+        })),
+      })),
   };
 };
 
@@ -292,12 +308,20 @@ export const calculateSongContentHash = (input: SongContentHashInput) => (
   hashCanonicalContent('song', createSongCanonicalContent(input))
 );
 
-export const hasCurrentContentHash = (value: Partial<ContentHashMetadata>): boolean => (
+const hasContentHashVersion = (
+  value: Partial<ContentHashMetadata>,
+  version: number,
+): boolean => (
   value.contentHashAlgorithm === CONTENT_HASH_ALGORITHM
-    && value.contentHashVersion === CONTENT_HASH_VERSION
+    && value.contentHashVersion === version
     && typeof value.contentHash === 'string'
     && /^[0-9a-f]{64}$/.test(value.contentHash)
 );
+
+export const hasCurrentContentHash = (
+  value: Partial<ContentHashMetadata>,
+  type: EntityContentHashType,
+): boolean => hasContentHashVersion(value, CONTENT_HASH_VERSIONS[type]);
 
 export const findByContentHash = <TEntity extends Partial<ContentHashMetadata>>(
   entities: TEntity[],
@@ -314,8 +338,9 @@ export const contentHashIndexKey = (hash: ContentHashMetadata): string => (
 
 export const createContentHashIndex = <TEntity extends Partial<ContentHashMetadata>>(
   entities: TEntity[],
+  type: EntityContentHashType,
 ): Map<string, TEntity> => entities.reduce<Map<string, TEntity>>((index, entity) => {
-  if (hasCurrentContentHash(entity)) {
+  if (hasCurrentContentHash(entity, type)) {
     index.set(contentHashIndexKey(entity as ContentHashMetadata), entity);
   }
   return index;

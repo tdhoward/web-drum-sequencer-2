@@ -20,6 +20,7 @@ import type {
   SequencerRootState,
   SongState,
 } from '../sequencerModel';
+import { sampleIdFromUrl } from '../velocityLayers';
 import {
   addUserSample,
   getUserSampleId,
@@ -169,23 +170,43 @@ const createUniqueKitId = (state: KitTransferState): string => {
 const createImportedChannel = (
   channel: KitBundleChannel,
   kitId: string,
-  importedSample: ExportedSample,
-  localSampleUrl: string,
+  samplesById: Record<string, ExportedSample>,
+  localSampleUrls: Map<string, string>,
 ): KitChannelInput => {
   const settings = { ...channel } as Record<string, unknown>;
-  ['id', 'kitId', 'laneId', 'sampleId', 'sampleLoaded'].forEach((field) => {
+  [
+    'id',
+    'kitId',
+    'laneId',
+    'velocityLayers',
+  ].forEach((field) => {
     delete settings[field];
   });
   const id = `kit-channel-${uuid()}`;
+  const velocityLayers = channel.velocityLayers.map((layer, index) => {
+    const importedSample = layer.sampleId ? samplesById[layer.sampleId] : undefined;
+    if (!importedSample) {
+      throw new Error(`Imported kit sample is missing: ${layer.sampleId}`);
+    }
+    const localUrl = localSampleUrls.get(importedSample.contentHash);
+    if (!localUrl) {
+      throw new Error(`Imported kit sample could not be resolved: ${layer.sampleId}`);
+    }
+    return {
+      ...layer,
+      id: `${id}:layer:${index + 1}`,
+      sample: localUrl,
+      sampleId: sampleIdFromUrl(localUrl),
+    };
+  });
+
   return {
     ...settings,
     id,
     kitId,
     laneId: id,
-    sample: localSampleUrl,
     sourceType: 'imported',
-    fileName: importedSample.fileName,
-    alignmentOffset: importedSample.alignmentOffset || 0,
+    velocityLayers,
   };
 };
 
@@ -277,11 +298,7 @@ export const prepareKitBundleImport = async (
     return result;
   }, {});
   const channels = drumkit.channels.map((channel) => {
-    const importedSample = samplesById[channel.sampleId];
-    if (!importedSample) throw new Error(`Imported kit sample is missing: ${channel.sampleId}`);
-    const localUrl = localSampleUrls.get(importedSample.contentHash);
-    if (!localUrl) throw new Error(`Imported kit sample could not be resolved: ${channel.sampleId}`);
-    return createImportedChannel(channel, kitId, importedSample, localUrl);
+    return createImportedChannel(channel, kitId, samplesById, localSampleUrls);
   });
   const importedPreset: UserPreset = {
     name,

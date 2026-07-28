@@ -211,6 +211,8 @@ note model.
 
 Standalone `.wds-pattern-pack` exports contain musical note properties such as
 beat, pitch, and non-default velocity, but not normalized `note.id` values.
+Writers and readers use bundle v2 and encode velocity as a MIDI-style integer,
+omitting the default value 64. Unsupported bundle versions are rejected.
 Export retains only lanes currently represented by the selected kit and filters
 each pattern slot's events to its active time-signature, bar, and step length.
 Notes on unresolved lanes and notes beyond the active pattern length remain in
@@ -235,6 +237,8 @@ unresolved lanes, and notes beyond active Pattern lengths are omitted. Import
 verifies the complete dependency hash chain before changing Redux content,
 resolves matching Kit, Pattern pack, and Song content by hash, and remaps the
 saved Song to collision-safe local dependency IDs when new objects are needed.
+Song writers and readers use bundle v2; unsupported versions are rejected
+before changing application state.
 
 ```text
 kit
@@ -318,7 +322,7 @@ The layer containing velocity 64 is the reference layer used by the current
 single-sample compatibility UI and Hit-button audition. Playback selectors
 also resolve every layer so scheduled notes can choose from the complete
 partition. Channel-level `sample`, `sampleId`, and `alignmentOffset` fields are
-accepted only at normalization, migration, and v1 serialization boundaries;
+accepted only at normalization and persistence-migration boundaries;
 normalized Redux channels do not store those fields.
 
 The Kit-row view model exposes that resolved reference layer, its inclusive
@@ -423,9 +427,11 @@ to interchange.
 SHA-256 is the initial hash algorithm. Although no finite hash can guarantee
 mathematical uniqueness, SHA-256 provides practical global uniqueness for this
 use case and is available through the browser's Web Crypto API. Every hash input
-starts with an entity-type and schema-version marker, such as
-`wds:kit:musical-content:v1`, so a later model change can introduce a new hash
-version without changing the meaning of existing hashes.
+starts with an entity-type and schema-version marker. Raw sample fingerprints
+remain `wds:sample:musical-content:v1`; current Kit, Pattern Pack, and Song
+musical-content hashes use their respective v2 markers. Keeping versions per
+entity type allows a model change to advance the affected hashes without
+invalidating unchanged raw sample fingerprints.
 
 ### Sample hashes
 
@@ -453,9 +459,10 @@ entity's content hash rather than a machine-local ID; normalized runtime state
 continues to use local IDs.
 
 A drumkit hash includes channel order, percussion/lane metadata, channel audio
-settings, sample alignment offsets, and the stored content hash of every
-referenced sample. It excludes kit, channel, and sample IDs as well as sample
-names, filenames, and URLs.
+settings, and each channel's complete ordered velocity-layer list. Every layer
+contributes its sample content hash, inclusive maximum velocity, alignment
+offset, and trim dB. It excludes kit, channel, sample, and layer IDs as well as
+derived layer labels, sample names, filenames, and URLs.
 
 A pattern-pack hash includes tempo and swing, ordered pattern settings, ordered
 lane metadata, and notes sorted and represented by their semantic pattern,
@@ -494,6 +501,11 @@ its ordered channel snapshot, and its referenced sample metadata, together with
 base64-encoded copies of the raw sample payloads. Payload keys are sample
 content hashes, so a sample referenced more than once is stored only once.
 Import requires the GZIP wrapper; uncompressed `.wds-kit` files are invalid.
+
+Kit writers and readers use bundle v2. Each channel carries its complete layer
+partition and every layer references portable sample metadata. Import
+resolves samples by verified content hash and rewrites each layer to local
+sample IDs and URLs. Unsupported bundle versions are rejected.
 
 Import parses the complete file and verifies every raw sample payload and the
 canonical kit hash before changing Redux state. Matching user samples and saved

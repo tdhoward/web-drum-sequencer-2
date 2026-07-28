@@ -9,12 +9,14 @@ import type {
 } from '../sequencerModel';
 import {
   beatToStep,
+  DEFAULT_NOTE_VELOCITY,
   getPatternTotalSteps,
+  normalizeNoteVelocity,
 } from '../sequencerModel';
 import { getPatternPackPatternSettings } from '../patternPacks/patternPacks.utils';
 
 export const PATTERN_PACK_BUNDLE_FORMAT = 'wds-pattern-pack-bundle' as const;
-export const PATTERN_PACK_BUNDLE_VERSION = 1;
+export const PATTERN_PACK_BUNDLE_VERSION = 2;
 
 export type PatternPackBundleManifest = {
   format: typeof PATTERN_PACK_BUNDLE_FORMAT;
@@ -53,6 +55,10 @@ const isPatternPackNote = (value: unknown): boolean => (
   && (isFiniteNumber(value.beat) || isFiniteNumber(value.step))
   && (typeof value.pitch === 'undefined' || isFiniteNumber(value.pitch))
   && (typeof value.velocity === 'undefined' || isFiniteNumber(value.velocity))
+  && (
+    typeof value.velocity === 'undefined'
+    || (Number.isInteger(value.velocity) && value.velocity >= 0 && value.velocity <= 127)
+  )
 );
 
 const portableNoteIsWithinPattern = (
@@ -83,6 +89,12 @@ export const preparePatternPackForExport = (
         .map((note) => {
           const portableNote = { ...note };
           delete portableNote.id;
+          const velocity = normalizeNoteVelocity(note.velocity);
+          if (velocity === DEFAULT_NOTE_VELOCITY) {
+            delete portableNote.velocity;
+          } else {
+            portableNote.velocity = velocity;
+          }
           return portableNote;
         })
     ));
@@ -102,7 +114,9 @@ const isPatternPackNotes = (value: unknown): boolean => (
   ))
 );
 
-export const assertPatternPackShape: (value: unknown) => asserts value is PatternPack = (value) => {
+export const assertPatternPackShape: (
+  value: unknown,
+) => asserts value is PatternPack = (value) => {
   if (
     !isRecord(value)
     || typeof value.id !== 'string'
@@ -134,7 +148,7 @@ const assertManifestShape: (
     throw new Error('Unsupported pattern pack bundle format or version');
   }
   assertPatternPackShape(value.patternPack);
-  if (!hasCurrentContentHash(value.patternPack)) {
+  if (!hasCurrentContentHash(value.patternPack, 'pattern-pack')) {
     throw new Error('Pattern pack bundle content hash is missing or unsupported');
   }
 };
@@ -158,11 +172,11 @@ export const verifyPatternPackExportBundle = async (
   bundle: PatternPackExportBundle,
 ): Promise<ContentHashMetadata> => {
   assertManifestShape(bundle.manifest);
-  const calculated = await calculatePatternPackContentHash(bundle.manifest.patternPack);
-  if (bundle.manifest.patternPack.contentHash !== calculated.contentHash) {
+  const contentHash = await calculatePatternPackContentHash(bundle.manifest.patternPack);
+  if (bundle.manifest.patternPack.contentHash !== contentHash.contentHash) {
     throw new Error('Pattern pack content hash verification failed');
   }
-  return calculated;
+  return contentHash;
 };
 
 export const serializePatternPackExportBundle = (

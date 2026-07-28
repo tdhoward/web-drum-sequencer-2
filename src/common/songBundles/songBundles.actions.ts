@@ -7,14 +7,12 @@ import { getSampleBytes } from '../../services/sampleStore';
 import { channelsSelector } from '../channels';
 import {
   KIT_BUNDLE_FORMAT,
-  KIT_BUNDLE_VERSION,
   applyPreparedKitBundleImport,
   prepareKitBundleImport,
 } from '../kitBundles';
 import { replaceKit } from '../kits';
 import {
   PATTERN_PACK_BUNDLE_FORMAT,
-  PATTERN_PACK_BUNDLE_VERSION,
   applyPreparedPatternPackBundleImport,
   preparePatternPackBundleImport,
 } from '../patternPackBundles';
@@ -165,7 +163,7 @@ export const importSongFile = (file: File) => async (
     const patternBundle = {
       manifest: {
         format: PATTERN_PACK_BUNDLE_FORMAT,
-        version: PATTERN_PACK_BUNDLE_VERSION,
+        version: bundle.manifest.version,
         patternPack: bundle.manifest.patternPack,
       },
     } as const;
@@ -183,7 +181,7 @@ export const importSongFile = (file: File) => async (
     const kitBundle = {
       manifest: {
         format: KIT_BUNDLE_FORMAT,
-        version: KIT_BUNDLE_VERSION,
+        version: bundle.manifest.version,
         drumkit: bundle.manifest.drumkit,
       },
       samplePayloads: bundle.samplePayloads,

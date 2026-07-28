@@ -8,7 +8,10 @@ import {
   normalizeNotesState,
 } from '../sequencerModel';
 import type { Kit, PatternPack, Sample, SavedSong } from '../sequencerModel';
-import { createSongExportBundle, serializeSongExportBundle } from './songBundles';
+import {
+  createSongExportBundle,
+  serializeSongExportBundle,
+} from './songBundles';
 import { exportCurrentSong, importSongFile } from './songBundles.actions';
 
 jest.mock('../../services/featureChecks');

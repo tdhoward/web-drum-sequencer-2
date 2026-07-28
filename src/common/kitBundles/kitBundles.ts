@@ -9,33 +9,23 @@ import type {
   ContentHashMetadata,
   Kit,
   KitChannel,
-  KitChannelInput,
   Sample,
 } from '../sequencerModel';
-import {
-  getReferenceVelocityLayer,
-  normalizeVelocityLayers,
-} from '../velocityLayers';
+import { validateVelocityLayers } from '../velocityLayers';
 import {
   parseBinaryPayloads,
   serializeBinaryPayloads,
 } from '../bundlePayloads';
 
 export const KIT_BUNDLE_FORMAT = 'wds-kit-bundle' as const;
-export const KIT_BUNDLE_VERSION = 1;
+export const KIT_BUNDLE_VERSION = 2;
 
 export type ExportedSample = Sample & Required<ContentHashMetadata> & {
   byteLength: number;
   payloadKey: string;
-  alignmentOffset?: number;
 };
 
-export type KitBundleChannel = KitChannelInput & {
-  sampleId: string;
-  kitId: string;
-  laneId: string;
-  percussionType: string;
-};
+export type KitBundleChannel = KitChannel;
 
 export type DrumkitSnapshot = {
   kit: Kit & Required<ContentHashMetadata>;
@@ -83,44 +73,35 @@ const referencedSamples = (
   kit: Kit,
   channels: KitChannel[],
   samples: Record<string, Sample>,
-): Array<{ sample: Sample; alignmentOffset: number }> => {
+): Sample[] => {
   const channelsById = channels.reduce<Record<string, KitChannel>>((result, channel) => {
     result[channel.id] = channel;
     return result;
   }, {});
 
-  return kit.channelIds.reduce<Array<{ sample: Sample; alignmentOffset: number }>>(
+  return kit.channelIds.reduce<Sample[]>(
     (result, channelId) => {
-    const channel = channelsById[channelId];
-    if (!channel) throw new Error(`Cannot export missing kit channel: ${channelId}`);
-    const referenceLayer = getReferenceVelocityLayer(channel.velocityLayers);
-    if (!referenceLayer) {
-      throw new Error(`Cannot export kit channel without a reference layer: ${channelId}`);
-    }
-    const sample = samples[referenceLayer.sampleId];
-    if (!sample) throw new Error(`Cannot export missing sample: ${referenceLayer.sampleId}`);
-    if (!result.some(existing => existing.sample.id === sample.id)) {
-      result.push({
-        sample,
-        alignmentOffset: referenceLayer.alignmentOffset,
+      const channel = channelsById[channelId];
+      if (!channel) throw new Error(`Cannot export missing kit channel: ${channelId}`);
+      channel.velocityLayers.forEach((layer) => {
+        const sample = samples[layer.sampleId];
+        if (!sample) throw new Error(`Cannot export missing sample: ${layer.sampleId}`);
+        if (!result.some(existing => existing.id === sample.id)) result.push(sample);
       });
-    }
-    return result;
+      return result;
     },
     [],
   );
 };
 
-const channelToV1BundleChannel = (channel: KitChannel): KitBundleChannel => {
-  const referenceLayer = getReferenceVelocityLayer(channel.velocityLayers);
-  if (!referenceLayer) {
-    throw new Error(`Cannot export kit channel without a reference layer: ${channel.id}`);
-  }
+const channelToV2BundleChannel = (channel: KitChannel): KitBundleChannel => {
   const channelSettings = { ...channel } as Record<string, unknown>;
-  delete channelSettings.velocityLayers;
+  ['sample', 'sampleId', 'sampleLoaded', 'alignmentOffset', 'velocityLayers'].forEach((field) => {
+    delete channelSettings[field];
+  });
   return {
     ...channelSettings,
-    sampleId: referenceLayer.sampleId,
+    velocityLayers: channel.velocityLayers.map(layer => ({ ...layer })),
   } as KitBundleChannel;
 };
 
@@ -134,7 +115,7 @@ export const createDrumkitSnapshot = async ({
   const exportedSamples: ExportedSample[] = [];
   const hashedSamples = { ...samples };
 
-  for (const { sample, alignmentOffset } of referencedSamples(kit, channels, samples)) {
+  for (const sample of referencedSamples(kit, channels, samples)) {
     const bytes = await getSampleBytes(sample);
     const fingerprint = await calculateSampleFingerprint(bytes);
     if (!sampleMetadataMatches(sample, fingerprint)) {
@@ -142,12 +123,13 @@ export const createDrumkitSnapshot = async ({
     }
     const payloadKey = fingerprint.contentHash;
     samplePayloads[payloadKey] = bytes;
+    const sampleMetadata = { ...sample } as Record<string, unknown>;
+    delete sampleMetadata.alignmentOffset;
     const exportedSample: ExportedSample = {
-      ...sample,
+      ...sampleMetadata,
       ...fingerprint,
       payloadKey,
-      alignmentOffset,
-    };
+    } as ExportedSample;
     exportedSamples.push(exportedSample);
     hashedSamples[sample.id] = exportedSample;
   }
@@ -164,7 +146,7 @@ export const createDrumkitSnapshot = async ({
       channels: kit.channelIds.map((channelId) => {
         const channel = channelsById[channelId];
         if (!channel) throw new Error(`Cannot export missing kit channel: ${channelId}`);
-        return channelToV1BundleChannel(channel);
+        return channelToV2BundleChannel(channel);
       }),
       samples: exportedSamples,
     },
@@ -192,7 +174,7 @@ const assertMatchingHash = (
   stored: Partial<ContentHashMetadata>,
   calculated: ContentHashMetadata,
 ): void => {
-  if (!hasCurrentContentHash(stored) || stored.contentHash !== calculated.contentHash) {
+  if (!hasCurrentContentHash(stored, 'sample') || stored.contentHash !== calculated.contentHash) {
     throw new Error(`${label} content hash verification failed`);
   }
 };
@@ -207,6 +189,7 @@ export const verifyDrumkitSnapshot = async (
   drumkit: DrumkitSnapshot,
   samplePayloads: Record<string, ArrayBuffer>,
 ): Promise<VerifiedDrumkitSnapshot> => {
+  assertDrumkitSnapshotShape(drumkit);
   const samplesById: Record<string, Sample> = {};
   const sampleHashes: Record<string, ContentHashMetadata & { byteLength: number }> = {};
   for (const sample of drumkit.samples) {
@@ -223,17 +206,19 @@ export const verifyDrumkitSnapshot = async (
     sampleHashes[sample.id] = fingerprint;
   }
 
-  const kitHash = await calculateKitContentHash({
+  const hashInput = {
     kit: drumkit.kit,
-    channels: drumkit.channels.map(channel => ({
-      ...channel,
-      velocityLayers: normalizeVelocityLayers(channel, {
-        entities: samplesById,
-      }),
-    })),
+    channels: drumkit.channels,
     samples: samplesById,
-  });
-  assertMatchingHash('Drumkit', drumkit.kit, kitHash);
+  };
+  const kitHash = await calculateKitContentHash(hashInput);
+  if (
+    drumkit.kit.contentHashAlgorithm !== kitHash.contentHashAlgorithm
+    || drumkit.kit.contentHashVersion !== kitHash.contentHashVersion
+    || drumkit.kit.contentHash !== kitHash.contentHash
+  ) {
+    throw new Error('Drumkit content hash verification failed');
+  }
 
   return { sampleHashes, samplesById, kitHash };
 };
@@ -241,13 +226,11 @@ export const verifyDrumkitSnapshot = async (
 export const verifyKitExportBundle = async (
   bundle: KitExportBundle,
 ): Promise<VerifiedDrumkitSnapshot> => {
-  if (
-    bundle.manifest.format !== KIT_BUNDLE_FORMAT
-    || bundle.manifest.version !== KIT_BUNDLE_VERSION
-  ) {
-    throw new Error('Unsupported kit bundle format or version');
-  }
-  return verifyDrumkitSnapshot(bundle.manifest.drumkit, bundle.samplePayloads);
+  assertManifestShape(bundle.manifest);
+  return verifyDrumkitSnapshot(
+    bundle.manifest.drumkit,
+    bundle.samplePayloads,
+  );
 };
 
 export type KitImportResolution = VerifiedDrumkitSnapshot & {
@@ -260,7 +243,7 @@ export const resolveKitBundleImport = async (
   existingKits: Kit[],
 ): Promise<KitImportResolution> => {
   const verified = await verifyKitExportBundle(bundle);
-  const duplicateKit = createContentHashIndex(existingKits).get(
+  const duplicateKit = createContentHashIndex(existingKits, 'kit').get(
     contentHashIndexKey(verified.kitHash),
   );
   return {
@@ -287,10 +270,51 @@ export const assertDrumkitSnapshotShape: (
     || !Array.isArray(drumkit.channels) || !Array.isArray(drumkit.samples)) {
     throw new Error('Kit bundle manifest is invalid');
   }
+  const sampleIds = new Set<string>();
+  drumkit.samples.forEach((sample) => {
+    if (
+      !isRecord(sample)
+      || typeof sample.id !== 'string'
+      || typeof sample.payloadKey !== 'string'
+      || typeof sample.alignmentOffset !== 'undefined'
+      || sampleIds.has(sample.id)
+    ) {
+      throw new Error('Kit bundle manifest is invalid');
+    }
+    sampleIds.add(sample.id);
+  });
+  drumkit.channels.forEach((channel) => {
+    if (
+      !isRecord(channel)
+      || typeof channel.id !== 'string'
+      || typeof channel.kitId !== 'string'
+      || typeof channel.laneId !== 'string'
+      || typeof channel.percussionType !== 'string'
+      || typeof channel.sample !== 'undefined'
+      || typeof channel.sampleId !== 'undefined'
+      || typeof channel.sampleLoaded !== 'undefined'
+      || typeof channel.alignmentOffset !== 'undefined'
+    ) {
+      throw new Error('Kit bundle manifest is invalid');
+    }
+    if (
+      !Array.isArray(channel.velocityLayers)
+      || validateVelocityLayers(channel.velocityLayers).length > 0
+      || channel.velocityLayers.some(layer => (
+        typeof layer.sampleId !== 'string' || !sampleIds.has(layer.sampleId)
+      ))
+    ) {
+      throw new Error('Kit bundle manifest is invalid');
+    }
+  });
 };
 
 const assertManifestShape: (value: unknown) => asserts value is KitBundleManifest = (value) => {
-  if (!isRecord(value) || value.format !== KIT_BUNDLE_FORMAT || value.version !== KIT_BUNDLE_VERSION) {
+  if (
+    !isRecord(value)
+    || value.format !== KIT_BUNDLE_FORMAT
+    || value.version !== KIT_BUNDLE_VERSION
+  ) {
     throw new Error('Unsupported kit bundle format or version');
   }
   assertDrumkitSnapshotShape(value.drumkit);

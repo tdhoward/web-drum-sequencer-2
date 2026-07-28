@@ -339,22 +339,18 @@ Edit Open Hat Samples
 ## Compatibility policy
 
 `PROJECT_NOTES.md` permits breaking old saved application data during the
-revamp. This plan nevertheless preserves the immediately preceding supported
-formats because current state and exported bundles are likely to exist:
+revamp. Redux persistence still needs migrations because development state may
+exist, but no Kit, Pattern Pack, or Song files were exported before the current
+format:
 
 - Add Redux persistence migrations from version 9 to the new current schema.
   If the layer model and integer velocity domain ship in separate releases,
   assign each change its own new persistence version; never amend a migration
   version that has already shipped.
-- Read current v1 Kit, Pattern Pack, and Song bundles and normalize them into
-  the new model.
-- Write only the new current bundle formats after the change.
-- Do not add compatibility for formats older than the currently supported v1
-  bundles unless a fixture or explicit requirement exists.
-
-If the maintainer chooses to drop this compatibility, remove the v1 reader and
-v9 migration tasks deliberately and update this document; do not leave
-half-migrated behavior.
+- Read and write only the current v2 Kit, Pattern Pack, and Song bundle formats.
+- Reject unsupported bundle versions before changing application state.
+- Do not add pre-v2 bundle readers unless an explicit requirement and fixture
+  exist.
 
 ## Implementation phases
 
@@ -362,8 +358,8 @@ half-migrated behavior.
 
 As of July 27, 2026:
 
-- Phases 1 through 7 are complete.
-- Phase 8, Presets, hashes, and bundle import/export, is the next phase.
+- Phases 1 through 8 are complete.
+- Phase 9, Documentation and full regression, is the next phase.
 - Phase 4 also completed some groundwork originally listed under Phase 6:
   - Dirty waveform edits are guarded when switching layers.
   - Edited copies can be created as library assets without assigning the
@@ -406,6 +402,18 @@ As of July 27, 2026:
     using a sample, including non-reference layers.
   - In-use deletion is blocked both in the Sample Manager and in the deletion
     action so stale UI state cannot remove a referenced sample.
+- Phase 8 completed presets, hashes, and bundle portability:
+  - Current Kit presets retain every layer sample reference, boundary,
+    alignment offset, and trim.
+  - Kit hashes include every ordered layer's sample content hash, maximum
+    velocity, alignment, and trim while excluding local layer IDs.
+  - Raw sample fingerprints remain on hash schema v1; Kit, Pattern Pack, and
+    Song musical-content hashes use schema v2.
+  - Current Kit, Pattern Pack, and Song writers emit v2 bundles.
+  - V2 Kit and Song snapshots include every unique velocity-layer sample and
+    deduplicate shared payloads by content hash.
+  - Bundle readers are intentionally v2-only because no earlier files were
+    exported during development.
 
 ### Phase 1: Pure velocity and layer domain
 
@@ -783,7 +791,7 @@ Acceptance criteria:
 
 ### Phase 8: Presets, hashes, and bundle import/export
 
-**Status:** Next.
+**Status:** Complete.
 
 **Goal:** Make layered kits and integer velocities fully portable and
 deterministically hashable.
@@ -806,10 +814,8 @@ Tasks:
 - Update Pattern Pack canonical content for integer velocities.
 - Update Song bundles because they embed both Kit and Pattern Pack snapshots.
 - Introduce current v2 bundle writers for Kit, Pattern Pack, and Song.
-- Preserve v1 readers:
-  - V1 Kit: create one 1-127 layer and copy sample alignment.
-  - V1 Pattern Pack: convert velocity multipliers; omitted velocity becomes 64.
-  - V1 Song: apply both conversions to embedded dependencies.
+- Keep Kit, Pattern Pack, and Song readers v2-only and reject unsupported
+  versions before import changes application state.
 - Refactor the current global musical-content hash version if necessary so Kit
   and Pattern Pack schema changes do not invalidate unrelated raw sample
   fingerprints without intent.
@@ -831,13 +837,14 @@ Acceptance criteria:
 - A three-layer Kit round-trips with all samples, boundaries, alignment, and
   trims intact.
 - Reusing one sample in several layers exports one payload.
-- A v1 Kit imports as an equivalent single-layer Kit.
-- A v1 Pattern Pack preserves expected note loudness after conversion.
+- Pre-v2 Kit, Pattern Pack, and Song bundles are rejected.
 - Kit hashes change for sample, range, alignment, or trim changes.
 - Kit hashes do not change for layer ID or derived label changes.
 - Song dependency hashes remain internally consistent.
 
 ### Phase 9: Documentation and full regression
+
+**Status:** Next.
 
 **Goal:** Finish the feature with model documentation, coverage, and static
 verification.
@@ -925,7 +932,7 @@ end. Before declaring the feature complete, cover at least:
 
 - Version-9 Redux state through the new current persistence schema.
 - User Kit and Pattern Pack migration.
-- V1 Kit, Pattern Pack, and Song imports.
+- Rejection of unsupported pre-v2 Kit, Pattern Pack, and Song files.
 - V2 round trips.
 - Shared sample payload de-duplication.
 - Sample-manager deletion protection for non-reference layers.
@@ -944,8 +951,8 @@ end. Before declaring the feature complete, cover at least:
 - [x] Shared Audio Edit/Beat Alignment waveform modes.
 - [x] Transactional Apply/Save Copy/Replace routing.
 - [x] Multi-layer sample loading and Sample Manager usage protection.
-- [ ] Kit/Pattern Pack/Song preset and bundle portability.
-- [ ] Content-hash schema updates.
+- [x] Kit/Pattern Pack/Song preset and bundle portability.
+- [x] Content-hash schema updates.
 - [ ] Documentation and full static verification.
 
 ## Explicit non-goals
