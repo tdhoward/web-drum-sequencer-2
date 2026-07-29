@@ -252,6 +252,30 @@ describe('SampleEditorModal Phase 6 workflow', () => {
     expect(props.onSaveEditedSample).not.toHaveBeenCalled();
   });
 
+  test('keeps the velocity rail and concise controls for a single layer', async () => {
+    renderEditor(createProps());
+    await getReadyCanvas(/Edit Main 1-127 sample waveform/);
+
+    expect(screen.getByLabelText('Velocity layers')).not.toBeNull();
+    expect(screen.getByRole('button', {
+      name: /Main, velocities 1-127/,
+    }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByText(/Selected:/)).toBeNull();
+    expect(screen.getByText('0.000 s - 1.000 s')).not.toBeNull();
+    expect(screen.queryByText('1.000 s')).toBeNull();
+
+    const trimInput = screen.getByLabelText('Main layer trim in decibels');
+    expect(trimInput.parentElement?.textContent).toBe('Layer trim (dB)');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Beat Alignment' }));
+    const layerSettings = screen.getByLabelText('Selected layer settings');
+    const previewButton = screen.getByRole('button', { name: 'Preview' });
+    expect(
+      layerSettings.compareDocumentPosition(previewButton)
+      & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   test('saves a copy and applies the complete draft in one action', async () => {
     const props = createProps();
     renderEditor(props);
@@ -385,10 +409,10 @@ describe('SampleEditorModal Phase 6 workflow', () => {
     fireEvent.click(hardLayer);
 
     expect(confirmSpy).toHaveBeenCalled();
-    expect(screen.getByText(/Selected: Soft/)).not.toBeNull();
+    expect(hardLayer.getAttribute('aria-pressed')).toBe('false');
 
     confirmSpy.mockReturnValue(true);
     fireEvent.click(hardLayer);
-    await screen.findByText(/Selected: Hard/);
+    await waitFor(() => expect(hardLayer.getAttribute('aria-pressed')).toBe('true'));
   });
 });

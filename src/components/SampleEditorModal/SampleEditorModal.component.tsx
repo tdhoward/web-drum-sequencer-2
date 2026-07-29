@@ -120,10 +120,6 @@ type LayerButtonProps = {
   $selected: boolean;
 };
 
-type EditorLayoutProps = {
-  $singleLayer: boolean;
-};
-
 type WaveformCanvasProps = {
   $mode: EditorMode;
 };
@@ -194,12 +190,10 @@ const CloseButton = styled.button`
   }
 `;
 
-const EditorLayout = styled.div<EditorLayoutProps>`
+const EditorLayout = styled.div`
   display: grid;
   gap: 1rem;
-  grid-template-columns: ${({ $singleLayer }) => (
-    $singleLayer ? 'minmax(0, 1fr)' : '14rem minmax(0, 1fr)'
-  )};
+  grid-template-columns: 14rem minmax(0, 1fr);
   min-height: 0;
 
   @media (max-width: 680px) {
@@ -287,24 +281,6 @@ const RailActions = styled.div`
   margin-top: auto;
 `;
 
-const CompactLayerBar = styled.div`
-  align-items: center;
-  background: ${({ theme }) => theme.colors.surfaceControl};
-  border: 2px solid ${({ theme }) => theme.colors.borderDefault};
-  border-radius: 0.3rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: space-between;
-  padding: 0.55rem 0.65rem;
-`;
-
-const CompactLayerText = styled.span`
-  color: ${({ theme }) => theme.colors.textMuted};
-  font-size: 0.76rem;
-  font-weight: 700;
-`;
-
 const MobileLayerControls = styled.div`
   display: none;
   gap: 0.5rem;
@@ -333,27 +309,6 @@ const Workspace = styled.section`
   flex-direction: column;
   gap: 0.8rem;
   min-width: 0;
-`;
-
-const SelectedSummary = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  line-height: 1.3;
-`;
-
-const SummaryLead = styled.strong`
-  color: ${({ theme }) => theme.colors.nearWhite};
-  font-size: 0.84rem;
-`;
-
-const SummarySample = styled.span`
-  color: ${({ theme }) => theme.colors.textMuted};
-  font-size: 0.8rem;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 `;
 
 const SampleRow = styled.div`
@@ -517,12 +472,6 @@ const NumberInput = styled.input`
   &:disabled {
     opacity: 0.5;
   }
-`;
-
-const TrimValue = styled.span`
-  color: ${({ theme }) => theme.colors.textPrimary};
-  font-size: 0.72rem;
-  text-transform: none;
 `;
 
 const ActionRow = styled.div`
@@ -1095,10 +1044,6 @@ export const SampleEditorModal = ({
       event.currentTarget.releasePointerCapture?.(event.pointerId);
     }
   };
-  const selectedDuration = sourceAudioBuffer
-    ? formatSeconds(selection.endSample - selection.startSample, sourceAudioBuffer.sampleRate)
-    : '0.000 s';
-
   const confirmDiscardAudioEdits = (): boolean => (
     !hasEdits
     || window.confirm('Discard the unsaved waveform edits for this layer?')
@@ -1410,7 +1355,6 @@ export const SampleEditorModal = ({
   const alignmentWaveformAriaLabel = (
     `Set ${selectedPresentation.label} ${selectedPresentation.rangeLabel} sample beat alignment`
   );
-  const isSingleLayer = draftLayers.length === 1;
   const canAddLayer = draftLayers.length < MAX_EDITOR_VELOCITY_LAYERS
     && selectedPresentation.minVelocity < selectedPresentation.maxVelocity;
   const canRemoveLayer = draftLayers.length > 1;
@@ -1452,119 +1396,97 @@ export const SampleEditorModal = ({
           </CloseButton>
         </Header>
 
-        {isSingleLayer && (
-          <CompactLayerBar>
-            <CompactLayerText>Velocity Layers: 1</CompactLayerText>
-            <ControlButton
-              disabled={!canAddLayer || isSaving || isApplying}
-              onClick={handleAddLayer}
-              type="button"
-            >
-              Add Layer
-            </ControlButton>
-          </CompactLayerBar>
-        )}
+        <MobileLayerControls>
+          <MobileLayerSelect
+            aria-label="Selected velocity layer"
+            disabled={isBusy}
+            onChange={event => selectLayer(event.target.value)}
+            value={selectedLayerId}
+          >
+            {layerPresentations.map(({ layer, presentation }) => (
+              presentation && (
+                <option key={layer.id} value={layer.id}>
+                  {`Layer ${presentation.index + 1} of ${draftLayers.length} · `}
+                  {`${presentation.label} · ${presentation.rangeLabel}`}
+                </option>
+              )
+            ))}
+          </MobileLayerSelect>
+          <SquareButton
+            aria-label="Add velocity layer"
+            disabled={!canAddLayer || isSaving || isApplying}
+            onClick={handleAddLayer}
+            type="button"
+          >
+            +
+          </SquareButton>
+          <SquareButton
+            aria-label="Remove selected velocity layer"
+            disabled={!canRemoveLayer || isSaving || isApplying}
+            onClick={handleRemoveLayer}
+            type="button"
+          >
+            −
+          </SquareButton>
+        </MobileLayerControls>
 
-        {!isSingleLayer && (
-          <MobileLayerControls>
-            <MobileLayerSelect
-              aria-label="Selected velocity layer"
-              disabled={isBusy}
-              onChange={event => selectLayer(event.target.value)}
-              value={selectedLayerId}
-            >
-              {layerPresentations.map(({ layer, presentation }) => (
-                presentation && (
-                  <option key={layer.id} value={layer.id}>
-                    {`Layer ${presentation.index + 1} of ${draftLayers.length} · `}
-                    {`${presentation.label} · ${presentation.rangeLabel}`}
-                  </option>
-                )
-              ))}
-            </MobileLayerSelect>
-            <SquareButton
-              aria-label="Add velocity layer"
-              disabled={!canAddLayer || isSaving || isApplying}
-              onClick={handleAddLayer}
-              type="button"
-            >
-              +
-            </SquareButton>
-            <SquareButton
-              aria-label="Remove selected velocity layer"
-              disabled={!canRemoveLayer || isSaving || isApplying}
-              onClick={handleRemoveLayer}
-              type="button"
-            >
-              −
-            </SquareButton>
-          </MobileLayerControls>
-        )}
-
-        <EditorLayout $singleLayer={isSingleLayer}>
-          {!isSingleLayer && (
-            <LayerRail aria-label="Velocity layers">
-              <RailHeading>Velocity Layers</RailHeading>
-              <LayerList>
-                {layerPresentations.map(({ layer, presentation }) => {
-                  if (!presentation) {
-                    return null;
-                  }
-                  const layerSampleUrl = sampleUrlsByLayerId[layer.id]
-                    || getSampleUrlFromId(layer.sampleId);
-                  const isSelected = layer.id === selectedLayerId;
-                  return (
-                    <LayerButton
-                      key={layer.id}
-                      $selected={isSelected}
-                      aria-label={
-                        `${presentation.label}, velocities ${presentation.rangeLabel}, `
-                        + `${getSampleDisplayName(layerSampleUrl, userSamples)}, `
-                        + `${layer.trimDb.toFixed(1)} dB`
-                      }
-                      aria-pressed={isSelected}
-                      disabled={isBusy}
-                      onClick={() => selectLayer(layer.id)}
-                      type="button"
-                    >
-                      <LayerName>
-                        {presentation.label}
-                        {layer.id === referenceLayerId ? ' •' : ''}
-                      </LayerName>
-                      <LayerRange>{presentation.rangeLabel}</LayerRange>
-                      <LayerSampleName>
-                        {`${getSampleDisplayName(layerSampleUrl, userSamples)} · `}
-                        {`${layer.trimDb.toFixed(1)} dB`}
-                      </LayerSampleName>
-                    </LayerButton>
-                  );
-                })}
-              </LayerList>
-              <RailActions>
-                <ControlButton
-                  disabled={!canAddLayer || isSaving || isApplying}
-                  onClick={handleAddLayer}
-                  type="button"
-                >
-                  Add Layer
-                </ControlButton>
-                <ControlButton
-                  disabled={!canRemoveLayer || isSaving || isApplying}
-                  onClick={handleRemoveLayer}
-                  type="button"
-                >
-                  Remove Layer
-                </ControlButton>
-              </RailActions>
-            </LayerRail>
-          )}
+        <EditorLayout>
+          <LayerRail aria-label="Velocity layers">
+            <RailHeading>Velocity Layers</RailHeading>
+            <LayerList>
+              {layerPresentations.map(({ layer, presentation }) => {
+                if (!presentation) {
+                  return null;
+                }
+                const layerSampleUrl = sampleUrlsByLayerId[layer.id]
+                  || getSampleUrlFromId(layer.sampleId);
+                const isSelected = layer.id === selectedLayerId;
+                return (
+                  <LayerButton
+                    key={layer.id}
+                    $selected={isSelected}
+                    aria-label={
+                      `${presentation.label}, velocities ${presentation.rangeLabel}, `
+                      + `${getSampleDisplayName(layerSampleUrl, userSamples)}, `
+                      + `${layer.trimDb.toFixed(1)} dB`
+                    }
+                    aria-pressed={isSelected}
+                    disabled={isBusy}
+                    onClick={() => selectLayer(layer.id)}
+                    type="button"
+                  >
+                    <LayerName>
+                      {presentation.label}
+                      {layer.id === referenceLayerId ? ' •' : ''}
+                    </LayerName>
+                    <LayerRange>{presentation.rangeLabel}</LayerRange>
+                    <LayerSampleName>
+                      {`${getSampleDisplayName(layerSampleUrl, userSamples)} · `}
+                      {`${layer.trimDb.toFixed(1)} dB`}
+                    </LayerSampleName>
+                  </LayerButton>
+                );
+              })}
+            </LayerList>
+            <RailActions>
+              <ControlButton
+                disabled={!canAddLayer || isSaving || isApplying}
+                onClick={handleAddLayer}
+                type="button"
+              >
+                Add Layer
+              </ControlButton>
+              <ControlButton
+                disabled={!canRemoveLayer || isSaving || isApplying}
+                onClick={handleRemoveLayer}
+                type="button"
+              >
+                Remove Layer
+              </ControlButton>
+            </RailActions>
+          </LayerRail>
 
           <Workspace aria-label={`${selectedLayerSummary} settings`}>
-            <SelectedSummary>
-              <SummaryLead>{`Selected: ${selectedLayerSummary}`}</SummaryLead>
-              <SummarySample>{`· ${selectedSampleName}`}</SummarySample>
-            </SelectedSummary>
-
             <SampleRow>
               <FieldLabel>Sample</FieldLabel>
               <SamplePicker
@@ -1652,7 +1574,6 @@ export const SampleEditorModal = ({
                         + `${formatSeconds(selection.endSample, audioBuffer.sampleRate)}`
                       : '0.000 s - 0.000 s'}
                   </span>
-                  <span>{selectedDuration}</span>
                 </SelectionInfo>
 
                 <ControlBar>
@@ -1703,13 +1624,6 @@ export const SampleEditorModal = ({
                 <AlignmentValue aria-live="polite">
                   {formatAlignmentOffset(renderedAlignmentOffset)}
                 </AlignmentValue>
-                <ControlButton
-                  disabled={!audioBuffer || isBusy}
-                  onClick={handlePreviewAlignment}
-                  type="button"
-                >
-                  Preview
-                </ControlButton>
                 <ControlButton
                   disabled={!audioBuffer || isBusy}
                   onClick={() => setRenderedAlignmentOffset(0)}
@@ -1772,9 +1686,7 @@ export const SampleEditorModal = ({
                 />
               </NumberField>
               <NumberField>
-                <span>
-                  Layer trim <TrimValue>{`${selectedLayer.trimDb.toFixed(1)} dB`}</TrimValue>
-                </span>
+                Layer trim (dB)
                 <NumberInput
                   aria-label={`${selectedPresentation.label} layer trim in decibels`}
                   disabled={isBusy}
@@ -1852,6 +1764,17 @@ export const SampleEditorModal = ({
                   type="button"
                 >
                   Preview Edited
+                </ControlButton>
+              </ControlBar>
+            )}
+            {editorMode === 'alignment' && (
+              <ControlBar>
+                <ControlButton
+                  disabled={!audioBuffer || isBusy}
+                  onClick={handlePreviewAlignment}
+                  type="button"
+                >
+                  Preview
                 </ControlButton>
               </ControlBar>
             )}
