@@ -17,10 +17,10 @@ describe('channelsSelector', () => {
 
     const [channel] = channelsSelector(state);
 
-    expect(channel.sampleContentHash).toBe('replacement-content-hash');
+    expect(channel.referenceSampleContentHash).toBe('replacement-content-hash');
   });
 
-  test('derives legacy sample and alignment fields from the reference layer', () => {
+  test('derives explicit reference-layer fields without channel-level sample aliases', () => {
     const state = {
       ...createDefaultSequencerState(),
       sampleLoadStatus: {} as Record<string, 'loading' | 'loaded' | 'error'>,
@@ -34,7 +34,6 @@ describe('channelsSelector', () => {
 
     expect(channel).toEqual(expect.objectContaining({
       kitChannelId: firstChannelId,
-      sampleId: referenceLayer.sampleId,
       referenceVelocityLayerId: referenceLayer.id,
       referenceVelocityLayer: expect.objectContaining({
         id: referenceLayer.id,
@@ -46,10 +45,13 @@ describe('channelsSelector', () => {
       },
       referenceSampleUrl: state.samples.entities[referenceLayer.sampleId].url,
       referenceAlignmentOffset: 0.125,
+      referenceSampleLoaded: true,
       velocityLayerCount: 1,
-      alignmentOffset: 0.125,
-      sampleLoaded: true,
     }));
+    expect(channel).not.toHaveProperty('sample');
+    expect(channel).not.toHaveProperty('sampleId');
+    expect(channel).not.toHaveProperty('sampleLoaded');
+    expect(channel).not.toHaveProperty('alignmentOffset');
   });
 
   test('resolves sample metadata and load status for every velocity layer', () => {
@@ -103,7 +105,7 @@ describe('channelsSelector', () => {
         sampleLoaded: false,
       }),
     ]);
-    expect(resolvedChannel.sampleId).toBe(referenceLayer.sampleId);
+    expect(resolvedChannel.referenceVelocityLayer.sampleId).toBe(referenceLayer.sampleId);
   });
 
   test('exposes the velocity-64 layer range and waveform inputs for a layered channel', () => {

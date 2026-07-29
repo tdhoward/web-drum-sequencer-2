@@ -38,7 +38,6 @@ type KitChannelListChannel = LegacyChannel & {
   pan?: number;
   pitchCoarse?: number;
   reverb?: number;
-  sampleLoaded?: boolean;
   solo?: boolean;
 };
 
@@ -278,12 +277,17 @@ const MoveImage = styled(Image)`
 
 const getKitChannelId = (channel: KitChannelListChannel): string => channel.kitChannelId || channel.id;
 
-const getSampleSelectChannel = (channel: KitChannelListChannel): KitChannelListChannel => ({
+const getReferenceSampleTarget = (channel: KitChannelListChannel) => ({
+  channelId: getKitChannelId(channel),
+  channelName: channel.name,
+  sampleUrl: channel.referenceSampleUrl,
+  sampleLoaded: channel.referenceSampleLoaded,
+});
+
+const getKitEditChannel = (channel: KitChannelListChannel): KitChannelListChannel => ({
   ...channel,
   id: getKitChannelId(channel),
 });
-
-const getKitEditChannel = getSampleSelectChannel;
 
 export const getKitChannelWaveformAccessibleName = (
   channelName: string,
@@ -540,9 +544,10 @@ export class KitChannelListComponent extends React.Component<
                       />
                     ) : (
                       <ChannelNameButton
+                        aria-label={`Rename ${channel.name || channel.id}`}
                         type="button"
-                        onDoubleClick={() => this.startEditingChannelName(channel)}
-                        title="Double-click to rename"
+                        onClick={() => this.startEditingChannelName(channel)}
+                        title={`Rename ${channel.name || channel.id}`}
                       >
                         <Text as="span" color="nearWhite" fontSize={2} lineHeight="1.2em">
                           {channel.name || channel.id}
@@ -599,7 +604,7 @@ export class KitChannelListComponent extends React.Component<
                   />
                 </Box>
                 <Box minWidth="0">
-                  <SampleSelect channel={getSampleSelectChannel(channel)} showLabel={false} />
+                  <SampleSelect target={getReferenceSampleTarget(channel)} showLabel={false} />
                 </Box>
                 <WaveformCell>
                   <SampleWaveform

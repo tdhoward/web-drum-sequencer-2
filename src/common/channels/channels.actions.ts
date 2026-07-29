@@ -16,6 +16,7 @@ import type {
 import {
   getReferenceVelocityLayer,
   getVelocityLayerSampleReferences,
+  MAX_MIDI_VELOCITY,
 } from '../velocityLayers';
 import {
   SAMPLE_LOAD_STATUSES,
@@ -36,10 +37,6 @@ type Thunk = (dispatch: Dispatch, getState: () => ChannelActionsState) => unknow
 
 type NamedChannel = {
   name?: string;
-};
-
-type SampleChannel = KitChannelInput & {
-  sample: string;
 };
 
 type LoadableSample = {
@@ -95,21 +92,21 @@ export const {
   setChannelReverb,
 } = channelsSlice.actions;
 
-export const loadSampleStatefully = (dispatch: Dispatch, channel: LoadableSample): void => {
-  const sampleId = channel.sampleId || sampleIdFromUrl(channel.sample);
+export const loadSampleStatefully = (dispatch: Dispatch, sampleAsset: LoadableSample): void => {
+  const sampleId = sampleAsset.sampleId || sampleIdFromUrl(sampleAsset.sample);
   dispatch(setSampleLoadStatus({
     sampleId,
     status: SAMPLE_LOAD_STATUSES.LOADING,
   }));
-  loadSample(channel.sample).then((success: boolean) => {
+  loadSample(sampleAsset.sample).then((success: boolean) => {
     if (success) {
       dispatch(setSampleLoadStatus({
         sampleId,
         status: SAMPLE_LOAD_STATUSES.LOADED,
       }));
-      const fingerprint = getSampleFingerprint?.(channel.sample);
+      const fingerprint = getSampleFingerprint?.(sampleAsset.sample);
       if (fingerprint) {
-        dispatch(setSampleFingerprint(channel.sample, fingerprint));
+        dispatch(setSampleFingerprint(sampleAsset.sample, fingerprint));
       }
     } else {
       dispatch(setSampleLoadStatus({
@@ -191,6 +188,8 @@ export const loadChannels = (
 
 export const newChannel = (): Thunk => (dispatch, getState) => {
   const channelId = uuid();
+  const sampleUrl = factorySamples[0].url;
+  const sampleId = sampleIdFromUrl(sampleUrl);
   const state = getState();
   const kitId = getSelectedKitId(state);
   const kit = state.kits?.entities?.[kitId];
@@ -198,23 +197,30 @@ export const newChannel = (): Thunk => (dispatch, getState) => {
   const existingKitChannels = (kit?.channelIds || kitChannels.ids || [])
     .map(id => kitChannels.entities[id])
     .filter((channel): channel is KitChannel => Boolean(channel));
-  const channelToAdd: SampleChannel = {
+  const channelToAdd: KitChannelInput = {
     id: channelId,
     name: getNextNewChannelName(existingKitChannels),
     kitId,
     laneId: channelId,
     percussionType: PERCUSSION_TYPES.GENERIC_PERCUSSION,
-    sample: factorySamples[0].url,
+    velocityLayers: [{
+      id: `${channelId}:layer:1`,
+      sample: sampleUrl,
+      sampleId,
+      maxVelocity: MAX_MIDI_VELOCITY,
+      alignmentOffset: 0,
+      trimDb: 0,
+    }],
     gain: 1,
     pitchCoarse: 0,
     pitchFine: 0,
     pan: 0,
   };
-  dispatch(addSampleFromUrl(channelToAdd.sample, 'factory'));
+  dispatch(addSampleFromUrl(sampleUrl, 'factory'));
   dispatch(addChannel(channelToAdd));
   dispatch(initializeChannelNotes());
   dispatch(setSelectedChannel(channelToAdd.id));
-  loadSampleStatefully(dispatch, channelToAdd);
+  loadSampleStatefully(dispatch, { sample: sampleUrl, sampleId });
 };
 
 export const loadAndSetChannelSample = (channelId: string, sampleURL: string) => (

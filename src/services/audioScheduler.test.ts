@@ -17,6 +17,22 @@ jest.mock('./audioRouter');
 
 const mockedPlayNote = playNote as jest.Mock;
 
+const createSingleLayerChannel = (
+  id = 'test-channel',
+  sample = '/whatever.wav',
+  alignmentOffset = 0,
+) => ({
+  id,
+  velocityLayers: [{
+    id: `${id}:layer:1`,
+    sampleId: `sample:${sample}`,
+    sample,
+    maxVelocity: 127,
+    alignmentOffset,
+    trimDb: 0,
+  }],
+});
+
 afterEach(() => {
   clearScheduledNotes();
   mockedPlayNote.mockClear();
@@ -51,10 +67,7 @@ describe('getScheduledNotes', () => {
   ];
 
   const scheduledNotes = getScheduledNotes({
-    channel: {
-      id: 'test-channel',
-      sample: '/whatever.wav',
-    },
+    channel: createSingleLayerChannel(),
     channelNotes: testNotes,
     tempo: {
       bpm: 60,
@@ -78,10 +91,7 @@ describe('getScheduledNotes', () => {
 
   test('should not schedule notes outside the active pattern length', () => {
     const scheduledThreeFourNotes = getScheduledNotes({
-      channel: {
-        id: 'test-channel',
-        sample: '/whatever.wav',
-      },
+      channel: createSingleLayerChannel(),
       channelNotes: [
         {
           beat: 3.75,
@@ -128,10 +138,7 @@ describe('getScheduledNotes', () => {
 
   test('should preserve note velocity when humanize is zero', () => {
     const humanizedNotes = getScheduledNotes({
-      channel: {
-        id: 'test-channel',
-        sample: '/whatever.wav',
-      },
+      channel: createSingleLayerChannel(),
       channelNotes: [
         {
           beat: 1,
@@ -153,10 +160,7 @@ describe('getScheduledNotes', () => {
 
   test('should clamp authored note velocity before humanize', () => {
     const scheduledNotes = getScheduledNotes({
-      channel: {
-        id: 'test-channel',
-        sample: '/whatever.wav',
-      },
+      channel: createSingleLayerChannel(),
       channelNotes: [
         {
           beat: 1,
@@ -177,10 +181,7 @@ describe('getScheduledNotes', () => {
 
   test('should apply deterministic humanize timing and velocity', () => {
     const getHumanizedNotes = () => getScheduledNotes({
-      channel: {
-        id: 'test-channel',
-        sample: '/whatever.wav',
-      },
+      channel: createSingleLayerChannel(),
       channelNotes: [
         {
           beat: 1,
@@ -210,10 +211,7 @@ describe('getScheduledNotes', () => {
 
 describe('clearScheduledNotes', () => {
   test('should allow a note ID to be scheduled again after the schedule is cleared', () => {
-    const channel = {
-      id: 'kick',
-      sample: 'kick.wav',
-    };
+    const channel = createSingleLayerChannel('kick', 'kick.wav');
 
     scheduleNote('note-1', 1, channel);
     scheduleNote('note-1', 2, channel);
@@ -227,10 +225,7 @@ describe('clearScheduledNotes', () => {
   });
 
   test('passes note velocity to the audio router', () => {
-    const channel = {
-      id: 'kick',
-      sample: 'kick.wav',
-    };
+    const channel = createSingleLayerChannel('kick', 'kick.wav');
 
     scheduleNote('note-velocity', 1, channel, 32);
 
@@ -402,7 +397,7 @@ describe('cancelScheduledNotesAfter', () => {
     mockedPlayNote
       .mockReturnValueOnce(futureSource)
       .mockReturnValueOnce(startedSource);
-    const channel = { id: 'kick', sample: 'kick.wav' };
+    const channel = createSingleLayerChannel('kick', 'kick.wav');
 
     scheduleNote('future-note', 2, channel);
     scheduleNote('started-note', 1, channel);
@@ -421,7 +416,7 @@ describe('song occurrence scheduling', () => {
   test('can schedule the same pattern note in adjacent occurrences', () => {
     const args = {
       notes: { kick: [[{ id: 'note-1', beat: 1 }]] },
-      channels: [{ id: 'kick', sample: 'kick.wav' }],
+      channels: [createSingleLayerChannel('kick', 'kick.wav')],
       tempo: { bpm: 120, humanize: 0 },
       pattern: 0,
       patternLengthInBeats: 4,
@@ -437,10 +432,7 @@ describe('song occurrence scheduling', () => {
 
   test('looks ahead far enough to start an aligned sample before its beat', () => {
     const alignedNotes = getScheduledNotes({
-      channel: {
-        id: 'test-channel',
-        alignmentOffset: 0.2,
-      },
+      channel: createSingleLayerChannel('test-channel', '/whatever.wav', 0.2),
       channelNotes: [{ beat: 1.2, id: 'early-attack' }],
       tempo: { bpm: 60, humanize: 0 },
       startTime: 10,
@@ -481,18 +473,22 @@ describe('song occurrence scheduling', () => {
   });
 
   test('starts playback early by the sample alignment offset', () => {
-    scheduleNote('aligned-note', 2, {
-      id: 'snare',
-      sample: 'snare.wav',
-      alignmentOffset: 0.126,
-    });
+    scheduleNote(
+      'aligned-note',
+      2,
+      createSingleLayerChannel('snare', 'snare.wav', 0.126),
+    );
 
     expect(mockedPlayNote).toHaveBeenCalledWith(1.874, undefined, 'snare', 0, 64, 0);
   });
 
   test('zero alignment preserves timing and startup never schedules negative audio time', () => {
-    scheduleNote('zero-note', 2, { id: 'kick', alignmentOffset: 0 });
-    scheduleNote('startup-note', 0.08, { id: 'snare', alignmentOffset: 0.2 });
+    scheduleNote('zero-note', 2, createSingleLayerChannel('kick', 'kick.wav'));
+    scheduleNote(
+      'startup-note',
+      0.08,
+      createSingleLayerChannel('snare', 'snare.wav', 0.2),
+    );
 
     expect(mockedPlayNote).toHaveBeenNthCalledWith(1, 2, undefined, 'kick', 0, 64, 0);
     expect(mockedPlayNote).toHaveBeenNthCalledWith(2, 1, undefined, 'snare', 0, 64, 0);

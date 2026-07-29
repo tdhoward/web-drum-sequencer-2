@@ -80,7 +80,16 @@ describe('newChannel', () => {
         name: 'New channel 2',
         kitId: DEFAULT_KIT_ID,
         laneId: 'new-channel-id',
+        velocityLayers: [expect.objectContaining({
+          id: 'new-channel-id:layer:1',
+          maxVelocity: 127,
+          alignmentOffset: 0,
+          trimDb: 0,
+        })],
       }));
+    expect(addChannelAction?.payload).not.toHaveProperty('sample');
+    expect(addChannelAction?.payload).not.toHaveProperty('sampleId');
+    expect(addChannelAction?.payload).not.toHaveProperty('alignmentOffset');
   });
 });
 

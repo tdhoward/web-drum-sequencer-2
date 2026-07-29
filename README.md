@@ -7,14 +7,14 @@ The original web app can be found here:  https://wds-1.com
 
 ## Features
  * Kit, Pattern, and Song workspaces
- * Swap drum samples
+ * Assign one or more samples to contiguous MIDI velocity ranges per Kit channel
  * Choose drum samples from file
  * Record drum samples from the user's device
- * Edit kit samples with a waveform modal
- * Auto-select, trim, normalize, preview, and save edited samples
+ * Edit Kit samples and velocity layers in a unified waveform modal
+ * Audio Edit and Beat Alignment modes with auto-select, trim, normalize, preview, and save-copy/replace workflows
  * Rename, preview, and delete unused user samples
  * Pattern pack and pattern slot selectors
- * Per-note velocity/emphasis editing
+ * Per-note MIDI-style velocity editing with deterministic humanize playback
  * BPM, swing, and humanize playback controls
  * Sample hit buttons
  * Gain and pan
@@ -22,6 +22,7 @@ The original web app can be found here:  https://wds-1.com
  * Mute and solo
  * Pitch shift
  * Preset system for saving and loading drum kits
+ * Self-contained v2 Kit, Pattern Pack, and Song import/export
  * Works offline with service worker and caching
  * Installable as PWA
  * Drag to reorder channels

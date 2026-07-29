@@ -2,7 +2,6 @@ import { LOOKAHEAD } from './audioEngine.config';
 import { DEFAULT_NOTE_VELOCITY, normalizeNoteVelocity } from '../common/sequencerModel';
 import {
   getVelocityLayerForVelocity,
-  MAX_MIDI_VELOCITY,
   SILENT_MIDI_VELOCITY,
 } from '../common/velocityLayers';
 import { getAudioContext } from './audioContext';
@@ -19,9 +18,7 @@ type PitchInput = {
 
 type NoteChannel = PitchInput & {
   id: string;
-  sample?: string;
-  alignmentOffset?: number;
-  velocityLayers?: NoteChannelVelocityLayer[];
+  velocityLayers: NoteChannelVelocityLayer[];
 };
 
 type NoteChannelVelocityLayer = {
@@ -103,31 +100,19 @@ const getPlaybackLayer = (
   if (effectiveVelocity === SILENT_MIDI_VELOCITY) {
     return undefined;
   }
-  if (noteChannel.velocityLayers?.length) {
-    return getVelocityLayerForVelocity(
-      noteChannel.velocityLayers,
-      effectiveVelocity,
-    );
-  }
-  return {
-    id: `${noteChannel.id}:legacy-layer`,
-    sampleId: '',
-    sample: noteChannel.sample,
-    maxVelocity: MAX_MIDI_VELOCITY,
-    alignmentOffset: normalizeAlignmentOffset(noteChannel.alignmentOffset),
-    trimDb: 0,
-  };
+  return getVelocityLayerForVelocity(
+    noteChannel.velocityLayers,
+    effectiveVelocity,
+  );
 };
 
 export const getMaxAlignmentOffset = (noteChannel: NoteChannel): number => (
-  noteChannel.velocityLayers?.length
-    ? Math.max(
-      0,
-      ...noteChannel.velocityLayers.map(layer => (
-        normalizeAlignmentOffset(layer.alignmentOffset)
-      )),
-    )
-    : normalizeAlignmentOffset(noteChannel.alignmentOffset)
+  Math.max(
+    0,
+    ...noteChannel.velocityLayers.map(layer => (
+      normalizeAlignmentOffset(layer.alignmentOffset)
+    )),
+  )
 );
 
 export const pitchToCents = ({ pitchCoarse = 0, pitchFine = 0 }: PitchInput): number => Math.round(

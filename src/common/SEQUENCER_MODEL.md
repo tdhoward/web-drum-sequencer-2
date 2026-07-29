@@ -1,8 +1,10 @@
 # Sequencer model
 
-The app now stores the musical document in a normalized, kit-aware model. The
-current UI still uses compatibility selectors that expose the older channel and
-note shapes, but new model work should build on the domain objects below.
+The app stores the musical document in a normalized, kit-aware model. Selected-
+kit and note view models still adapt lane assignments for older UI call sites,
+but resolved channels always carry their complete velocity-layer partition.
+Runtime audio code does not fall back to channel-level sample or alignment
+fields. New model work should build on the domain objects below.
 
 ## Songs
 
@@ -133,6 +135,9 @@ default is `64`, which preserves the prior 100% level. Values 1 through 127 are
 audible and select one velocity layer; 0 is reserved for silent migrated data.
 The Pattern editor authors values from 1 through 127.
 
+Velocity gain preserves the app's earlier 0%-200% anchors with a piecewise
+linear conversion: 0 is silent, 32 is 50%, 64 is 100%, and 127 is 200%.
+
 Pattern data may omit `velocity` when it is `64`. The normalized in-memory note
 state keeps `velocity: 64` so reducers and selectors can use a simple shape.
 
@@ -164,6 +169,22 @@ clamps and rounds the effective velocity to 0-127. Playback uses that same
 integer to select exactly one channel velocity layer and to calculate the
 per-voice gain. Layer trim is multiplied into that voice gain before channel
 gain and before the channel's dry and reverb paths.
+
+The complete playback order is:
+
+```text
+authored MIDI velocity
+  -> deterministic humanize variation
+  -> clamp and round to an effective 0-127 integer
+  -> select exactly one velocity layer
+  -> effective-velocity gain × layer trim (dB converted to gain)
+  -> channel gain, mute, and solo
+  -> dry pan path + channel reverb send
+  -> master output
+```
+
+Pitch and fine pitch are channel-level source detune. Pan, reverb, channel gain,
+mute, and solo never vary by velocity layer.
 
 ## Pattern packs
 
@@ -318,12 +339,13 @@ increasing and the final layer always ends at 127. Layer IDs are stable local
 identity. A legacy one-sample channel normalizes deterministically to
 `<channel-id>:layer:1`, covering 1-127.
 
-The layer containing velocity 64 is the reference layer used by the current
-single-sample compatibility UI and Hit-button audition. Playback selectors
-also resolve every layer so scheduled notes can choose from the complete
-partition. Channel-level `sample`, `sampleId`, and `alignmentOffset` fields are
-accepted only at normalization and persistence-migration boundaries;
-normalized Redux channels do not store those fields.
+The layer containing velocity 64 is the reference layer used by the Kit-row
+sample selector, main waveform, displayed duration, default editor selection,
+and Hit-button audition. Playback selectors resolve every layer so scheduled
+notes can choose from the complete partition. Channel-level `sample`,
+`sampleId`, and `alignmentOffset` fields are accepted only at normalization and
+persistence-migration boundaries; normalized Redux channels and resolved
+runtime channel view models do not store or publish those fields.
 
 The Kit-row view model exposes that resolved reference layer, its inclusive
 range, the total layer count, and the reference sample's URL, content revision,
@@ -391,8 +413,8 @@ stale UI state cannot remove a referenced sample.
 
 Recorded device-audio samples are user samples. The recording dialog stores the
 final sample as WAV data in IndexedDB and assigns it to the selected channel's
-reference layer through the compatibility sample flow used by uploads and
-edited samples.
+reference layer through the same explicit reference-layer action used by main-
+row uploads and sample selection.
 
 ## Content hashes and duplicate imports
 
@@ -514,25 +536,21 @@ kit, channel, and sample IDs, their sample payloads are stored in IndexedDB, and
 the imported kit is then saved as a user preset and selected. Portable IDs from
 the bundle are never treated as authoritative local IDs.
 
-### Import and export plan
+### Bundle and persistence schema boundaries
 
-1. Calculate and persist a full raw-byte sample hash whenever a sample is
-   uploaded, recorded, edited, created by migration, or imported.
-2. Add versioned canonical projection and hashing functions for samples,
-   drumkits, pattern packs, and songs, with fixture tests proving that local ID
-   and name changes do not change musical-content hashes.
-3. Store entity content hashes in library metadata and index entities by entity
-   type, hash algorithm/version, and content hash for constant-time duplicate
-   lookup.
-4. Export a manifest containing the song snapshot, drumkit snapshot,
-   pattern-pack snapshot, sample payloads, and all dependency hashes.
-5. On import, validate and migrate the manifest, verify every included sample's
-   full raw-byte hash, recalculate the canonical drumkit and pattern-pack hashes,
-   and reuse matching global library entities instead of creating duplicates.
-6. Recalculate and verify the song hash from the resolved drumkit hash,
-   pattern-pack hash, arrangement, and tempo changes. Save the imported song
-   with the resolved `selectedKitId` and `patternPackId`, then restore that kit
-   and pattern pack when the song is loaded.
+Redux persistence version 10 migrates version-9 channels and saved Kit presets
+to velocity layers, moving any sample-level alignment to the generated layer.
+Version 11 converts normalized notes and saved Pattern Packs from legacy gain
+multipliers to MIDI-style integer velocity. These migrations are the only
+runtime entry point for the superseded persisted shapes.
+
+Kit, Pattern Pack, and Song file writers and readers support bundle v2 only.
+Kit snapshots contain complete ordered layer partitions and deduplicate sample
+payloads by content hash. Pattern Pack snapshots use integer velocity and omit
+the default 64. Song snapshots embed both current dependency snapshots.
+Readers validate the version, manifest shape, payload hashes, entity hashes,
+and dependency hash chain before changing application state; pre-v2 files are
+rejected rather than migrated.
 
 ## Kit channel mapping
 
@@ -543,8 +561,8 @@ medium-confidence results directly; low-confidence or unresolved results open
 the mapping review dialog before changing kit or pattern state. The dialog can
 accept a fallback, choose another target channel, or leave a lane silent.
 
-The current compatibility UI still reads `kitChannel.laneId`, but
-`kitChannelAssignments` is the forward path for applying a resolved mapping.
+The selected-kit UI view model still adapts assignment lane IDs for sequencing
+call sites, but `kitChannelAssignments` is the source of that mapping.
 
 ```text
 kitChannelMappingResult
@@ -560,6 +578,12 @@ kitChannelMappingResult
 
 ## Compatibility selectors
 
-The existing UI and audio scheduler still expect legacy-shaped `channels[]` and
-`notes[channelId][patternIndex]` data. Keep using the compatibility selectors for
-those call sites until the UI is migrated to the domain model directly.
+The Pattern grid and transport still consume `notes[channelId][patternIndex]`
+and a selected-kit channel array keyed by assignment lane IDs. The selected-kit
+view model resolves sample metadata and loading state for every velocity layer,
+plus explicit `referenceVelocityLayer*` fields for Kit-row presentation. It
+does not flatten a reference sample or alignment back onto the channel.
+
+The audio scheduler consumes the resolved `velocityLayers` array directly.
+Missing layer partitions are invalid normalized state, not a one-sample
+fallback case.

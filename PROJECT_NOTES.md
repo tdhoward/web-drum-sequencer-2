@@ -57,12 +57,12 @@ Current model baseline:
 
 * `src/common/percussion.ts` defines the controlled percussion vocabulary and the pure `resolveKitChannelMapping` resolver.
 * `kitChannel.percussionType` is required by invariant checks and defaults to `generic_percussion` for new/legacy channels.
-* Normalized Kit channels require a `velocityLayers` partition and no longer store channel-level `sample`, `sampleId`, or `alignmentOffset` fields. Legacy and factory one-sample inputs normalize to one deterministic 1-127 layer. Compatibility selectors retain flattened velocity-64 reference-layer fields for the current Kit UI while also resolving every layer for playback.
+* Normalized Kit channels require a `velocityLayers` partition and no longer store channel-level `sample`, `sampleId`, or `alignmentOffset` fields. Legacy one-sample inputs normalize to one deterministic 1-127 layer only at migration/normalization boundaries. The selected-Kit view model resolves every layer plus explicit velocity-64 reference-layer fields; it does not recreate deprecated channel-level sample or alignment aliases.
 * Sample metadata is reusable and alignment-free. Per-layer alignment lives on the Kit channel layer, and sample load status is runtime-only state keyed by sample ID. Startup, reconnect, and Kit-load paths scan every unique velocity-layer sample, while concurrent requests for the same asset share one decode operation.
 * `kitChannelAssignments` exists as the forward path for applying resolved lane-to-channel mappings.
 * `src/patternPacks/index.ts` exposes factory pattern packs with human-readable names. The Pattern workspace dropdown loads a pack; the existing 1-8 pattern buttons select slots within that pack.
 * Bundled factory presets use semantic channel IDs and explicit channel names/percussion metadata; `empty_channel` has been removed from factory preset data.
-* The compatibility UI/audio path now exposes assignment lane IDs through `channelsSelector`, so loaded pack notes can play through the current kit without changing kit samples.
+* The selected-Kit view model exposes assignment lane IDs through `channelsSelector`, so loaded pack notes can play through the current kit without changing Kit samples. The audio scheduler requires the resolved velocity-layer partition and has no one-sample channel fallback.
 * Kit preset loading changes kit channels/samples/name and rebuilds assignments from the selected factory or user pattern pack's lane metadata, but does not replace notes, pattern lanes, tempo, or swing.
 * The master header includes BPM, Swing, and Humanize controls. `humanize` lives in tempo state as a playback-feel setting rather than authored pattern data.
 * Humanize applies deterministic Gaussian timing offsets and per-note MIDI-velocity variation during scheduling. The pattern grid remains exact, and `humanize: 0` preserves the authored integer velocity.

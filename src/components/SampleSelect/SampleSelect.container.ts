@@ -7,15 +7,15 @@ import type { RootState } from '../../reducer';
 
 type AppAction = Parameters<AppDispatch>[0];
 
-type SampleSelectChannel = {
-  id: string;
-  name?: string;
-  sample?: string;
+type ReferenceSampleTarget = {
+  channelId: string;
+  channelName?: string;
+  sampleUrl?: string;
   sampleLoaded?: boolean;
 };
 
 type SampleSelectOwnProps = {
-  channel: SampleSelectChannel;
+  target: ReferenceSampleTarget;
   showLabel?: boolean;
 };
 
@@ -74,17 +74,17 @@ const mergeProps = (
   ...stateProps,
   ...ownProps,
   onSelectSample: (sample: SampleSelectOption) => {
-    dispatchProps.loadAndSetChannelSample(ownProps.channel.id, sample.value);
+    dispatchProps.loadAndSetChannelSample(ownProps.target.channelId, sample.value);
   },
   onSampleFileChosen: (event: FileInputChangeEvent) => {
     const files = event.target.files;
 
     if (files) {
-      dispatchProps.saveUserSample(ownProps.channel.id, files);
+      dispatchProps.saveUserSample(ownProps.target.channelId, files);
     }
   },
   onSaveRecordedSample: (audioBuffer: AudioBuffer, sampleName: string) => (
-    dispatchProps.saveRecordedUserSample(ownProps.channel.id, audioBuffer, sampleName)
+    dispatchProps.saveRecordedUserSample(ownProps.target.channelId, audioBuffer, sampleName)
   ),
 });
 

@@ -358,8 +358,7 @@ format:
 
 As of July 27, 2026:
 
-- Phases 1 through 8 are complete.
-- Phase 9, Documentation and full regression, is the next phase.
+- Phases 1 through 9 are complete.
 - Phase 4 also completed some groundwork originally listed under Phase 6:
   - Dirty waveform edits are guarded when switching layers.
   - Edited copies can be created as library assets without assigning the
@@ -414,6 +413,18 @@ As of July 27, 2026:
     deduplicate shared payloads by content hash.
   - Bundle readers are intentionally v2-only because no earlier files were
     exported during development.
+- Phase 9 completed documentation and the final compatibility audit:
+  - The sequencer model records integer velocity, layer/reference invariants,
+    signal order, humanize ordering, and the current persistence, bundle, and
+    hash schema boundaries.
+  - Runtime selected-Kit channels no longer publish deprecated channel-level
+    sample or alignment aliases, and the scheduler requires a resolved layer
+    partition instead of accepting a one-sample fallback.
+  - New channels are created with an explicit deterministic 1-127 layer.
+  - Channel rename is a visible single-click/tap action with an accessible
+    label rather than relying on hover-only guidance.
+  - The complete required type check, lint, test, and production build suite
+    passes.
 
 ### Phase 1: Pure velocity and layer domain
 
@@ -844,7 +855,7 @@ Acceptance criteria:
 
 ### Phase 9: Documentation and full regression
 
-**Status:** Next.
+**Status:** Complete.
 
 **Goal:** Finish the feature with model documentation, coverage, and static
 verification.
@@ -953,7 +964,7 @@ end. Before declaring the feature complete, cover at least:
 - [x] Multi-layer sample loading and Sample Manager usage protection.
 - [x] Kit/Pattern Pack/Song preset and bundle portability.
 - [x] Content-hash schema updates.
-- [ ] Documentation and full static verification.
+- [x] Documentation and full static verification.
 
 ## Explicit non-goals
 

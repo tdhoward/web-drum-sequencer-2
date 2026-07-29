@@ -41,7 +41,6 @@ export type LegacyChannel = KitChannel & {
   kitChannelId: string;
   velocityLayers: PlaybackVelocityLayer[];
   velocityLayerCount: number;
-  sampleId: string;
   referenceVelocityLayerId: string;
   referenceVelocityLayer: PlaybackVelocityLayer;
   referenceVelocityLayerRange: VelocityLayerRange;
@@ -50,10 +49,6 @@ export type LegacyChannel = KitChannel & {
   referenceSampleLoadStatus?: SampleLoadStatus;
   referenceSampleLoaded?: boolean;
   referenceAlignmentOffset: number;
-  sample?: string;
-  sampleContentHash?: string;
-  alignmentOffset?: number;
-  sampleLoaded?: boolean;
 };
 
 export const channelsStateSelector = (state: ChannelsRootState): KitChannelsState => (
@@ -110,7 +105,6 @@ export const channelsSelector = createSelector(
         velocityLayerCount: velocityLayers.length,
         id: assignment?.laneId || channel.laneId || channel.id,
         kitChannelId: channel.id,
-        sampleId: referenceLayer.sampleId,
         referenceVelocityLayerId: referenceLayer.id,
         referenceVelocityLayer: referenceLayer,
         referenceVelocityLayerRange,
@@ -119,10 +113,6 @@ export const channelsSelector = createSelector(
         referenceSampleLoadStatus: referenceLayer.sampleLoadStatus,
         referenceSampleLoaded: referenceLayer.sampleLoaded,
         referenceAlignmentOffset: referenceLayer.alignmentOffset,
-        sample: referenceLayer.sample,
-        sampleContentHash: referenceLayer.sampleContentHash,
-        alignmentOffset: referenceLayer.alignmentOffset,
-        sampleLoaded: referenceLayer.sampleLoaded,
       });
       return result;
     }, []);

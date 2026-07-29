@@ -20,10 +20,10 @@ export type SampleSelectOption = {
   label: string;
 };
 
-type SampleSelectChannel = {
-  id: string;
-  name?: string;
-  sample?: string;
+type ReferenceSampleTarget = {
+  channelId: string;
+  channelName?: string;
+  sampleUrl?: string;
   sampleLoaded?: boolean;
 };
 
@@ -31,7 +31,7 @@ type SampleSelectComponentProps = {
   onSelectSample: (sample: SampleSelectOption) => void;
   onSampleFileChosen: React.ChangeEventHandler<HTMLInputElement>;
   onSaveRecordedSample: (audioBuffer: AudioBuffer, sampleName: string) => Promise<void> | void;
-  channel: SampleSelectChannel;
+  target: ReferenceSampleTarget;
   userSamples: UserSample[];
   showLabel?: boolean;
 };
@@ -174,7 +174,7 @@ export const SampleSelectComponent = ({
   onSelectSample,
   onSampleFileChosen,
   onSaveRecordedSample,
-  channel,
+  target,
   userSamples,
   showLabel = true,
 }: SampleSelectComponentProps) => {
@@ -193,8 +193,8 @@ export const SampleSelectComponent = ({
         onChooseFile={() => openFileInput.current?.click()}
         onRecordSample={() => setIsRecorderOpen(true)}
         onSelectSample={onSelectSample}
-        sample={channel.sample}
-        sampleLoaded={channel.sampleLoaded}
+        sample={target.sampleUrl}
+        sampleLoaded={target.sampleLoaded}
         userSamples={userSamples}
       />
       <input
@@ -205,7 +205,7 @@ export const SampleSelectComponent = ({
         accept="audio/*"
       />
       <SampleRecorderModal
-        channelName={channel.name || channel.id}
+        channelName={target.channelName || target.channelId}
         onClose={() => setIsRecorderOpen(false)}
         onSaveRecordedSample={onSaveRecordedSample}
         show={isRecorderOpen}
