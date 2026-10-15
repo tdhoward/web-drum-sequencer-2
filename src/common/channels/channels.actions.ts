@@ -6,27 +6,46 @@ import { setSelectedChannel } from '../master';
 import { addSampleFromUrl, setSampleFingerprint } from '../samples';
 import { PERCUSSION_TYPES } from '../percussion';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
-import { DEFAULT_KIT_ID } from '../sequencerModel';
+import { DEFAULT_KIT_ID, sampleIdFromUrl } from '../sequencerModel';
 import type {
   KitChannel,
   KitChannelInput,
   KitChannelsState,
   SequencerRootState,
 } from '../sequencerModel';
+import {
+  getReferenceVelocityLayer,
+  getVelocityLayerSampleReferences,
+  MAX_MIDI_VELOCITY,
+} from '../velocityLayers';
+import {
+  SAMPLE_LOAD_STATUSES,
+  type SampleLoadStatusState,
+  setSampleLoadStatus,
+} from '../sampleLoadStatus';
 import { channelsSlice } from './channels.reducer';
 
 const NEW_CHANNEL_NAME_PREFIX = 'New channel';
 
 type Dispatch = (action: unknown) => unknown;
 
-type Thunk = (dispatch: Dispatch, getState: () => SequencerRootState) => unknown;
+type ChannelActionsState = SequencerRootState & {
+  sampleLoadStatus?: SampleLoadStatusState;
+};
+
+type Thunk = (dispatch: Dispatch, getState: () => ChannelActionsState) => unknown;
 
 type NamedChannel = {
   name?: string;
 };
 
-type SampleChannel = KitChannelInput & {
+type LoadableSample = {
   sample: string;
+  sampleId?: string;
+};
+
+type LoadVelocityLayerSamplesOptions = {
+  force?: boolean;
 };
 
 type DeletableChannel = {
@@ -65,20 +84,35 @@ export const {
   updateChannelOrder,
   replaceChannels,
   replaceKitChannels,
-  sampleLoaded,
   setChannelSample,
+  setVelocityLayerSample,
+  setVelocityLayerAlignment,
+  replaceChannelVelocityLayers,
+  transformChannelSampleAlignments,
   setChannelReverb,
 } = channelsSlice.actions;
 
-export const loadSampleStatefully = (dispatch: Dispatch, channel: SampleChannel): void => {
-  dispatch(sampleLoaded(channel.id, false));
-  loadSample(channel.sample).then((success: boolean) => {
+export const loadSampleStatefully = (dispatch: Dispatch, sampleAsset: LoadableSample): void => {
+  const sampleId = sampleAsset.sampleId || sampleIdFromUrl(sampleAsset.sample);
+  dispatch(setSampleLoadStatus({
+    sampleId,
+    status: SAMPLE_LOAD_STATUSES.LOADING,
+  }));
+  loadSample(sampleAsset.sample).then((success: boolean) => {
     if (success) {
-      dispatch(sampleLoaded(channel.id, true));
-      const fingerprint = getSampleFingerprint?.(channel.sample);
+      dispatch(setSampleLoadStatus({
+        sampleId,
+        status: SAMPLE_LOAD_STATUSES.LOADED,
+      }));
+      const fingerprint = getSampleFingerprint?.(sampleAsset.sample);
       if (fingerprint) {
-        dispatch(setSampleFingerprint(channel.sample, fingerprint));
+        dispatch(setSampleFingerprint(sampleAsset.sample, fingerprint));
       }
+    } else {
+      dispatch(setSampleLoadStatus({
+        sampleId,
+        status: SAMPLE_LOAD_STATUSES.ERROR,
+      }));
     }
   });
 };
@@ -87,20 +121,75 @@ const getSelectedKitId = (state: SequencerRootState): string => (
   state.song?.selectedKitId || DEFAULT_KIT_ID
 );
 
+export const loadVelocityLayerSamples = (
+  channels: readonly KitChannelInput[],
+  { force = false }: LoadVelocityLayerSamplesOptions = {},
+): Thunk => (dispatch, getState) => {
+  const state = getState();
+  const loadedSampleIds = new Set<string>();
+  channels.forEach((channel) => {
+    getVelocityLayerSampleReferences(channel).forEach((reference) => {
+      if (loadedSampleIds.has(reference.sampleId)) {
+        return;
+      }
+      const sample = reference.sample || state.samples?.entities?.[reference.sampleId]?.url;
+      if (!sample) {
+        return;
+      }
+      loadedSampleIds.add(reference.sampleId);
+      const registeredSample = state.samples?.entities?.[reference.sampleId];
+      if (registeredSample?.url !== sample) {
+        dispatch(addSampleFromUrl(sample, channel.sourceType || 'factory'));
+      }
+      const loadStatus = state.sampleLoadStatus?.[reference.sampleId];
+      if (
+        !force
+        && (
+          loadStatus === SAMPLE_LOAD_STATUSES.LOADING
+          || loadStatus === SAMPLE_LOAD_STATUSES.LOADED
+        )
+      ) {
+        return;
+      }
+      loadSampleStatefully(dispatch, {
+        sample,
+        sampleId: reference.sampleId,
+      });
+    });
+  });
+};
+
+export const loadCurrentKitSamples = (
+  options?: LoadVelocityLayerSamplesOptions,
+): Thunk => (dispatch, getState) => {
+  const state = getState();
+  const channelState = state.kitChannels || state.channels;
+  if (!channelState) {
+    return;
+  }
+
+  const selectedKit = state.kits?.entities?.[getSelectedKitId(state)];
+  const channelIds = selectedKit?.channelIds || channelState.ids;
+  const channels = channelIds
+    .map(channelId => channelState.entities[channelId])
+    .filter((channel): channel is KitChannel => Boolean(channel));
+  loadVelocityLayerSamples(channels, options)(dispatch, getState);
+};
+
 export const loadChannels = (
-  channels: SampleChannel[],
+  channels: KitChannelInput[],
   targetKitId?: string,
 ): Thunk => (dispatch, getState) => {
-  const kitId = targetKitId || getSelectedKitId(getState());
-  channels.forEach((channel) => {
-    dispatch(addSampleFromUrl(channel.sample, channel.sourceType || 'factory'));
-    loadSampleStatefully(dispatch, channel);
-  });
+  const state = getState();
+  const kitId = targetKitId || getSelectedKitId(state);
+  loadVelocityLayerSamples(channels)(dispatch, getState);
   dispatch(replaceKitChannels(channels, kitId));
 };
 
 export const newChannel = (): Thunk => (dispatch, getState) => {
   const channelId = uuid();
+  const sampleUrl = factorySamples[0].url;
+  const sampleId = sampleIdFromUrl(sampleUrl);
   const state = getState();
   const kitId = getSelectedKitId(state);
   const kit = state.kits?.entities?.[kitId];
@@ -108,42 +197,84 @@ export const newChannel = (): Thunk => (dispatch, getState) => {
   const existingKitChannels = (kit?.channelIds || kitChannels.ids || [])
     .map(id => kitChannels.entities[id])
     .filter((channel): channel is KitChannel => Boolean(channel));
-  const channelToAdd: SampleChannel = {
+  const channelToAdd: KitChannelInput = {
     id: channelId,
     name: getNextNewChannelName(existingKitChannels),
     kitId,
     laneId: channelId,
     percussionType: PERCUSSION_TYPES.GENERIC_PERCUSSION,
-    sample: factorySamples[0].url,
+    velocityLayers: [{
+      id: `${channelId}:layer:1`,
+      sample: sampleUrl,
+      sampleId,
+      maxVelocity: MAX_MIDI_VELOCITY,
+      alignmentOffset: 0,
+      trimDb: 0,
+    }],
     gain: 1,
     pitchCoarse: 0,
     pitchFine: 0,
     pan: 0,
   };
-  dispatch(addSampleFromUrl(channelToAdd.sample, 'factory'));
+  dispatch(addSampleFromUrl(sampleUrl, 'factory'));
   dispatch(addChannel(channelToAdd));
   dispatch(initializeChannelNotes());
   dispatch(setSelectedChannel(channelToAdd.id));
-  loadSampleStatefully(dispatch, channelToAdd);
+  loadSampleStatefully(dispatch, { sample: sampleUrl, sampleId });
 };
 
 export const loadAndSetChannelSample = (channelId: string, sampleURL: string) => (
   dispatch: Dispatch,
+  getState: () => SequencerRootState,
 ): void => {
-  dispatch(sampleLoaded(channelId, false));
+  const state = getState();
+  const channels = state.kitChannels || state.channels;
+  const channel = channels?.entities?.[channelId];
+  const referenceLayer = channel
+    ? getReferenceVelocityLayer(channel.velocityLayers)
+    : undefined;
+  const changedReferenceLayer = Boolean(
+    referenceLayer
+      && referenceLayer.sampleId !== sampleIdFromUrl(sampleURL),
+  );
+
+  dispatch(loadSampleAsset(sampleURL));
+  dispatch(setChannelSample(channelId, sampleURL));
+  if (changedReferenceLayer && channel && channel.velocityLayers.length > 1) {
+    dispatch(showFlashMessage(FLASH_MESSAGES.VELOCITY_LAYER_SAMPLE_CHANGED));
+  }
+};
+
+export const loadSampleAsset = (
+  sampleURL: string,
+  sourceType = 'user',
+) => (
+  dispatch: Dispatch,
+): void => {
+  const sampleId = sampleIdFromUrl(sampleURL);
+  dispatch(setSampleLoadStatus({
+    sampleId,
+    status: SAMPLE_LOAD_STATUSES.LOADING,
+  }));
   loadSample(sampleURL).then((success: boolean) => {
     if (success) {
-      dispatch(sampleLoaded(channelId, true));
+      dispatch(setSampleLoadStatus({
+        sampleId,
+        status: SAMPLE_LOAD_STATUSES.LOADED,
+      }));
       const fingerprint = getSampleFingerprint?.(sampleURL);
       if (fingerprint) {
         dispatch(setSampleFingerprint(sampleURL, fingerprint));
       }
     } else {
+      dispatch(setSampleLoadStatus({
+        sampleId,
+        status: SAMPLE_LOAD_STATUSES.ERROR,
+      }));
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
     }
   });
-  dispatch(addSampleFromUrl(sampleURL, 'user'));
-  dispatch(setChannelSample(channelId, sampleURL));
+  dispatch(addSampleFromUrl(sampleURL, sourceType));
 };
 
 const getKitChannelId = (channel: DeletableChannel): string => channel.kitChannelId || channel.id;

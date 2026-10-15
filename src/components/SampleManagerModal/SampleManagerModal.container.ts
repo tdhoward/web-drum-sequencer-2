@@ -3,6 +3,7 @@ import {
   channelsSelector,
   deleteSavedUserSample,
   renameSavedUserSample,
+  userPresetsSelector,
   userSamplesSelector,
 } from '../../common';
 import type { AppDispatch } from '../../store';
@@ -12,18 +13,19 @@ import { SampleManagerModalComponent } from './SampleManagerModal.component';
 type AppAction = Parameters<AppDispatch>[0];
 
 type SampleManagerModalDispatchProps = {
-  onDeleteSample: (sampleId: string) => Promise<void>;
+  onDeleteSample: (sampleId: string) => Promise<boolean>;
   onRenameSample: (sampleId: string, name: string) => void;
 };
 
 const mapStateToProps = (state: RootState) => ({
   channels: channelsSelector(state),
+  savedKits: userPresetsSelector(state) || [],
   userSamples: userSamplesSelector(state) || [],
 });
 
 const mapDispatchToProps = (dispatch: AppDispatch): SampleManagerModalDispatchProps => ({
   onDeleteSample: sampleId => (
-    dispatch(deleteSavedUserSample(sampleId) as unknown as AppAction) as unknown as Promise<void>
+    dispatch(deleteSavedUserSample(sampleId) as unknown as AppAction) as unknown as Promise<boolean>
   ),
   onRenameSample: (sampleId, name) => {
     dispatch(renameSavedUserSample(sampleId, name) as unknown as AppAction);

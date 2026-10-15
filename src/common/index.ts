@@ -23,3 +23,5 @@ export * from './contentHash';
 export * from './songBundles';
 export * from './kitBundles';
 export * from './patternPackBundles';
+export * from './velocityLayers';
+export * from './sampleLoadStatus';

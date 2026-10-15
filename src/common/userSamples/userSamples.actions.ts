@@ -6,7 +6,14 @@ import {
   saveToSampleStore,
 } from '../../services/sampleStore';
 import factorySamples from '../../samples.config';
-import { loadAndSetChannelSample, setChannelPitchCoarse } from '../channels';
+import {
+  loadAndSetChannelSample,
+  loadSampleAsset,
+  setChannelPitchCoarse,
+  transformChannelSampleAlignments,
+} from '../channels';
+import { transformPresetSampleAlignments } from '../presets';
+import type { PresetsState } from '../presets';
 import {
   removeSampleFromUrl,
   renameSampleFromUrl,
@@ -14,15 +21,29 @@ import {
 } from '../samples';
 import { showFlashMessage, FLASH_MESSAGES } from '../window';
 import {
+  sampleIdFromUrl,
+  type SampleAlignmentTransform,
+} from '../velocityLayers';
+import type {
+  KitChannel,
+  SequencerRootState,
+} from '../sequencerModel';
+import {
+  SAMPLE_LOAD_STATUSES,
+  setSampleLoadStatus,
+} from '../sampleLoadStatus';
+import {
   getUserSampleId,
   normalizeUserSample,
   userSamplesSlice,
   type UserSamplesState,
 } from './userSamples.reducer';
+import { isSampleInUse } from './userSamples.usage';
 
 type Dispatch = (action: unknown) => unknown;
 
-type UserSamplesRootState = {
+type UserSamplesRootState = SequencerRootState & {
+  presets?: PresetsState;
   userSamples?: UserSamplesState;
 };
 
@@ -56,16 +77,37 @@ export const saveUserSample = (channel: string, files: FileList | File[]) => (
     });
 };
 
+export const createUploadedUserSample = (file: File) => (
+  dispatch: Dispatch,
+): Promise<string> => saveToSampleStore(file)
+  .then(({ id: sampleURL, fingerprint }) => {
+    dispatch(addUserSample({
+      id: sampleURL,
+      name: file.name,
+      sourceType: 'uploaded',
+      ...fingerprint,
+    }));
+    dispatch(loadSampleAsset(sampleURL));
+    dispatch(setSampleFingerprint(sampleURL, fingerprint));
+    return sampleURL;
+  })
+  .catch((error) => {
+    dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
+    return Promise.reject(error);
+  });
+
 export const saveEditedUserSample = (
   channel: string,
   audioBuffer: AudioBuffer,
   sourceName?: string,
   sampleName?: string,
   replaceSampleId?: string,
+  assignToChannel = true,
+  alignmentTransform?: SampleAlignmentTransform,
 ) => (
   dispatch: Dispatch,
   getState: () => UserSamplesRootState,
-): Promise<void> => {
+): Promise<string> => {
   const displayName = sampleName?.trim() || sourceName?.trim() || 'Edited Sample';
   const isFactorySample = factorySamples.some(sample => sample.url === replaceSampleId);
   const existingUserSample = replaceSampleId && !isFactorySample
@@ -92,10 +134,54 @@ export const saveEditedUserSample = (
       }));
       if (existingUserSampleRecord) {
         dispatch(renameSampleFromUrl(sampleURL, displayName));
-      } else {
+        dispatch(setSampleLoadStatus({
+          sampleId: sampleIdFromUrl(sampleURL),
+          status: SAMPLE_LOAD_STATUSES.LOADED,
+        }));
+        if (alignmentTransform) {
+          const sampleId = sampleIdFromUrl(sampleURL);
+          dispatch(transformChannelSampleAlignments({
+            sampleId,
+            ...alignmentTransform,
+          }));
+          dispatch(transformPresetSampleAlignments({
+            sampleId,
+            ...alignmentTransform,
+          }));
+        }
+      } else if (assignToChannel) {
         dispatch(loadAndSetChannelSample(channel, sampleURL));
+      } else {
+        dispatch(loadSampleAsset(sampleURL));
       }
       dispatch(setSampleFingerprint(sampleURL, fingerprint));
+      return sampleURL;
+    })
+    .catch((error) => {
+      dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
+      return Promise.reject(error);
+    });
+};
+
+export const createRecordedUserSample = (
+  audioBuffer: AudioBuffer,
+  sampleName?: string,
+) => (
+  dispatch: Dispatch,
+): Promise<string> => {
+  const displayName = sampleName?.trim() || 'Recorded Sample';
+
+  return saveRecordedSampleBuffer(audioBuffer, displayName)
+    .then(({ id: sampleURL, fingerprint }) => {
+      dispatch(addUserSample({
+        id: sampleURL,
+        name: displayName,
+        sourceType: 'recorded',
+        ...fingerprint,
+      }));
+      dispatch(loadSampleAsset(sampleURL));
+      dispatch(setSampleFingerprint(sampleURL, fingerprint));
+      return sampleURL;
     })
     .catch((error) => {
       dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
@@ -139,12 +225,26 @@ export const renameSavedUserSample = (sampleId: string, name: string) => (
 
 export const deleteSavedUserSample = (sampleId: string) => (
   dispatch: Dispatch,
-): Promise<void> => deleteSampleBuffer(sampleId)
-  .then(() => {
-    dispatch(removeUserSample(sampleId));
-    dispatch(removeSampleFromUrl(sampleId));
-  })
-  .catch((error) => {
-    dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
-    return Promise.reject(error);
-  });
+  getState: () => UserSamplesRootState,
+): Promise<boolean> => {
+  const state = getState();
+  const channelState = state.kitChannels || state.channels;
+  const channels = Object.values(channelState?.entities || {})
+    .filter((channel): channel is KitChannel => Boolean(channel));
+
+  if (isSampleInUse(sampleId, channels, state.presets?.userPresets)) {
+    dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_DELETE_IN_USE));
+    return Promise.resolve(false);
+  }
+
+  return deleteSampleBuffer(sampleId)
+    .then(() => {
+      dispatch(removeUserSample(sampleId));
+      dispatch(removeSampleFromUrl(sampleId));
+      return true;
+    })
+    .catch((error) => {
+      dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_LOAD_ERROR));
+      return Promise.reject(error);
+    });
+};

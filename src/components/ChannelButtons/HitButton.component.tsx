@@ -12,9 +12,6 @@ import { subscribeToChannelTriggers } from '../../services/channelTriggerEvents'
 const HIT_TRIGGER_DURATION_MS = 220;
 
 type HitButtonChannel = {
-  sample?: string | {
-    name?: string;
-  };
   name?: string;
   id?: string;
   kitChannelId?: string;
@@ -61,13 +58,9 @@ const StyledHitButton = styled(HoverButton)<StyledHitButtonProps>`
   `}
 `;
 
-const getSampleLabel = (channel: HitButtonChannel): string => {
-  if (typeof channel.sample === 'string') {
-    return channel.name || channel.sample || channel.id || 'channel';
-  }
-
-  return channel.sample?.name || channel.name || channel.id || 'channel';
-};
+const getChannelLabel = (channel: HitButtonChannel): string => (
+  channel.name || channel.id || channel.kitChannelId || 'channel'
+);
 
 const getTriggerChannelId = (channel: HitButtonChannel): string | undefined => (
   channel.id || channel.kitChannelId
@@ -138,7 +131,7 @@ export const HitButton = ({ channel, onMouseDown }: HitButtonProps) => {
       onMouseDown={() => onMouseDown()}
       onTouchStart={() => onMouseDown()}
       onTouchEnd={(event: TouchEvent<HTMLButtonElement>) => event.preventDefault()}
-      aria-label={`Play ${getSampleLabel(channel)}`}
+      aria-label={`Play ${getChannelLabel(channel)}`}
     />
   );
 };

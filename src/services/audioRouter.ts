@@ -2,6 +2,10 @@ import { detuneSupported, stereoPannerSupported } from './featureChecks';
 import { getAudioContext } from './audioContext';
 import { loadImpulseResponse } from './reverb';
 import impulseResponseUrl from '../assets/impulse-responses/ruby-room.mp3';
+import {
+  DEFAULT_MIDI_VELOCITY,
+  noteVelocityToGain,
+} from '../common/velocityLayers';
 
 type AudioChannel = {
   id: string;
@@ -140,6 +144,12 @@ export const updateChannelNodes = (channels: AudioChannel[]): void => {
   });
 };
 
+export const dbToGain = (db: number): number => (
+  typeof db === 'number' && Number.isFinite(db)
+    ? 10 ** (db / 20)
+    : 1
+);
+
 const ensureChannelNodes = (channelId: string): void => {
   if (typeof channelPanNodes[channelId] === 'undefined') {
     if (stereoPannerSupported) {
@@ -168,14 +178,18 @@ export const playNote = (
   buffer: AudioBuffer | undefined,
   channelId: string,
   notePitch = 0,
-  noteVelocity = 1,
+  noteVelocity = DEFAULT_MIDI_VELOCITY,
+  trimDb = 0,
 ): AudioBufferSourceNode => {
   ensureChannelNodes(channelId);
 
   const source = audioCtx.createBufferSource();
   const voiceGainNode = audioCtx.createGain();
   source.buffer = buffer ?? null;
-  voiceGainNode.gain.setValueAtTime(noteVelocity, audioCtx.currentTime);
+  voiceGainNode.gain.setValueAtTime(
+    noteVelocityToGain(noteVelocity) * dbToGain(trimDb),
+    audioCtx.currentTime,
+  );
 
   if (detuneSupported) {
     source.detune.value = notePitch;

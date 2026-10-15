@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import Select from 'react-select';
 import type { GroupBase, StylesConfig } from 'react-select';
 import { useTheme } from 'styled-components';
@@ -12,18 +12,18 @@ import {
 } from '../../common';
 import { SampleRecorderModal } from '../SampleRecorderModal';
 
-const CHOOSE_FILE_VALUE = 'CHOOSE_FILE';
-const RECORD_SAMPLE_VALUE = 'RECORD_SAMPLE';
+export const CHOOSE_FILE_VALUE = 'CHOOSE_FILE';
+export const RECORD_SAMPLE_VALUE = 'RECORD_SAMPLE';
 
-type SampleSelectOption = {
+export type SampleSelectOption = {
   value: string;
   label: string;
 };
 
-type SampleSelectChannel = {
-  id: string;
-  name?: string;
-  sample?: string;
+type ReferenceSampleTarget = {
+  channelId: string;
+  channelName?: string;
+  sampleUrl?: string;
   sampleLoaded?: boolean;
 };
 
@@ -31,79 +31,109 @@ type SampleSelectComponentProps = {
   onSelectSample: (sample: SampleSelectOption) => void;
   onSampleFileChosen: React.ChangeEventHandler<HTMLInputElement>;
   onSaveRecordedSample: (audioBuffer: AudioBuffer, sampleName: string) => Promise<void> | void;
-  channel: SampleSelectChannel;
+  target: ReferenceSampleTarget;
   userSamples: UserSample[];
   showLabel?: boolean;
 };
 
-const openFileInput = React.createRef<HTMLInputElement>();
+type SamplePickerProps = {
+  ariaLabel?: string;
+  disabled?: boolean;
+  onChooseFile?: () => void;
+  onRecordSample?: () => void;
+  onSelectSample: (sample: SampleSelectOption) => void;
+  sample?: string;
+  sampleLoaded?: boolean;
+  userSamples: UserSample[];
+};
 
-const factoryOptions: SampleSelectOption[] = sampleOptions.map(sampleOption => ({
+export const factorySampleOptions: SampleSelectOption[] = sampleOptions.map(sampleOption => ({
   value: sampleOption.url,
   label: sampleOption.name,
 }));
 
-const userSampleToOption = (userSample: UserSample): SampleSelectOption => {
+export const userSampleToOption = (userSample: UserSample): SampleSelectOption => {
   return {
     value: getUserSampleId(userSample),
     label: getUserSampleDisplayName(userSample),
   };
 };
 
-const getSampleSelectOptions = (
+export const getSampleSelectOptions = (
   userOptions: SampleSelectOption[] = [],
+  includeCreationOptions = true,
 ): GroupBase<SampleSelectOption>[] => [
   {
     label: 'User',
     options: [
-      {
-        value: CHOOSE_FILE_VALUE,
-        label: 'Choose file...',
-      },
-      {
-        value: RECORD_SAMPLE_VALUE,
-        label: 'Record sample...',
-      },
+      ...(includeCreationOptions ? [
+        {
+          value: CHOOSE_FILE_VALUE,
+          label: 'Choose file...',
+        },
+        {
+          value: RECORD_SAMPLE_VALUE,
+          label: 'Record sample...',
+        },
+      ] : []),
       ...userOptions,
     ],
   },
   {
     label: '707',
-    options: factoryOptions.filter(item => item.label.includes('707')),
+    options: factorySampleOptions.filter(item => item.label.includes('707')),
   },
   {
     label: '808',
-    options: factoryOptions.filter(item => item.label.includes('808')),
+    options: factorySampleOptions.filter(item => item.label.includes('808')),
   },
   {
     label: 'Ace',
-    options: factoryOptions.filter(item => item.label.includes('Ace')),
+    options: factorySampleOptions.filter(item => item.label.includes('Ace')),
   },
   {
     label: 'LDrum',
-    options: factoryOptions.filter(item => item.label.includes('LDrum')),
+    options: factorySampleOptions.filter(item => item.label.includes('LDrum')),
   },
   {
     label: 'Hip-hop',
-    options: factoryOptions.filter(item => item.label.includes('Hip Hop')),
+    options: factorySampleOptions.filter(item => item.label.includes('Hip Hop')),
   },
 ];
 
-export const SampleSelectComponent = ({
+export const getSampleOption = (
+  sample: string | undefined,
+  userSamples: UserSample[],
+): SampleSelectOption | undefined => {
+  const allOptions = userSamples.map(userSampleToOption).concat(factorySampleOptions);
+  return allOptions.find(option => sample === option.value);
+};
+
+export const getSampleDisplayName = (
+  sample: string | undefined,
+  userSamples: UserSample[],
+): string => getSampleOption(sample, userSamples)?.label || sample || 'Sample unavailable';
+
+export const SamplePicker = ({
+  ariaLabel = 'Select sample',
+  disabled = false,
+  onChooseFile,
+  onRecordSample,
   onSelectSample,
-  onSampleFileChosen,
-  onSaveRecordedSample,
-  channel,
+  sample,
+  sampleLoaded,
   userSamples,
-  showLabel = true,
-}: SampleSelectComponentProps) => {
+}: SamplePickerProps) => {
   const theme = useTheme();
-  const [isRecorderOpen, setIsRecorderOpen] = React.useState(false);
   const userOptions = userSamples.map(userSampleToOption);
-  const allOptions = userOptions.concat(factoryOptions);
-  const currentOption = allOptions.find(option => channel.sample === option.value);
+  const currentOption = getSampleOption(sample, userSamples);
+  const includeCreationOptions = Boolean(onChooseFile || onRecordSample);
   const selectStyles: StylesConfig<SampleSelectOption, false, GroupBase<SampleSelectOption>> = {
-    ...createSelectStyles<SampleSelectOption>(theme),
+    ...createSelectStyles<SampleSelectOption>(theme, {
+      menuFontSize: '0.8rem',
+      menuWidth: '16rem',
+      optionPadding: '0.2em 1em',
+    }),
     container: styles => ({
       ...styles,
       height: '3rem',
@@ -111,19 +141,45 @@ export const SampleSelectComponent = ({
     singleValue: styles => ({
       ...styles,
       color: theme.colors.textPrimary,
-      opacity: channel.sampleLoaded ? 1 : 0.3,
-    }),
-    menu: styles => ({
-      ...styles,
-      fontSize: '0.8rem',
-      width: '16rem',
-    }),
-    option: styles => ({
-      ...styles,
-      paddingTop: '0.2em',
-      paddingBottom: '0.2em',
+      opacity: sampleLoaded === false ? 0.3 : 1,
     }),
   };
+
+  return (
+    <Select<SampleSelectOption, false, GroupBase<SampleSelectOption>>
+      aria-label={ariaLabel}
+      isDisabled={disabled}
+      options={getSampleSelectOptions(userOptions, includeCreationOptions)}
+      onChange={(choice) => {
+        if (!choice) {
+          return;
+        }
+
+        if (choice.value === CHOOSE_FILE_VALUE) {
+          onChooseFile?.();
+        } else if (choice.value === RECORD_SAMPLE_VALUE) {
+          onRecordSample?.();
+        } else {
+          onSelectSample(choice);
+        }
+      }}
+      value={currentOption}
+      isSearchable={false}
+      styles={selectStyles}
+    />
+  );
+};
+
+export const SampleSelectComponent = ({
+  onSelectSample,
+  onSampleFileChosen,
+  onSaveRecordedSample,
+  target,
+  userSamples,
+  showLabel = true,
+}: SampleSelectComponentProps) => {
+  const openFileInput = useRef<HTMLInputElement>(null);
+  const [isRecorderOpen, setIsRecorderOpen] = React.useState(false);
 
   return (
     <Box>
@@ -132,25 +188,14 @@ export const SampleSelectComponent = ({
           SAMPLE
         </ControlLabel>
       )}
-      <Select<SampleSelectOption, false, GroupBase<SampleSelectOption>>
-        aria-label="Select Channel"
-        options={getSampleSelectOptions(userOptions)}
-        onChange={(choice) => {
-          if (!choice) {
-            return;
-          }
-
-          if (choice.value === CHOOSE_FILE_VALUE) {
-            openFileInput.current?.click();
-          } else if (choice.value === RECORD_SAMPLE_VALUE) {
-            setIsRecorderOpen(true);
-          } else {
-            onSelectSample(choice);
-          }
-        }}
-        value={currentOption}
-        isSearchable={false}
-        styles={selectStyles}
+      <SamplePicker
+        ariaLabel="Select Channel"
+        onChooseFile={() => openFileInput.current?.click()}
+        onRecordSample={() => setIsRecorderOpen(true)}
+        onSelectSample={onSelectSample}
+        sample={target.sampleUrl}
+        sampleLoaded={target.sampleLoaded}
+        userSamples={userSamples}
       />
       <input
         type="file"
@@ -160,7 +205,7 @@ export const SampleSelectComponent = ({
         accept="audio/*"
       />
       <SampleRecorderModal
-        channelName={channel.name || channel.id}
+        channelName={target.channelName || target.channelId}
         onClose={() => setIsRecorderOpen(false)}
         onSaveRecordedSample={onSaveRecordedSample}
         show={isRecorderOpen}

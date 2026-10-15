@@ -1,12 +1,15 @@
 import {
   beatToStep,
   createPatternsState,
+  createSamplesState,
   DEFAULT_KIT_ID,
   DEFAULT_NOTE_VELOCITY,
   MAX_NOTE_VELOCITY,
   MIN_NOTE_VELOCITY,
   migrateToKitSequencerState,
+  migrateToMidiVelocitySequencerState,
   migrateToNormalizedSequencerState,
+  migrateToVelocityLayerSequencerState,
   normalizeArrangementPatternIds,
   normalizeChannelsState,
   normalizeNoteVelocity,
@@ -14,7 +17,12 @@ import {
   sampleIdFromUrl,
   stepToBeat,
 } from './sequencerModel';
-import type { KitChannelInput, LegacyNotes, LegacySequencerState } from './sequencerModel';
+import type {
+  KitChannelInput,
+  LegacyNotes,
+  LegacySequencerState,
+  PatternPackNotes,
+} from './sequencerModel';
 import { PERCUSSION_TYPES } from './percussion';
 import { channelsSelector } from './channels';
 import { notesSelector } from './notes';
@@ -71,11 +79,11 @@ describe('time-signature grid helpers', () => {
 });
 
 describe('note velocity helpers', () => {
-  test('normalizes authored note velocity multipliers', () => {
-    expect(normalizeNoteVelocity(0.5)).toBe(0.5);
-    expect(normalizeNoteVelocity(1.25)).toBe(1.25);
+  test('normalizes authored note velocity to MIDI-style integers', () => {
+    expect(normalizeNoteVelocity(32)).toBe(32);
+    expect(normalizeNoteVelocity(80.4)).toBe(80);
     expect(normalizeNoteVelocity(-1)).toBe(MIN_NOTE_VELOCITY);
-    expect(normalizeNoteVelocity(3)).toBe(MAX_NOTE_VELOCITY);
+    expect(normalizeNoteVelocity(300)).toBe(MAX_NOTE_VELOCITY);
     expect(normalizeNoteVelocity(Number.NaN)).toBe(DEFAULT_NOTE_VELOCITY);
     expect(normalizeNoteVelocity(undefined)).toBe(DEFAULT_NOTE_VELOCITY);
   });
@@ -87,7 +95,7 @@ describe('portable note normalization', () => {
     const notes = normalizeNotesState({
       kick: [[
         { beat: 1 },
-        { beat: 2, velocity: 0.5 },
+        { beat: 2, velocity: 32 },
       ]],
     }, patterns.ids, patterns);
 
@@ -99,7 +107,7 @@ describe('portable note normalization', () => {
       id: 'pattern-note:kick:pattern-0:1',
       laneId: 'kick',
       patternId: 'pattern-0',
-      velocity: 0.5,
+      velocity: 32,
     }));
   });
 });
@@ -225,7 +233,7 @@ describe('compatibility selectors', () => {
         kick: [[{
           id: 'accent',
           beat: 1,
-          velocity: 0.7,
+          velocity: 80,
         }]],
       }, patterns.ids, patterns),
     };
@@ -233,7 +241,7 @@ describe('compatibility selectors', () => {
     expect(notesSelector(state).kick[0][0]).toEqual({
       id: 'accent',
       beat: 1,
-      velocity: 0.7,
+      velocity: 80,
     });
   });
 
@@ -335,7 +343,7 @@ describe('redux-persist migration', () => {
       patternId: 'pattern-0',
       step: 0,
       pitch: 0,
-      velocity: 1,
+      velocity: 64,
     });
     expect(migrated.master).toEqual({
       selectedChannel: 'kick',
@@ -368,7 +376,15 @@ describe('kit-aware migration', () => {
       kitChannelId: 'kick',
       confidence: 'manual',
     });
-    expect(migrated.kitChannels.entities.kick.sampleId).toBe('sample:kick.mp3');
+    expect(migrated.kitChannels.entities.kick.velocityLayers).toEqual([{
+      id: 'kick:layer:1',
+      sampleId: 'sample:kick.mp3',
+      maxVelocity: 127,
+      alignmentOffset: 0,
+      trimDb: 0,
+    }]);
+    expect(migrated.kitChannels.entities.kick).not.toHaveProperty('sampleId');
+    expect(migrated.kitChannels.entities.kick).not.toHaveProperty('sample');
     expect(migrated.samples.entities['sample:kick.mp3'].url).toBe('kick.mp3');
     expect(migrated.patterns.entities['pattern-0'].laneIds).toEqual(['kick']);
     expect(migrated.notes.entities['kick-1'].laneId).toBe('kick');
@@ -395,9 +411,218 @@ describe('kit channel normalization', () => {
     expect(normalized.entities.kick).toEqual(expect.objectContaining({
       percussionType: PERCUSSION_TYPES.BASS_DRUM,
       register: 'low',
-      sampleId: sampleIdFromUrl('kick.mp3'),
+      velocityLayers: [
+        expect.objectContaining({
+          sampleId: sampleIdFromUrl('kick.mp3'),
+          maxVelocity: 127,
+        }),
+      ],
     }));
+    expect(normalized.entities.kick).not.toHaveProperty('sampleId');
+    expect(normalized.entities.kick).not.toHaveProperty('alignmentOffset');
     expect(normalized.entities.mystery.percussionType)
       .toBe(PERCUSSION_TYPES.GENERIC_PERCUSSION);
+  });
+
+  test('normalizes layered inputs and creates metadata for every referenced sample', () => {
+    const input: KitChannelInput = {
+      id: 'snare',
+      sample: 'legacy-snare.wav',
+      sampleId: 'sample:legacy-snare.wav',
+      alignmentOffset: 0.5,
+      velocityLayers: [
+        {
+          id: 'soft',
+          sample: 'soft-snare.wav',
+          maxVelocity: 63,
+          alignmentOffset: 0.01,
+          trimDb: -2,
+        },
+        {
+          id: 'hard',
+          sample: 'hard-snare.wav',
+          maxVelocity: 127,
+          alignmentOffset: 0.02,
+          trimDb: 0,
+        },
+      ],
+    };
+    const samples = createSamplesState([input]);
+    const normalized = normalizeChannelsState([input]).entities.snare;
+
+    expect(samples.ids).toEqual([
+      'sample:soft-snare.wav',
+      'sample:hard-snare.wav',
+    ]);
+    expect(normalized.velocityLayers.map(layer => layer.sampleId)).toEqual(samples.ids);
+    expect(normalized).not.toHaveProperty('sample');
+    expect(normalized).not.toHaveProperty('sampleId');
+    expect(normalized).not.toHaveProperty('alignmentOffset');
+  });
+});
+
+describe('velocity-layer persistence migration', () => {
+  test('migrates active channels, sample alignment, and saved Kit presets', () => {
+    const versionNineState = legacyState({
+      kitChannels: {
+        ids: ['kick'],
+        entities: {
+          kick: {
+            id: 'kick',
+            kitId: DEFAULT_KIT_ID,
+            laneId: 'kick',
+            percussionType: PERCUSSION_TYPES.BASS_DRUM,
+            sampleId: 'sample:kick.wav',
+            sampleLoaded: true,
+          },
+        },
+      },
+      samples: {
+        ids: ['sample:kick.wav'],
+        entities: {
+          'sample:kick.wav': {
+            id: 'sample:kick.wav',
+            name: 'Kick',
+            url: 'kick.wav',
+            sourceType: 'user',
+            alignmentOffset: 0.045,
+          },
+        },
+      },
+      presets: {
+        preset: 'Saved Kit',
+        userPresets: [{
+          name: 'Saved Kit',
+          channels: [{
+            id: 'saved-kick',
+            sample: 'kick.wav',
+            sampleId: 'sample:kick.wav',
+            alignmentOffset: 0.08,
+          }],
+        }],
+      },
+    } as unknown);
+
+    const migrated = migrateToVelocityLayerSequencerState(versionNineState);
+    const activeChannel = migrated.kitChannels?.entities.kick;
+    const presets = migrated.presets as {
+      userPresets: Array<{ channels: KitChannelInput[] }>;
+    };
+
+    expect(activeChannel?.velocityLayers).toEqual([{
+      id: 'kick:layer:1',
+      sampleId: 'sample:kick.wav',
+      maxVelocity: 127,
+      alignmentOffset: 0.045,
+      trimDb: 0,
+    }]);
+    expect(activeChannel).not.toHaveProperty('sampleId');
+    expect(activeChannel).not.toHaveProperty('sampleLoaded');
+    expect(migrated.samples?.entities['sample:kick.wav']).not.toHaveProperty(
+      'alignmentOffset',
+    );
+    expect(presets.userPresets[0].channels[0]).toEqual(expect.objectContaining({
+      id: 'saved-kick',
+      velocityLayers: [{
+        id: 'saved-kick:layer:1',
+        sample: 'kick.wav',
+        sampleId: 'sample:kick.wav',
+        maxVelocity: 127,
+        alignmentOffset: 0.08,
+        trimDb: 0,
+      }],
+    }));
+    expect(presets.userPresets[0].channels[0]).not.toHaveProperty('sampleId');
+    expect(migrateToVelocityLayerSequencerState(
+      migrated as unknown as LegacySequencerState,
+    ).kitChannels).toEqual(migrated.kitChannels);
+  });
+});
+
+describe('MIDI velocity persistence migration', () => {
+  test('converts normalized notes and saved user Pattern Packs from multipliers', () => {
+    const migrated = migrateToMidiVelocitySequencerState(legacyState({
+      notes: {
+        ids: ['silent', 'ghost', 'main', 'accent', 'maximum'],
+        entities: {
+          silent: {
+            id: 'silent',
+            laneId: 'kick',
+            patternId: 'pattern-0',
+            step: 0,
+            pitch: 0,
+            velocity: 0,
+          },
+          ghost: {
+            id: 'ghost',
+            laneId: 'kick',
+            patternId: 'pattern-0',
+            step: 1,
+            pitch: 0,
+            velocity: 0.5,
+          },
+          main: {
+            id: 'main',
+            laneId: 'kick',
+            patternId: 'pattern-0',
+            step: 2,
+            pitch: 0,
+            velocity: 1,
+          },
+          accent: {
+            id: 'accent',
+            laneId: 'kick',
+            patternId: 'pattern-0',
+            step: 3,
+            pitch: 0,
+            velocity: 1.25,
+          },
+          maximum: {
+            id: 'maximum',
+            laneId: 'kick',
+            patternId: 'pattern-0',
+            step: 4,
+            pitch: 0,
+            velocity: 2,
+          },
+        },
+      },
+      patternPacks: {
+        selectedPatternPackId: 'saved-pack',
+        userPatternPacks: [{
+          id: 'saved-pack',
+          name: 'Saved Pack',
+          bpm: 120,
+          swing: 0,
+          lanes: [{ id: 'kick' }],
+          notes: {
+            kick: [[
+              { beat: 1 },
+              { beat: 2, velocity: 0.5 },
+              { beat: 3, velocity: 1.25 },
+            ]],
+          },
+        }],
+      },
+    }));
+    const notes = migrated.notes as {
+      entities: Record<string, { velocity: number }>;
+    };
+    const patternPacks = migrated.patternPacks as {
+      userPatternPacks: Array<{ notes: PatternPackNotes }>;
+    };
+
+    expect([
+      notes.entities.silent.velocity,
+      notes.entities.ghost.velocity,
+      notes.entities.main.velocity,
+      notes.entities.accent.velocity,
+      notes.entities.maximum.velocity,
+    ]).toEqual([0, 32, 64, 80, 127]);
+    expect(patternPacks.userPatternPacks[0].notes.kick[0]).toEqual([
+      { beat: 1 },
+      { beat: 2, velocity: 32 },
+      { beat: 3, velocity: 80 },
+    ]);
   });
 });

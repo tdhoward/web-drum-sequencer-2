@@ -29,7 +29,7 @@ import {
 } from '../bundlePayloads';
 
 export const SONG_BUNDLE_FORMAT = 'wds-song-bundle' as const;
-export const SONG_BUNDLE_VERSION = 1;
+export const SONG_BUNDLE_VERSION = 2;
 
 export type { DrumkitSnapshot, ExportedSample } from '../kitBundles';
 
@@ -105,7 +105,11 @@ const assertMatchingHash = (
   stored: Partial<ContentHashMetadata>,
   calculated: ContentHashMetadata,
 ): void => {
-  if (!hasCurrentContentHash(stored) || stored.contentHash !== calculated.contentHash) {
+  if (
+    stored.contentHashAlgorithm !== calculated.contentHashAlgorithm
+    || stored.contentHashVersion !== calculated.contentHashVersion
+    || stored.contentHash !== calculated.contentHash
+  ) {
     throw new Error(`${label} content hash verification failed`);
   }
 };
@@ -120,10 +124,8 @@ export type VerifiedSongBundle = {
 export const verifySongExportBundle = async (
   bundle: SongExportBundle,
 ): Promise<VerifiedSongBundle> => {
+  assertSongManifestShape(bundle.manifest);
   const { manifest } = bundle;
-  if (manifest.format !== SONG_BUNDLE_FORMAT || manifest.version !== SONG_BUNDLE_VERSION) {
-    throw new Error('Unsupported song bundle format or version');
-  }
 
   const { sampleHashes, kitHash } = await verifyDrumkitSnapshot(
     manifest.drumkit,
@@ -170,13 +172,16 @@ export const resolveSongBundleImport = async (
   libraries: ExistingContentLibraries,
 ): Promise<SongImportResolution> => {
   const verified = await verifySongExportBundle(bundle);
-  const duplicateKit = createContentHashIndex(libraries.kits).get(
+  const duplicateKit = createContentHashIndex(libraries.kits, 'kit').get(
     contentHashIndexKey(verified.kitHash),
   );
-  const duplicatePatternPack = createContentHashIndex(libraries.patternPacks).get(
+  const duplicatePatternPack = createContentHashIndex(
+    libraries.patternPacks,
+    'pattern-pack',
+  ).get(
     contentHashIndexKey(verified.patternPackHash),
   );
-  const duplicateSong = createContentHashIndex(libraries.songs).get(
+  const duplicateSong = createContentHashIndex(libraries.songs, 'song').get(
     contentHashIndexKey(verified.songHash),
   );
   const selectedKitId = duplicateKit?.id || bundle.manifest.drumkit.kit.id;
@@ -193,6 +198,9 @@ export const resolveSongBundleImport = async (
       ...bundle.manifest.song,
       selectedKitId,
       patternPackId,
+      kitContentHash: verified.kitHash.contentHash,
+      patternPackContentHash: verified.patternPackHash.contentHash,
+      ...verified.songHash,
     },
   };
 };
@@ -205,7 +213,9 @@ const isStringArray = (value: unknown): value is string[] => (
   Array.isArray(value) && value.every(item => typeof item === 'string')
 );
 
-const assertSavedSongShape: (value: unknown) => asserts value is SavedSong = (value) => {
+const assertSavedSongShape: (
+  value: unknown,
+) => asserts value is SavedSong = (value) => {
   if (
     !isRecord(value)
     || typeof value.id !== 'string'
@@ -218,7 +228,7 @@ const assertSavedSongShape: (value: unknown) => asserts value is SavedSong = (va
       && (!Array.isArray(value.tempoChanges)
         || !value.tempoChanges.every(item => item === null
           || (typeof item === 'number' && Number.isFinite(item) && item > 0))))
-    || !hasCurrentContentHash(value)
+    || !hasCurrentContentHash(value, 'song')
     || typeof value.kitContentHash !== 'string'
     || typeof value.patternPackContentHash !== 'string'
   ) {
@@ -239,7 +249,7 @@ const assertSongManifestShape: (
   assertSavedSongShape(value.song);
   assertDrumkitSnapshotShape(value.drumkit);
   assertPatternPackShape(value.patternPack);
-  if (!hasCurrentContentHash(value.patternPack)) {
+  if (!hasCurrentContentHash(value.patternPack, 'pattern-pack')) {
     throw new Error('Song bundle pattern-pack content hash is missing or unsupported');
   }
 };

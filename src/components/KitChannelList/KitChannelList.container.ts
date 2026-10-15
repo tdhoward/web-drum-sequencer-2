@@ -1,7 +1,11 @@
 import { connect } from 'react-redux';
 import {
   channelsSelector,
+  createRecordedUserSample,
+  createUploadedUserSample,
   deleteChannel,
+  loadSampleAsset,
+  replaceChannelVelocityLayers,
   selectedChannelSelector,
   saveEditedUserSample,
   setChannelGain,
@@ -10,11 +14,13 @@ import {
   setChannelPan,
   setChannelPitchCoarse,
   setChannelReverb,
-  setSampleAlignmentOffset,
   updateChannelOrder,
   userSamplesSelector,
 } from '../../common';
+import type { VelocityLayer } from '../../common';
+import type { SampleAlignmentTransform } from '../../common';
 import { playNoteNow } from '../../services/audioScheduler';
+import factorySamples from '../../samples.config';
 import { KitChannelListComponent } from './KitChannelList.component';
 import type { LegacyChannel } from '../../common';
 import type { AppDispatch } from '../../store';
@@ -39,14 +45,25 @@ type KitChannelListDispatchProps = {
   setChannelPan: (channelId: string, pan: number) => void;
   setChannelPitchCoarse: (channelId: string, pitchCoarse: number) => void;
   setChannelReverb: (channelId: string, reverb: number) => void;
-  setSampleAlignmentOffset: (sampleId: string, alignmentOffset: number) => void;
+  applyVelocityLayers: (
+    channelId: string,
+    layers: VelocityLayer[],
+    sampleUrlsByLayerId: Record<string, string>,
+  ) => Promise<void>;
   saveEditedUserSample: (
     channelId: string,
     audioBuffer: AudioBuffer,
     sourceName?: string,
     sampleName?: string,
     replaceSampleId?: string,
-  ) => Promise<void>;
+    assignToChannel?: boolean,
+    alignmentTransform?: SampleAlignmentTransform,
+  ) => Promise<string>;
+  createUploadedUserSample: (file: File) => Promise<string>;
+  createRecordedUserSample: (
+    audioBuffer: AudioBuffer,
+    sampleName: string,
+  ) => Promise<string>;
   updateChannelOrder: (oldIndex: number, newIndex: number) => void;
 };
 
@@ -91,8 +108,18 @@ const mapDispatchToProps = (dispatch: AppDispatch): KitChannelListDispatchProps 
   setChannelReverb: (channelId, reverb) => {
     dispatch(setChannelReverb(channelId, reverb));
   },
-  setSampleAlignmentOffset: (sampleId, alignmentOffset) => {
-    dispatch(setSampleAlignmentOffset({ sampleId, alignmentOffset }));
+  applyVelocityLayers: async (channelId, layers, sampleUrlsByLayerId) => {
+    const uniqueSampleUrls = [...new Set(Object.values(sampleUrlsByLayerId))];
+    uniqueSampleUrls.forEach((sampleUrl) => {
+      const sourceType = factorySamples.some(sample => sample.url === sampleUrl)
+        ? 'factory'
+        : 'user';
+      dispatch(loadSampleAsset(sampleUrl, sourceType) as unknown as AppAction);
+    });
+    dispatch(replaceChannelVelocityLayers({
+      channelId,
+      velocityLayers: layers,
+    }));
   },
   saveEditedUserSample: (
     channelId,
@@ -100,6 +127,8 @@ const mapDispatchToProps = (dispatch: AppDispatch): KitChannelListDispatchProps 
     sourceName,
     sampleName,
     replaceSampleId,
+    assignToChannel,
+    alignmentTransform,
   ) => (
     dispatch(saveEditedUserSample(
       channelId,
@@ -107,7 +136,17 @@ const mapDispatchToProps = (dispatch: AppDispatch): KitChannelListDispatchProps 
       sourceName,
       sampleName,
       replaceSampleId,
-    ) as unknown as AppAction) as unknown as Promise<void>
+      assignToChannel,
+      alignmentTransform,
+    ) as unknown as AppAction) as unknown as Promise<string>
+  ),
+  createUploadedUserSample: file => (
+    dispatch(createUploadedUserSample(file) as unknown as AppAction) as unknown as Promise<string>
+  ),
+  createRecordedUserSample: (audioBuffer, sampleName) => (
+    dispatch(
+      createRecordedUserSample(audioBuffer, sampleName) as unknown as AppAction,
+    ) as unknown as Promise<string>
   ),
   updateChannelOrder: (oldIndex, newIndex) => {
     dispatch(updateChannelOrder(oldIndex, newIndex));
@@ -155,22 +194,36 @@ const mergeProps = (
   onSetReverb: (channel: LegacyChannel, event: Event) => {
     dispatchProps.setChannelReverb(getKitChannelId(channel), getEventNumber(event));
   },
-  onSetSampleAlignment: (channel: LegacyChannel, alignmentOffset: number) => {
-    dispatchProps.setSampleAlignmentOffset(channel.sampleId, alignmentOffset);
-  },
+  onApplyVelocityLayers: (
+    channel: LegacyChannel,
+    layers: VelocityLayer[],
+    sampleUrlsByLayerId: Record<string, string>,
+  ) => dispatchProps.applyVelocityLayers(
+    getKitChannelId(channel),
+    layers,
+    sampleUrlsByLayerId,
+  ),
   onSaveEditedSample: (
     channel: LegacyChannel,
     audioBuffer: AudioBuffer,
+    sourceName: string,
     sampleName: string,
-    replaceExisting: boolean,
+    replaceSampleId?: string,
+    alignmentTransform?: SampleAlignmentTransform,
   ) => (
     dispatchProps.saveEditedUserSample(
       getKitChannelId(channel),
       audioBuffer,
-      channel.name || channel.sample || channel.id,
+      sourceName,
       sampleName,
-      replaceExisting ? channel.sample : undefined,
+      replaceSampleId,
+      false,
+      alignmentTransform,
     )
+  ),
+  onCreateUploadedSample: (file: File) => dispatchProps.createUploadedUserSample(file),
+  onCreateRecordedSample: (audioBuffer: AudioBuffer, sampleName: string) => (
+    dispatchProps.createRecordedUserSample(audioBuffer, sampleName)
   ),
 });
 

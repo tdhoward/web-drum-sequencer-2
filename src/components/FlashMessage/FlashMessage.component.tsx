@@ -22,6 +22,11 @@ const TOAST_MESSAGES: Record<string, ToastMessage> = {
     detail: 'Check the sample file and try again.',
     tone: 'error',
   },
+  [FLASH_MESSAGES.SAMPLE_DELETE_IN_USE]: {
+    title: 'Sample is still in use',
+    detail: 'Remove it from active layers and saved Kits before deleting it.',
+    tone: 'error',
+  },
   [FLASH_MESSAGES.PRESET_SAVED]: {
     title: 'Kit saved',
     detail: 'Your user kit is ready to use.',
@@ -90,6 +95,11 @@ const TOAST_MESSAGES: Record<string, ToastMessage> = {
     title: 'Kit transfer failed',
     detail: 'The file may be invalid or incomplete. Check it and try again.',
     tone: 'error',
+  },
+  [FLASH_MESSAGES.VELOCITY_LAYER_SAMPLE_CHANGED]: {
+    title: 'Velocity-layer sample changed',
+    detail: 'The layer containing velocity 64 changed. Other velocity layers were left unchanged.',
+    tone: 'success',
   },
 };
 

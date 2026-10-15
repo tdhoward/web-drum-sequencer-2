@@ -1,4 +1,5 @@
 import { isValidPercussionType } from './percussion';
+import { validateVelocityLayers } from './velocityLayers';
 import type {
   EntityState,
   Kit,
@@ -9,6 +10,10 @@ import type {
   PatternsState,
   SamplesState,
   SequencerModelState,
+} from './sequencerModel';
+import {
+  MAX_NOTE_VELOCITY,
+  MIN_NOTE_VELOCITY,
 } from './sequencerModel';
 
 const hasEntity = <TEntity>(
@@ -120,9 +125,18 @@ export const validateSequencerModelState = (state: SequencerModelStateInput = {}
     if (!kits?.entities?.[kitChannel.kitId]?.channelIds?.includes(channelId)) {
       addError(errors, `kitChannel ${channelId} is not listed by kit ${kitChannel.kitId}`);
     }
-    if (!hasEntity(samples, kitChannel.sampleId)) {
-      addError(errors, `kitChannel ${channelId} references missing sampleId: ${kitChannel.sampleId}`);
-    }
+    validateVelocityLayers(kitChannel.velocityLayers || []).forEach((error) => {
+      addError(errors, `kitChannel ${channelId} ${error}`);
+    });
+    (kitChannel.velocityLayers || []).forEach((layer) => {
+      if (!hasEntity(samples, layer.sampleId)) {
+        addError(
+          errors,
+          `kitChannel ${channelId} velocityLayer ${layer.id} `
+          + `references missing sampleId: ${layer.sampleId}`,
+        );
+      }
+    });
     if (!isValidPercussionType(kitChannel.percussionType)) {
       addError(errors, `kitChannel ${channelId} has invalid percussionType: ${kitChannel.percussionType}`);
     }
@@ -172,6 +186,17 @@ export const validateSequencerModelState = (state: SequencerModelStateInput = {}
     const note = notes?.entities[noteId];
     if (!note) {
       return;
+    }
+    if (
+      !Number.isInteger(note.velocity)
+      || note.velocity < MIN_NOTE_VELOCITY
+      || note.velocity > MAX_NOTE_VELOCITY
+    ) {
+      addError(
+        errors,
+        `note ${noteId} velocity must be an integer from `
+        + `${MIN_NOTE_VELOCITY} to ${MAX_NOTE_VELOCITY}`,
+      );
     }
     const pattern = patterns?.entities?.[note.patternId];
     if (!pattern) {

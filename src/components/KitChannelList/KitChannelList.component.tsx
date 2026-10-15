@@ -23,13 +23,12 @@ import {
   getPercussionTypeLabel,
 } from '../../common/percussion';
 import {
-  getUserSampleDisplayName,
-  getUserSampleId,
   type LegacyChannel,
+  type SampleAlignmentTransform,
   type UserSample,
+  type VelocityLayer,
 } from '../../common';
 import construction from '../../assets/images/construction-light.svg';
-import factorySamples from '../../samples.config';
 
 const kitChannelGridColumns = 'minmax(8rem, 11rem) 1.2rem 3rem 15rem minmax(10rem, 1fr) repeat(4, 5.125rem) 2rem';
 
@@ -39,7 +38,6 @@ type KitChannelListChannel = LegacyChannel & {
   pan?: number;
   pitchCoarse?: number;
   reverb?: number;
-  sampleLoaded?: boolean;
   solo?: boolean;
 };
 
@@ -55,13 +53,24 @@ type KitChannelListComponentProps = {
   onSetPan: (channel: KitChannelListChannel, event: Event) => void;
   onSetChannelPitchCoarse: (channel: KitChannelListChannel, event: Event) => void;
   onSetReverb: (channel: KitChannelListChannel, event: Event) => void;
-  onSetSampleAlignment: (channel: KitChannelListChannel, alignmentOffset: number) => void;
+  onApplyVelocityLayers: (
+    channel: KitChannelListChannel,
+    layers: VelocityLayer[],
+    sampleUrlsByLayerId: Record<string, string>,
+  ) => Promise<void> | void;
   onSaveEditedSample: (
     channel: KitChannelListChannel,
     audioBuffer: AudioBuffer,
+    sourceName: string,
     sampleName: string,
-    replaceExisting: boolean,
-  ) => Promise<void> | void;
+    replaceSampleId?: string,
+    alignmentTransform?: SampleAlignmentTransform,
+  ) => Promise<string | void> | string | void;
+  onCreateUploadedSample: (file: File) => Promise<string>;
+  onCreateRecordedSample: (
+    audioBuffer: AudioBuffer,
+    sampleName: string,
+  ) => Promise<string>;
 };
 
 type KitChannelListComponentState = {
@@ -268,12 +277,26 @@ const MoveImage = styled(Image)`
 
 const getKitChannelId = (channel: KitChannelListChannel): string => channel.kitChannelId || channel.id;
 
-const getSampleSelectChannel = (channel: KitChannelListChannel): KitChannelListChannel => ({
+const getReferenceSampleTarget = (channel: KitChannelListChannel) => ({
+  channelId: getKitChannelId(channel),
+  channelName: channel.name,
+  sampleUrl: channel.referenceSampleUrl,
+  sampleLoaded: channel.referenceSampleLoaded,
+});
+
+const getKitEditChannel = (channel: KitChannelListChannel): KitChannelListChannel => ({
   ...channel,
   id: getKitChannelId(channel),
 });
 
-const getKitEditChannel = getSampleSelectChannel;
+export const getKitChannelWaveformAccessibleName = (
+  channelName: string,
+  layerCount: number,
+): string => (
+  layerCount > 1
+    ? `Edit ${channelName} samples; ${layerCount} velocity layers`
+    : `Edit ${channelName} sample`
+);
 
 export const KitChannelHeader = () => (
   <KitChannelHeaderBar>
@@ -468,6 +491,9 @@ export class KitChannelListComponent extends React.Component<
   render() {
     const {
       channels,
+      onApplyVelocityLayers,
+      onCreateRecordedSample,
+      onCreateUploadedSample,
       onPressHitButton,
       onPressRemove,
       onSaveEditedSample,
@@ -483,14 +509,6 @@ export class KitChannelListComponent extends React.Component<
       percussionMenuChannelId,
       sampleEditorChannel,
     } = this.state;
-    const isEditingFactorySample = factorySamples.some(
-      sample => sample.url === sampleEditorChannel?.sample,
-    );
-    const editedUserSample = sampleEditorChannel && !isEditingFactorySample
-      ? userSamples.find(
-        userSample => getUserSampleId(userSample) === sampleEditorChannel.sample,
-      )
-      : undefined;
 
     return (
       <>
@@ -526,9 +544,10 @@ export class KitChannelListComponent extends React.Component<
                       />
                     ) : (
                       <ChannelNameButton
+                        aria-label={`Rename ${channel.name || channel.id}`}
                         type="button"
-                        onDoubleClick={() => this.startEditingChannelName(channel)}
-                        title="Double-click to rename"
+                        onClick={() => this.startEditingChannelName(channel)}
+                        title={`Rename ${channel.name || channel.id}`}
                       >
                         <Text as="span" color="nearWhite" fontSize={2} lineHeight="1.2em">
                           {channel.name || channel.id}
@@ -585,18 +604,20 @@ export class KitChannelListComponent extends React.Component<
                   />
                 </Box>
                 <Box minWidth="0">
-                  <SampleSelect channel={getSampleSelectChannel(channel)} showLabel={false} />
+                  <SampleSelect target={getReferenceSampleTarget(channel)} showLabel={false} />
                 </Box>
                 <WaveformCell>
                   <SampleWaveform
-                    alignmentOffset={channel.alignmentOffset || 0}
-                    onAlignmentChange={alignmentOffset => (
-                      this.props.onSetSampleAlignment(channel, alignmentOffset)
+                    accessibleName={getKitChannelWaveformAccessibleName(
+                      channel.name || channel.id,
+                      channel.velocityLayerCount,
                     )}
+                    alignmentOffset={channel.referenceAlignmentOffset}
+                    layerCount={channel.velocityLayerCount}
                     onClick={() => this.openSampleEditor(channel)}
-                    sampleContentHash={channel.sampleContentHash}
-                    sampleUrl={channel.sample}
-                    title="Edit sample"
+                    sampleContentHash={channel.referenceSampleContentHash}
+                    sampleUrl={channel.referenceSampleUrl}
+                    title={`Edit ${channel.name || channel.id} samples`}
                   />
                 </WaveformCell>
                 {detuneSupported ? (
@@ -660,22 +681,39 @@ export class KitChannelListComponent extends React.Component<
           <AddChannelButton />
         </KitChannelListBox>
         <SampleEditorModal
-          canReplaceExisting={Boolean(editedUserSample)}
           channel={sampleEditorChannel}
-          existingSampleName={editedUserSample
-            ? getUserSampleDisplayName(editedUserSample)
-            : undefined}
+          initialSelectedLayerId={sampleEditorChannel?.referenceVelocityLayerId}
+          onApplyVelocityLayers={(layers, sampleUrlsByLayerId) => (
+            sampleEditorChannel
+              ? onApplyVelocityLayers(
+                sampleEditorChannel,
+                layers,
+                sampleUrlsByLayerId,
+              )
+              : undefined
+          )}
           onClose={this.closeSampleEditor}
-          onSaveEditedSample={(audioBuffer, sampleName, replaceExisting) => (
+          onCreateRecordedSample={onCreateRecordedSample}
+          onCreateUploadedSample={onCreateUploadedSample}
+          onSaveEditedSample={(
+            audioBuffer,
+            sourceName,
+            sampleName,
+            replaceSampleId,
+            alignmentTransform,
+          ) => (
             sampleEditorChannel
               ? onSaveEditedSample(
                 sampleEditorChannel,
                 audioBuffer,
+                sourceName,
                 sampleName,
-                replaceExisting,
+                replaceSampleId,
+                alignmentTransform,
               )
               : undefined
           )}
+          userSamples={userSamples}
         />
       </>
     );

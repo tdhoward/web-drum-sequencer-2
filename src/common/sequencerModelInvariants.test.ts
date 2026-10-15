@@ -57,7 +57,7 @@ describe('sequencer model invariants', () => {
       laneId: 'missing-lane',
       step: 0,
       pitch: 0,
-      velocity: 1,
+      velocity: 64,
     };
 
     expect(validateSequencerModelState(state)).toContain(
@@ -76,7 +76,7 @@ describe('sequencer model invariants', () => {
       laneId: state.patterns.entities[state.song.selectedPatternId].laneIds[0],
       step: 0,
       pitch: 0,
-      velocity: 1,
+      velocity: 64,
     };
 
     expect(validateSequencerModelState(state)).toContain(
@@ -87,12 +87,91 @@ describe('sequencer model invariants', () => {
   test('detects kit channels that reference missing samples', () => {
     const state = clone(createDefaultSequencerState());
     const kitChannelId = state.kitChannels.ids[0];
+    const layer = state.kitChannels.entities[kitChannelId].velocityLayers[0];
 
-    state.kitChannels.entities[kitChannelId].sampleId = 'missing-sample';
+    layer.sampleId = 'missing-sample';
 
     expect(validateSequencerModelState(state)).toContain(
-      `kitChannel ${kitChannelId} references missing sampleId: missing-sample`,
+      `kitChannel ${kitChannelId} velocityLayer ${layer.id} `
+      + 'references missing sampleId: missing-sample',
     );
+  });
+
+  test('detects notes outside the integer MIDI velocity domain', () => {
+    const state = clone(createDefaultSequencerState());
+    const patternId = state.song.patternIds[0];
+    const laneId = state.patterns.entities[patternId].laneIds[0];
+    const noteId = 'fractional-velocity';
+    state.notes.ids.push(noteId);
+    state.notes.entities[noteId] = {
+      id: noteId,
+      patternId,
+      laneId,
+      step: 0,
+      pitch: 0,
+      velocity: 64.5,
+    };
+
+    expect(validateSequencerModelState(state)).toContain(
+      `note ${noteId} velocity must be an integer from 0 to 127`,
+    );
+  });
+
+  test('accepts valid velocity layers and checks every layer sample reference', () => {
+    const state = clone(createDefaultSequencerState());
+    const kitChannelId = state.kitChannels.ids[0];
+    const sampleId = state.kitChannels.entities[kitChannelId].velocityLayers[0].sampleId;
+    state.kitChannels.entities[kitChannelId].velocityLayers = [
+      {
+        id: `${kitChannelId}:soft`,
+        sampleId,
+        maxVelocity: 63,
+        alignmentOffset: 0,
+        trimDb: -3,
+      },
+      {
+        id: `${kitChannelId}:hard`,
+        sampleId,
+        maxVelocity: 127,
+        alignmentOffset: 0.01,
+        trimDb: 0,
+      },
+    ];
+
+    expect(validateSequencerModelState(state)).toEqual([]);
+
+    state.kitChannels.entities[kitChannelId].velocityLayers[1].sampleId = 'missing-layer-sample';
+    expect(validateSequencerModelState(state)).toContain(
+      `kitChannel ${kitChannelId} velocityLayer ${kitChannelId}:hard `
+      + 'references missing sampleId: missing-layer-sample',
+    );
+  });
+
+  test('detects invalid velocity layer ranges', () => {
+    const state = clone(createDefaultSequencerState());
+    const kitChannelId = state.kitChannels.ids[0];
+    const sampleId = state.kitChannels.entities[kitChannelId].velocityLayers[0].sampleId;
+    state.kitChannels.entities[kitChannelId].velocityLayers = [
+      {
+        id: `${kitChannelId}:soft`,
+        sampleId,
+        maxVelocity: 80,
+        alignmentOffset: 0,
+        trimDb: 0,
+      },
+      {
+        id: `${kitChannelId}:hard`,
+        sampleId,
+        maxVelocity: 80,
+        alignmentOffset: 0,
+        trimDb: 0,
+      },
+    ];
+
+    expect(validateSequencerModelState(state)).toEqual(expect.arrayContaining([
+      `kitChannel ${kitChannelId} velocityLayers[1].maxVelocity must be strictly increasing`,
+      `kitChannel ${kitChannelId} velocityLayers must end at 127`,
+    ]));
   });
 
   test('detects kit channels with invalid percussion types', () => {

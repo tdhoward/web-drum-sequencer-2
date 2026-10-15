@@ -1,3 +1,5 @@
+import { normalizeMidiVelocity } from '../common/velocityLayers';
+
 const MAX_HUMANIZE_TIMING_SECONDS = 0.02;
 const MAX_HUMANIZE_VELOCITY_SIGMA = 0.12;
 const MAX_GAUSSIAN_DEVIATIONS = 3;
@@ -67,11 +69,12 @@ export const humanizeNote = ({
   velocity,
 }: HumanizeNoteArgs): HumanizedNote => {
   const depth = getHumanizeDepth(humanize);
+  const authoredVelocity = normalizeMidiVelocity(velocity);
 
   if (depth === 0) {
     return {
       time,
-      velocity,
+      velocity: authoredVelocity,
     };
   }
 
@@ -90,6 +93,6 @@ export const humanizeNote = ({
 
   return {
     time: time + timingOffset,
-    velocity: Math.max(0, velocity * velocityMultiplier),
+    velocity: normalizeMidiVelocity(authoredVelocity * velocityMultiplier),
   };
 };

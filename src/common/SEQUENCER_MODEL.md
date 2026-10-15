@@ -1,8 +1,10 @@
 # Sequencer model
 
-The app now stores the musical document in a normalized, kit-aware model. The
-current UI still uses compatibility selectors that expose the older channel and
-note shapes, but new model work should build on the domain objects below.
+The app stores the musical document in a normalized, kit-aware model. Selected-
+kit and note view models still adapt lane assignments for older UI call sites,
+but resolved channels always carry their complete velocity-layer partition.
+Runtime audio code does not fall back to channel-level sample or alignment
+fields. New model work should build on the domain objects below.
 
 ## Songs
 
@@ -128,14 +130,16 @@ note
   velocity
 ```
 
-`velocity` is an authored per-note emphasis multiplier, not a kit-channel
-setting. The default is `1`, meaning 100% of the selected kit channel's level.
-Values below or above `1` can create ghost notes and accents, such as `0.5`
-for 50% or `1.25` for 125%. The supported authored range is currently clamped
-to `0` through `2`.
+`velocity` is an authored MIDI-style integer, not a kit-channel setting. The
+default is `64`, which preserves the prior 100% level. Values 1 through 127 are
+audible and select one velocity layer; 0 is reserved for silent migrated data.
+The Pattern editor authors values from 1 through 127.
 
-Pattern data may omit `velocity` when it is `1`. The normalized in-memory note
-state keeps `velocity: 1` so reducers and selectors can use a simple shape.
+Velocity gain preserves the app's earlier 0%-200% anchors with a piecewise
+linear conversion: 0 is silent, 32 is 50%, 64 is 100%, and 127 is 200%.
+
+Pattern data may omit `velocity` when it is `64`. The normalized in-memory note
+state keeps `velocity: 64` so reducers and selectors can use a simple shape.
 
 `note.id` is local normalized-state identity used by reducers, rendering, and
 audio scheduling. It is not musical content and is not portable. Serialized
@@ -160,10 +164,27 @@ velocity variation for each note occurrence. `humanize: 0` is an exact bypass.
 The current maximum setting uses a 20ms timing standard deviation and a 12%
 velocity standard deviation, with bounded output.
 
-Per-note authored velocity is applied as the input to the humanize velocity
-transform. In effect, playback uses the note's authored multiplier first and
-then applies deterministic humanize variation before the audio router sets the
-per-voice gain.
+Per-note authored velocity is the input to the humanize transform. Humanize
+clamps and rounds the effective velocity to 0-127. Playback uses that same
+integer to select exactly one channel velocity layer and to calculate the
+per-voice gain. Layer trim is multiplied into that voice gain before channel
+gain and before the channel's dry and reverb paths.
+
+The complete playback order is:
+
+```text
+authored MIDI velocity
+  -> deterministic humanize variation
+  -> clamp and round to an effective 0-127 integer
+  -> select exactly one velocity layer
+  -> effective-velocity gain × layer trim (dB converted to gain)
+  -> channel gain, mute, and solo
+  -> dry pan path + channel reverb send
+  -> master output
+```
+
+Pitch and fine pitch are channel-level source detune. Pan, reverb, channel gain,
+mute, and solo never vary by velocity layer.
 
 ## Pattern packs
 
@@ -211,6 +232,8 @@ note model.
 
 Standalone `.wds-pattern-pack` exports contain musical note properties such as
 beat, pitch, and non-default velocity, but not normalized `note.id` values.
+Writers and readers use bundle v2 and encode velocity as a MIDI-style integer,
+omitting the default value 64. Unsupported bundle versions are rejected.
 Export retains only lanes currently represented by the selected kit and filters
 each pattern slot's events to its active time-signature, bar, and step length.
 Notes on unresolved lanes and notes beyond the active pattern length remain in
@@ -235,6 +258,8 @@ unresolved lanes, and notes beyond active Pattern lengths are omitted. Import
 verifies the complete dependency hash chain before changing Redux content,
 resolves matching Kit, Pattern pack, and Song content by hash, and remaps the
 saved Song to collision-safe local dependency IDs when new objects are needed.
+Song writers and readers use bundle v2; unsupported versions are rejected
+before changing application state.
 
 ```text
 kit
@@ -261,7 +286,7 @@ kitChannel
   articulation
   register
   tags[]
-  sampleId
+  velocityLayers[]
   gain
   pan
   muted
@@ -270,13 +295,19 @@ kitChannel
   pitchCoarse
   pitchFine
 
+velocityLayer
+  id
+  sampleId
+  maxVelocity (inclusive)
+  alignmentOffset (seconds, defaults to 0)
+  trimDb (defaults to 0)
+
 sample
   id
   name
   url
   sourceType
   fileName
-  alignmentOffset (seconds, defaults to 0)
   byteLength
   contentHashAlgorithm
   contentHashVersion
@@ -301,37 +332,110 @@ User-created channels can start as `generic_percussion` and be corrected later.
 Factory kits should provide explicit `name` and `percussionType` values so
 patterns can be remapped to another kit without rewriting note data.
 
-`sample` is the normalized entity used by kit channels. `userSample` is the
-persisted user-facing library metadata used by the sample selector and sample
-manager. The audio payload for uploaded, edited, and recorded samples is stored in
+Every normalized Kit channel has at least one velocity layer. Layer order is
+velocity order, the first range starts at 1, and each later range starts one
+above the preceding layer's inclusive `maxVelocity`. Boundaries are strictly
+increasing and the final layer always ends at 127. Layer IDs are stable local
+identity. A legacy one-sample channel normalizes deterministically to
+`<channel-id>:layer:1`, covering 1-127.
+
+Normalization repairs missing or malformed boundaries deterministically and
+rejects more than 127 layers; bundle readers validate partitions before import.
+The editor limits layer creation to eight and trim editing to -24 through
++12 dB. These are UI limits, not schema limits: the model allows any complete
+1-127 partition and finite trim values. Splitting copies the sample, alignment,
+and trim; removing a layer extends its predecessor, or its successor when
+removing the first layer. A one-velocity range cannot split, and the final
+remaining layer cannot be removed.
+
+The layer containing velocity 64 is the reference layer used by the Kit-row
+sample selector, main waveform, displayed duration, default editor selection,
+and Hit-button audition. Playback selectors resolve every layer so scheduled
+notes can choose from the complete partition. Channel-level `sample`,
+`sampleId`, and `alignmentOffset` fields are accepted only at normalization and
+persistence-migration boundaries; normalized Redux channels and resolved
+runtime channel view models do not store or publish those fields.
+
+The Kit-row view model exposes that resolved reference layer, its inclusive
+range, the total layer count, and the reference sample's URL, content revision,
+load status, and alignment. The main row sample selector changes only this
+layer. Its waveform is a single editor button: multi-layer rows show an
+informational `×N` badge beside duration, include the layer count in the
+accessible name, and show alignment markers only for a non-default reference
+offset. Beat Alignment is edited in the unified editor rather than inline in
+the row.
+
+`sample` is reusable normalized asset metadata referenced by velocity layers.
+It does not contain channel-specific alignment. `userSample` is the persisted
+user-facing library metadata used by the sample selector and sample manager.
+The audio payload for uploaded, edited, and recorded samples is stored in
 IndexedDB and mirrored in the in-memory sample store under `userSample.id`.
 Older persisted user-sample lists may contain bare string ids; reducers should
 continue to normalize those entries when they are renamed or otherwise edited.
 
-Each sample may store an `alignmentOffset` in seconds from its beginning. Zero
-preserves normal playback. The waveform's alignment mode clamps the value to the
-decoded sample duration and offers drag/tap placement, reset, and 10 ms steps.
+Each velocity layer stores an `alignmentOffset` in seconds from its sample
+beginning. Zero preserves normal playback. The waveform's alignment mode clamps
+the value to the decoded sample duration and offers drag/tap placement, reset,
+and 10 ms steps.
+Audio Edit and Beat Alignment share the selected layer's waveform, with
+mode-specific Pointer Event behavior. While a waveform edit is pending, Beat
+Alignment displays the rendered trim/normalize output. The draft preserves the
+alignment point in source-sample coordinates; the final offset subtracts the
+leading trim duration and clamps to the rendered sample duration.
 For a note whose beat time is `T`, playback begins at `T - alignmentOffset` so
 the marker lands on the beat. The scheduler expands its lookahead by the offset;
 at transport startup it clamps source start times to the current Web Audio time
 instead of passing a negative or already elapsed scheduling time.
+For layered channels, scheduler lookahead uses the maximum alignment offset
+across all layers, while the actual source start uses only the selected layer's
+offset. Hit-button audition uses velocity 64 and therefore the reference layer.
+
+Sample loading status is runtime-only state keyed by sample ID. It is excluded
+from persistence and musical-content hashes; reloading the application starts
+with an empty status map even though reusable sample metadata remains stored.
+Startup and reconnect loading scan every unique velocity-layer sample in the
+active Kit. Preset and import loading do the same for incoming channels.
+Concurrent requests for one sample share the same IndexedDB/fetch/decode
+operation, while each resolved layer exposes the status of its own sample so a
+failure in one layer does not change another layer's result.
 
 Sample editing defaults to non-destructive save-copy behavior. Trimming or
 normalizing a factory sample creates a new `userSample` and a corresponding
 `sample` entity rather than mutating the source sample. An existing user sample
 may instead be explicitly replaced under its current ID, which updates every
-channel that references it. Replacement eligibility requires the ID to exist in
-the user-sample registry and not in the factory catalog. The current editor
-supports waveform selection, auto-select, trim, normalize, original/edited
-preview, and save-as naming.
+layer that references it. Replacement eligibility requires the ID to exist in
+the user-sample registry and not in the factory catalog. Replacement alignment
+transforms apply to matching layers in active channels and saved user Kit
+presets; affected saved Kit content hashes are invalidated.
+The editor supports waveform selection, auto-select, trim, normalize,
+original/edited preview, and save-as naming. Its transactional primary action
+is `Apply`, `Save Copy & Apply`, or `Replace & Apply`. Uploading or recording
+inside the editor creates a library asset without assigning it to the channel
+until the complete valid layer draft is applied. Failed sample persistence
+does not commit that draft.
+This guarantee applies to persistence failure before draft application. Asset
+persistence and the atomic layer-partition update are separate operations;
+a successful global replacement is not rolled back if a later apply step fails.
+After a successful save, pending waveform edits are cleared and the saved draft
+is retained for an Apply-only retry if layer application fails. Retrying does
+not save another asset or repeat the alignment transform, and does not depend
+on preview loading succeeding. Apply errors survive preview reloads, and the
+editor announces saved copies or shared replacements that Cancel cannot undo.
 Trim applies a tiny fade only at the end boundary to avoid blunting drum
 attacks. User samples can be renamed, previewed, and deleted through the Kit
 workspace sample manager, but deletion is disabled while the sample is assigned
-to a channel.
+to an active channel layer or any saved user Kit layer. Usage text includes
+every matching layer and its inclusive velocity range; saved references also
+identify the Kit by name. Details wrap without requiring hover. The deletion
+action repeats both checks against current state so stale UI state cannot
+remove a referenced sample. A sample becomes deletable after its final active
+or saved Kit reference is removed; editing an active Kit alone does not change
+its saved preset.
 
 Recorded device-audio samples are user samples. The recording dialog stores the
-final sample as WAV data in IndexedDB and assigns it to the selected kit channel
-through the same channel-sample flow used by uploads and edited samples.
+final sample as WAV data in IndexedDB and assigns it to the selected channel's
+reference layer through the same explicit reference-layer action used by main-
+row uploads and sample selection.
 
 ## Content hashes and duplicate imports
 
@@ -366,9 +470,11 @@ to interchange.
 SHA-256 is the initial hash algorithm. Although no finite hash can guarantee
 mathematical uniqueness, SHA-256 provides practical global uniqueness for this
 use case and is available through the browser's Web Crypto API. Every hash input
-starts with an entity-type and schema-version marker, such as
-`wds:kit:musical-content:v1`, so a later model change can introduce a new hash
-version without changing the meaning of existing hashes.
+starts with an entity-type and schema-version marker. Raw sample fingerprints
+remain `wds:sample:musical-content:v1`; current Kit, Pattern Pack, and Song
+musical-content hashes use their respective v2 markers. Keeping versions per
+entity type allows a model change to advance the affected hashes without
+invalidating unchanged raw sample fingerprints.
 
 ### Sample hashes
 
@@ -396,9 +502,10 @@ entity's content hash rather than a machine-local ID; normalized runtime state
 continues to use local IDs.
 
 A drumkit hash includes channel order, percussion/lane metadata, channel audio
-settings, sample alignment offsets, and the stored content hash of every
-referenced sample. It excludes kit, channel, and sample IDs as well as sample
-names, filenames, and URLs.
+settings, and each channel's complete ordered velocity-layer list. Every layer
+contributes its sample content hash, inclusive maximum velocity, alignment
+offset, and trim dB. It excludes kit, channel, sample, and layer IDs as well as
+derived layer labels, sample names, filenames, and URLs.
 
 A pattern-pack hash includes tempo and swing, ordered pattern settings, ordered
 lane metadata, and notes sorted and represented by their semantic pattern,
@@ -438,6 +545,11 @@ base64-encoded copies of the raw sample payloads. Payload keys are sample
 content hashes, so a sample referenced more than once is stored only once.
 Import requires the GZIP wrapper; uncompressed `.wds-kit` files are invalid.
 
+Kit writers and readers use bundle v2. Each channel carries its complete layer
+partition and every layer references portable sample metadata. Import
+resolves samples by verified content hash and rewrites each layer to local
+sample IDs and URLs. Unsupported bundle versions are rejected.
+
 Import parses the complete file and verifies every raw sample payload and the
 canonical kit hash before changing Redux state. Matching user samples and saved
 kit presets are reused by content hash. New imports receive collision-safe local
@@ -445,25 +557,21 @@ kit, channel, and sample IDs, their sample payloads are stored in IndexedDB, and
 the imported kit is then saved as a user preset and selected. Portable IDs from
 the bundle are never treated as authoritative local IDs.
 
-### Import and export plan
+### Bundle and persistence schema boundaries
 
-1. Calculate and persist a full raw-byte sample hash whenever a sample is
-   uploaded, recorded, edited, created by migration, or imported.
-2. Add versioned canonical projection and hashing functions for samples,
-   drumkits, pattern packs, and songs, with fixture tests proving that local ID
-   and name changes do not change musical-content hashes.
-3. Store entity content hashes in library metadata and index entities by entity
-   type, hash algorithm/version, and content hash for constant-time duplicate
-   lookup.
-4. Export a manifest containing the song snapshot, drumkit snapshot,
-   pattern-pack snapshot, sample payloads, and all dependency hashes.
-5. On import, validate and migrate the manifest, verify every included sample's
-   full raw-byte hash, recalculate the canonical drumkit and pattern-pack hashes,
-   and reuse matching global library entities instead of creating duplicates.
-6. Recalculate and verify the song hash from the resolved drumkit hash,
-   pattern-pack hash, arrangement, and tempo changes. Save the imported song
-   with the resolved `selectedKitId` and `patternPackId`, then restore that kit
-   and pattern pack when the song is loaded.
+Redux persistence version 10 migrates version-9 channels and saved Kit presets
+to velocity layers, moving any sample-level alignment to the generated layer.
+Version 11 converts normalized notes and saved Pattern Packs from legacy gain
+multipliers to MIDI-style integer velocity. These migrations are the only
+runtime entry point for the superseded persisted shapes.
+
+Kit, Pattern Pack, and Song file writers and readers support bundle v2 only.
+Kit snapshots contain complete ordered layer partitions and deduplicate sample
+payloads by content hash. Pattern Pack snapshots use integer velocity and omit
+the default 64. Song snapshots embed both current dependency snapshots.
+Readers validate the version, manifest shape, payload hashes, entity hashes,
+and dependency hash chain before changing application state; pre-v2 files are
+rejected rather than migrated.
 
 ## Kit channel mapping
 
@@ -474,8 +582,8 @@ medium-confidence results directly; low-confidence or unresolved results open
 the mapping review dialog before changing kit or pattern state. The dialog can
 accept a fallback, choose another target channel, or leave a lane silent.
 
-The current compatibility UI still reads `kitChannel.laneId`, but
-`kitChannelAssignments` is the forward path for applying a resolved mapping.
+The selected-kit UI view model still adapts assignment lane IDs for sequencing
+call sites, but `kitChannelAssignments` is the source of that mapping.
 
 ```text
 kitChannelMappingResult
@@ -491,6 +599,12 @@ kitChannelMappingResult
 
 ## Compatibility selectors
 
-The existing UI and audio scheduler still expect legacy-shaped `channels[]` and
-`notes[channelId][patternIndex]` data. Keep using the compatibility selectors for
-those call sites until the UI is migrated to the domain model directly.
+The Pattern grid and transport still consume `notes[channelId][patternIndex]`
+and a selected-kit channel array keyed by assignment lane IDs. The selected-kit
+view model resolves sample metadata and loading state for every velocity layer,
+plus explicit `referenceVelocityLayer*` fields for Kit-row presentation. It
+does not flatten a reference sample or alignment back onto the channel.
+
+The audio scheduler consumes the resolved `velocityLayers` array directly.
+Missing layer partitions are invalid normalized state, not a one-sample
+fallback case.

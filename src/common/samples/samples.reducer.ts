@@ -1,5 +1,4 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { Draft } from 'immer';
+import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 import { createSamplesState, sampleIdFromUrl } from '../sequencerModel';
 import type { SamplesState } from '../sequencerModel';
 import type { SampleFingerprint } from '../contentHash';
@@ -20,11 +19,6 @@ type RenameSampleFromUrlPayload = {
 
 type RemoveSampleFromUrlPayload = {
   sampleURL: string;
-};
-
-type SetSampleAlignmentOffsetPayload = {
-  sampleId: string;
-  alignmentOffset: number;
 };
 
 type SetSampleFingerprintPayload = {
@@ -48,7 +42,6 @@ const upsertSampleFromUrl = (
     name,
     url: sampleURL,
     sourceType,
-    alignmentOffset: state.entities[sampleId]?.alignmentOffset || 0,
   };
 };
 
@@ -90,13 +83,6 @@ export const samplesSlice = createSlice({
         return { payload: { sampleURL } };
       },
     },
-    setSampleAlignmentOffset(state, action: PayloadAction<SetSampleAlignmentOffsetPayload>) {
-      const sample = state.entities[action.payload.sampleId];
-      if (sample) {
-        const offset = action.payload.alignmentOffset;
-        sample.alignmentOffset = Number.isFinite(offset) ? Math.max(0, offset) : 0;
-      }
-    },
     setSampleFingerprint: {
       reducer(state, action: PayloadAction<SetSampleFingerprintPayload>) {
         const sampleId = sampleIdFromUrl(action.payload.sampleURL);
@@ -113,7 +99,13 @@ export const samplesSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(channelsSlice.actions.addChannel, (state, action) => {
-        upsertSampleFromUrl(state, action.payload.sample);
+        const channelSamples = createSamplesState([action.payload]);
+        channelSamples.ids.forEach((sampleId) => {
+          if (!state.ids.includes(sampleId)) {
+            state.ids.push(sampleId);
+          }
+          state.entities[sampleId] = channelSamples.entities[sampleId];
+        });
       })
       .addCase(channelsSlice.actions.setChannelSample, (state, action) => {
         upsertSampleFromUrl(state, action.payload.sampleURL, 'user');
@@ -131,7 +123,6 @@ export const {
   addSampleFromUrl,
   renameSampleFromUrl,
   removeSampleFromUrl,
-  setSampleAlignmentOffset,
   setSampleFingerprint,
 } = samplesSlice.actions;
 

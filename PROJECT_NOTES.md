@@ -20,14 +20,14 @@ The app should be organized around three main workspaces:
    * Channel settings should include sample selection plus musical/mix properties such as gain, pan, reverb, and pitch where supported by the existing audio code.
    * Channel samples can be edited from the Kit workspace waveform. The current editor supports manual selection, auto-select, trim, normalize, original/edited preview, and save-as naming.
    * Sample edits default to non-destructive save-copy behavior. Existing user samples may be explicitly replaced in place, while bundled factory samples are always saved as new user-sample copies.
-   * User samples can be managed from the Kit workspace. The current sample manager supports rename, preview, and deletion for unused user samples.
+   * User samples can be managed from the Kit workspace. The current sample manager supports rename, preview, and deletion for user samples unused by active layers or saved user Kits.
 
 2. Pattern workspace
 
    * Edit beat patterns.
    * Patterns should reference logical lanes and resolve through the current kit, but pattern data should not contain full kit definitions.
    * Built-in rhythm content should be selected as human-readable pattern packs, such as `Hip Hop Swing`, with the existing pattern buttons selecting slots inside the loaded pack.
-   * Pattern editing should stay focused on sequencing notes, timing, steps, accents/velocity if supported, and pattern-level behavior.
+   * Pattern editing should stay focused on sequencing notes, timing, steps, MIDI-style velocity, and pattern-level behavior.
 
 3. Song workspace
 
@@ -55,28 +55,45 @@ Preferred model direction:
 
 Current model baseline:
 
+Detailed contracts live in [SEQUENCER_MODEL.md](src/common/SEQUENCER_MODEL.md).
+Velocity layers are implemented; [Velocity Layers: Status and Follow-ups](VELOCITY_LAYERS_NEXT_STEPS.md)
+records editor behavior and the remaining review findings, rather than pending implementation phases.
+
 * `src/common/percussion.ts` defines the controlled percussion vocabulary and the pure `resolveKitChannelMapping` resolver.
 * `kitChannel.percussionType` is required by invariant checks and defaults to `generic_percussion` for new/legacy channels.
+* Normalized Kit channels require a `velocityLayers` partition and no longer store channel-level `sample`, `sampleId`, or `alignmentOffset` fields. Legacy one-sample inputs normalize to one deterministic 1-127 layer only at migration/normalization boundaries. The selected-Kit view model resolves every layer plus explicit velocity-64 reference-layer fields; it does not recreate deprecated channel-level sample or alignment aliases.
+* Sample metadata is reusable and alignment-free. Per-layer alignment lives on the Kit channel layer, and sample load status is runtime-only state keyed by sample ID. Startup, reconnect, and Kit-load paths scan every unique velocity-layer sample, while concurrent requests for the same asset share one decode operation.
 * `kitChannelAssignments` exists as the forward path for applying resolved lane-to-channel mappings.
 * `src/patternPacks/index.ts` exposes factory pattern packs with human-readable names. The Pattern workspace dropdown loads a pack; the existing 1-8 pattern buttons select slots within that pack.
 * Bundled factory presets use semantic channel IDs and explicit channel names/percussion metadata; `empty_channel` has been removed from factory preset data.
-* The compatibility UI/audio path now exposes assignment lane IDs through `channelsSelector`, so loaded pack notes can play through the current kit without changing kit samples.
+* The selected-Kit view model exposes assignment lane IDs through `channelsSelector`, so loaded pack notes can play through the current kit without changing Kit samples. The audio scheduler requires the resolved velocity-layer partition and has no one-sample channel fallback.
 * Kit preset loading changes kit channels/samples/name and rebuilds assignments from the selected factory or user pattern pack's lane metadata, but does not replace notes, pattern lanes, tempo, or swing.
 * The master header includes BPM, Swing, and Humanize controls. `humanize` lives in tempo state as a playback-feel setting rather than authored pattern data.
-* Humanize applies deterministic Gaussian timing offsets and per-note velocity variation during scheduling. The pattern grid remains exact, and `humanize: 0` is an exact bypass.
-* Notes carry an authored `velocity` multiplier for per-note emphasis. `velocity: 1` means 100% of the selected kit channel's level and is the normalized in-memory default; serialized pattern-style data may omit default velocity values. The authored range is currently clamped to `0` through `2`, and the scheduler applies this authored value before humanize velocity variation.
+* Humanize applies deterministic Gaussian timing offsets and per-note MIDI-velocity variation during scheduling. The pattern grid remains exact, and `humanize: 0` preserves the authored integer velocity.
+* Notes carry authored MIDI-style integer `velocity` values from 0 through 127. Velocity 64 is the normalized default and preserves the prior 100% level, 0 is reserved for silent migrated data, and the Pattern editor authors 1 through 127. Serialized pattern-style data may omit velocity 64.
 * The compatibility note path preserves non-default note velocity values so scheduler-time playback transforms can use them.
+* Playback humanizes the authored integer, selects exactly one velocity layer from the resulting integer, starts that layer by its alignment offset, and applies MIDI velocity gain multiplied by layer trim before channel gain and dry/reverb routing. Scheduler lookahead uses the largest alignment offset on the channel.
 * Pattern timing changes preserve notes that fall outside the newly active grid, but those hidden notes are inactive: rendering and scheduler paths must ignore notes outside the current pattern length until the pattern timing makes them active again.
-* The Pattern grid exposes note velocity editing through a compact vertical popover. Touch and pen users long-press an active note; mouse users right-click a note, including an empty step to create a note and edit it; keyboard users can use Shift+Enter on a focused step. The popover edits note velocity only and leaves kit channel gain unchanged.
-* The Kit channel list exposes channel sample editing by clicking the row waveform. The sample editor uses immutable audio-buffer helpers for trim/normalize/WAV encoding, applies only a tiny trim-end fade to avoid dulling drum attacks, and creates named user samples on save.
+* The Pattern grid exposes note velocity editing through a compact vertical popover. Touch and pen users long-press an active note; mouse users right-click a note, including an empty step to create a note and edit it; keyboard users can use Shift+Enter on a focused step. The popover displays MIDI velocity with its equivalent percentage, resets to 64, edits note velocity only, and leaves kit channel gain unchanged.
+* The Kit waveform opens the unified sample/layer editor on the velocity-64 reference layer. The main-row selector targets that layer and announces its scope on multi-layer channels; the waveform shows a layer-count badge and only non-default reference alignment.
+* The editor keeps a complete local layer draft and shares one waveform between Audio Edit and Beat Alignment. Apply commits the partition; Save Copy & Apply creates a selected-layer copy; Replace & Apply changes the shared user asset globally. Upload/record assets can remain in the library after Cancel. The desktop rail currently remains visible even for one layer, unlike the original compact-layout proposal.
+* Leading trims transform alignment for the edited layer, or every matching active/saved user Kit layer on replacement. Failed sample persistence prevents draft commit, but asset persistence and draft application are separate steps with no rollback of a successful global replacement.
+* After a sample save succeeds, pending waveform edits are cleared before applying the layer draft. If Apply fails, the editor retains the saved draft for an Apply-only retry, including when preview loading is delayed or fails. A visible notice explains that Cancel keeps the saved copy or global replacement, and preview loading does not clear apply errors.
 * The sample selector can record device audio as a user sample. Recorded samples are saved through the same WAV/IndexedDB path as edited samples and can be assigned to the current kit channel immediately.
 * `userSamples` now stores user-facing sample metadata records, while older persisted string entries are still normalized when edited. The audio data itself is stored in IndexedDB and mirrored in the in-memory sample store by sample id.
-* The Kit workspace sample manager lists user samples, shows whether each sample is assigned to a channel, lets the user rename samples, previews samples through a dedicated preview channel, and only deletes samples that are not currently in use.
-* The Kit preset dropdown's Memory group can export the selected kit as a self-contained, GZIP-compressed `.wds-kit` file and import one as a selected user kit. The versioned bundle includes channel settings and every referenced sample payload; import requires GZIP, verifies sample and kit hashes before changing state, reuses matching user content, and remaps portable IDs to collision-safe local IDs.
-* The Pattern Pack dropdown's Memory group can export the live authored pattern state as a GZIP-compressed `.wds-pattern-pack` file and import one as a selected user pattern pack. Export includes only lanes currently represented by the selected kit and only notes inside each pattern slot's active length; unresolved-lane notes and notes hidden past the end of a bar are not portable. The versioned bundle contains BPM, swing, pattern names/settings, lane metadata, and musical note values, but excludes normalized note entity IDs. Import verifies the musical-content hash before changing state, reuses matching factory or user content, assigns collision-safe local pack names and IDs to new content, and generates local note IDs while normalizing the imported notes.
-* The Song dropdown's Memory group can export the live Song as a self-contained, GZIP-compressed `.wds-song` file. The versioned bundle includes the arrangement and tempo changes, the active Kit and all referenced sample payloads, and the live active Pattern pack using the same portable-lane/note rules as standalone Pattern pack export. Import verifies the complete sample-to-Kit-to-Pattern-pack-to-Song hash chain before changing Redux content, reuses matching library content, creates collision-safe local content when needed, remaps the Song's dependency IDs, and selects the imported Song.
+* The Kit workspace sample manager lists user samples, reports every active channel and saved user Kit velocity layer and inclusive range using each sample, lets the user rename samples, previews samples through a dedicated preview channel, and only deletes samples that have no active or saved Kit layer references. Saved usage identifies the Kit by name, and usage details wrap without requiring hover. Deletion is rechecked against current state in the action as well as disabled in the UI.
+* The Kit preset dropdown's Memory group writes and reads self-contained, GZIP-compressed v2 `.wds-kit` files containing every velocity layer and every unique referenced sample payload. Import verifies sample and Kit hashes before changing state, reuses matching user content, and rewrites every layer to collision-safe local sample IDs/URLs.
+* The Pattern Pack dropdown's Memory group writes and reads v2 `.wds-pattern-pack` files in the MIDI-style integer velocity domain. Export includes only lanes represented by the selected Kit and notes inside each active pattern length, omits runtime note IDs and default velocity 64, and excludes unresolved or hidden notes. Import verifies the musical-content hash, reuses matching content, and assigns collision-safe local names and IDs.
+* The Song dropdown's Memory group writes and reads self-contained v2 `.wds-song` files containing arrangement and tempo changes, the layered Kit with all unique sample payloads, and the live Pattern pack. Import verifies the complete dependency hash chain, reuses matching library content, and remaps local dependencies.
+* Musical-content hash schemas are versioned per entity type: raw sample fingerprints remain v1, while current Kit, Pattern Pack, and Song hashes are v2. Kit hashes include the complete ordered velocity-layer list but exclude local layer IDs.
 
 ## UI direction
+
+**Deferred follow-up: responsive UI.** Manual testing found that the overall UI
+needs a major usability review and updates for narrow screens, especially phones
+in portrait mode. Review workspace layouts, dialogs, scrolling, control reachability,
+and touch/keyboard use as a separate focused project after velocity layers is complete.
+The finding is recorded in [MANUAL_TEST_CHECKLIST.md](MANUAL_TEST_CHECKLIST.md).
 
 The app should have theme-consistent navigation between the main workspaces.
 
@@ -97,7 +114,7 @@ The Pattern workspace should include:
 The Kit workspace should include:
 
 * Kit preset selection.
-* Compact channel editing rows for channel name, percussion type, sample selection, waveform/sample editing, waveform beat alignment, pitch, pan, volume, reverb, mute/solo, and delete.
+* Compact channel editing rows for channel name, percussion type, reference-layer sample selection, a waveform entry point for sample/layer editing, pitch, pan, volume, reverb, mute/solo, and delete.
 * A sample manager for user-created and imported samples. Broad sample-library work should stay here rather than inside Pattern or Song.
 
 Current UI/component naming baseline:

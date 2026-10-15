@@ -3,6 +3,19 @@ import { createSelector } from 'reselect';
 import { selectedKitSelector } from '../kits';
 import { kitChannelAssignmentsSelector } from '../kitChannelAssignments';
 import { samplesSelector } from '../samples';
+import {
+  SAMPLE_LOAD_STATUSES,
+  sampleLoadStatusSelector,
+} from '../sampleLoadStatus';
+import type { SampleLoadStatus } from '../sampleLoadStatus';
+import {
+  getReferenceVelocityLayer,
+  getVelocityLayerRange,
+} from '../velocityLayers';
+import type {
+  VelocityLayer,
+  VelocityLayerRange,
+} from '../velocityLayers';
 import type {
   KitChannel,
   KitChannelsState,
@@ -16,12 +29,26 @@ type ChannelsRootState = SequencerRootState & {
   kitChannels?: KitChannelsState;
 };
 
+export type PlaybackVelocityLayer = VelocityLayer & {
+  sample?: string;
+  sampleContentHash?: string;
+  sampleLoadStatus?: SampleLoadStatus;
+  sampleLoaded?: boolean;
+};
+
 export type LegacyChannel = KitChannel & {
   id: string;
   kitChannelId: string;
-  sample?: string;
-  sampleContentHash?: string;
-  alignmentOffset?: number;
+  velocityLayers: PlaybackVelocityLayer[];
+  velocityLayerCount: number;
+  referenceVelocityLayerId: string;
+  referenceVelocityLayer: PlaybackVelocityLayer;
+  referenceVelocityLayerRange: VelocityLayerRange;
+  referenceSampleUrl?: string;
+  referenceSampleContentHash?: string;
+  referenceSampleLoadStatus?: SampleLoadStatus;
+  referenceSampleLoaded?: boolean;
+  referenceAlignmentOffset: number;
 };
 
 export const channelsStateSelector = (state: ChannelsRootState): KitChannelsState => (
@@ -33,7 +60,8 @@ export const channelsSelector = createSelector(
   selectedKitSelector,
   kitChannelAssignmentsSelector,
   samplesSelector,
-  (channels, selectedKit, assignments, samples): LegacyChannel[] => {
+  sampleLoadStatusSelector,
+  (channels, selectedKit, assignments, samples, sampleLoadStatus): LegacyChannel[] => {
     const channelIds = selectedKit?.channelIds || channels.ids;
     const selectedKitChannels = channelIds
       .map(id => channels.entities[id])
@@ -43,18 +71,50 @@ export const channelsSelector = createSelector(
       : (channels.ids || [])
         .map(id => channels.entities[id])
         .filter((channel): channel is KitChannel => Boolean(channel));
-    return resolvedChannels
-      .map((channel) => {
-        const sample = samples.entities[channel.sampleId];
-        const assignment = assignments.entities[channel.id];
+    return resolvedChannels.reduce<LegacyChannel[]>((result, channel) => {
+      const velocityLayers = channel.velocityLayers.map((layer) => {
+        const layerSample = samples.entities[layer.sampleId];
         return {
-          ...channel,
-          id: assignment?.laneId || channel.laneId || channel.id,
-          kitChannelId: channel.id,
-          sample: sample?.url || channel.sample,
-          sampleContentHash: sample?.contentHash,
-          alignmentOffset: sample?.alignmentOffset || 0,
+          ...layer,
+          sample: layerSample?.url,
+          sampleContentHash: layerSample?.contentHash,
+          sampleLoadStatus: sampleLoadStatus[layer.sampleId],
+          sampleLoaded: sampleLoadStatus[layer.sampleId] === SAMPLE_LOAD_STATUSES.LOADED,
         };
       });
+      const referenceLayer = getReferenceVelocityLayer(
+        velocityLayers,
+      ) as PlaybackVelocityLayer | undefined;
+      if (!referenceLayer) {
+        return result;
+      }
+      const referenceLayerIndex = velocityLayers.findIndex(
+        layer => layer.id === referenceLayer.id,
+      );
+      const referenceVelocityLayerRange = getVelocityLayerRange(
+        velocityLayers,
+        referenceLayerIndex,
+      );
+      if (!referenceVelocityLayerRange) {
+        return result;
+      }
+      const assignment = assignments.entities[channel.id];
+      result.push({
+        ...channel,
+        velocityLayers,
+        velocityLayerCount: velocityLayers.length,
+        id: assignment?.laneId || channel.laneId || channel.id,
+        kitChannelId: channel.id,
+        referenceVelocityLayerId: referenceLayer.id,
+        referenceVelocityLayer: referenceLayer,
+        referenceVelocityLayerRange,
+        referenceSampleUrl: referenceLayer.sample,
+        referenceSampleContentHash: referenceLayer.sampleContentHash,
+        referenceSampleLoadStatus: referenceLayer.sampleLoadStatus,
+        referenceSampleLoaded: referenceLayer.sampleLoaded,
+        referenceAlignmentOffset: referenceLayer.alignmentOffset,
+      });
+      return result;
+    }, []);
   },
 );

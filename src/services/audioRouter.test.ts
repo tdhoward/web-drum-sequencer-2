@@ -171,11 +171,35 @@ describe('audioRouter', () => {
       );
       const buffer = {} as AudioBuffer;
 
-      playNote(12, buffer, 'kick', 0, 0.42);
+      playNote(12, buffer, 'kick', 0, 32);
 
       const voiceGainNode = mockAudioContext.gainNodes[mockAudioContext.gainNodes.length - 1];
 
-      expect(voiceGainNode.gain.setValueAtTime).toHaveBeenCalledWith(0.42, 10);
+      expect(voiceGainNode.gain.setValueAtTime).toHaveBeenCalledWith(0.5, 10);
+    });
+  });
+
+  test('combines MIDI velocity and layer trim before channel routing', () => {
+    jest.isolateModules(() => {
+      const { playNote } = jest.requireActual<typeof import('./audioRouter')>(
+        './audioRouter',
+      );
+      const buffer = {} as AudioBuffer;
+
+      playNote(12, buffer, 'snare', 0, 127, -6);
+
+      const voiceGainNode = mockAudioContext.gainNodes[mockAudioContext.gainNodes.length - 1];
+      const channelGainNode = mockAudioContext.gainNodes[mockAudioContext.gainNodes.length - 2];
+      const reverbSendNode = mockAudioContext.gainNodes[1];
+
+      expect(voiceGainNode.gain.setValueAtTime.mock.calls[0][0]).toBeCloseTo(
+        2 * (10 ** (-6 / 20)),
+      );
+      expect(voiceGainNode.connect).toHaveBeenCalledWith(channelGainNode);
+      expect(channelGainNode.connect).toHaveBeenCalledWith(reverbSendNode);
+      expect(channelGainNode.connect).toHaveBeenCalledWith(
+        expect.objectContaining({ pan: expect.any(Object) }),
+      );
     });
   });
 });

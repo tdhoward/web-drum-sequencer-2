@@ -3,10 +3,12 @@ import styled from 'styled-components';
 import { playNote, stopAllNotes } from '../../services/audioRouter';
 import { loadSampleBuffer } from '../../services/sampleStore';
 import {
+  getSampleUsageLabels,
   getUserSampleDisplayName,
   getUserSampleId,
   normalizeUserSample,
   type LegacyChannel,
+  type UserPreset,
   type UserSample,
   type UserSampleRecord,
 } from '../../common';
@@ -17,8 +19,9 @@ const SAMPLE_MANAGER_PREVIEW_CHANNEL_ID = 'sample-manager-preview';
 type SampleManagerModalProps = {
   channels: LegacyChannel[];
   onClose: () => void;
-  onDeleteSample: (sampleId: string) => Promise<void> | void;
+  onDeleteSample: (sampleId: string) => Promise<unknown> | void;
   onRenameSample: (sampleId: string, name: string) => void;
+  savedKits: UserPreset[];
   show: boolean;
   userSamples: UserSample[];
 };
@@ -126,9 +129,7 @@ const UsageText = styled.div`
   font-size: 0.72rem;
   line-height: 1.25;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 `;
 
 const ActionButton = styled.button`
@@ -170,17 +171,6 @@ const EmptyState = styled.div`
   padding: 1rem;
 `;
 
-const getChannelLabel = (channel: LegacyChannel): string => (
-  channel.name || channel.kitChannelId || channel.id
-);
-
-const getSampleUsageLabels = (
-  sampleId: string,
-  channels: LegacyChannel[],
-): string[] => channels
-  .filter(channel => channel.sample === sampleId)
-  .map(getChannelLabel);
-
 const getDraftNames = (userSamples: UserSample[]): Record<string, string> => (
   userSamples.reduce<Record<string, string>>((draftNames, userSample) => {
     draftNames[getUserSampleId(userSample)] = getUserSampleDisplayName(userSample);
@@ -193,6 +183,7 @@ export const SampleManagerModalComponent = ({
   onClose,
   onDeleteSample,
   onRenameSample,
+  savedKits,
   show,
   userSamples,
 }: SampleManagerModalProps) => {
@@ -236,7 +227,7 @@ export const SampleManagerModalComponent = ({
   };
 
   const deleteSample = (sample: UserSampleRecord) => {
-    const usageLabels = getSampleUsageLabels(sample.id, channels);
+    const usageLabels = getSampleUsageLabels(sample.id, channels, savedKits);
 
     if (usageLabels.length > 0) {
       return;
@@ -299,7 +290,7 @@ export const SampleManagerModalComponent = ({
           <SampleList>
             {normalizedSamples.map((sample) => {
               const draftName = draftNames[sample.id] ?? getUserSampleDisplayName(sample);
-              const usageLabels = getSampleUsageLabels(sample.id, channels);
+              const usageLabels = getSampleUsageLabels(sample.id, channels, savedKits);
               const isInUse = usageLabels.length > 0;
               const usageText = previewErrorSampleId === sample.id
                 ? 'Could not play'
@@ -347,7 +338,7 @@ export const SampleManagerModalComponent = ({
                   <DeleteButton
                     disabled={isInUse || deletingSampleId === sample.id}
                     onClick={() => deleteSample(sample)}
-                    title={isInUse ? 'Sample is currently assigned to a channel' : undefined}
+                    title={isInUse ? 'Sample is used by an active layer or saved Kit' : undefined}
                     type="button"
                   >
                     Delete

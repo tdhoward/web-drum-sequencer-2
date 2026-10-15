@@ -29,7 +29,7 @@ const patternPack = (): PatternPack => ({
   }],
   notes: {
     'kick-a': [[
-      { id: 'note-a', beat: 2, velocity: 0.75 },
+      { id: 'note-a', beat: 2, velocity: 48 },
       { id: 'note-b', beat: 1 },
     ]],
   },
@@ -49,6 +49,7 @@ describe('canonical content hashes', () => {
 
     expect(first).toEqual(same);
     expect(first.byteLength).toBe(3);
+    expect(first.contentHashVersion).toBe(1);
     expect(first.contentHash).toMatch(/^[0-9a-f]{64}$/);
     expect(different.contentHash).not.toBe(first.contentHash);
   });
@@ -69,43 +70,44 @@ describe('canonical content hashes', () => {
       notes: {
         'imported-kick': [[
           { id: 'new-note-2', beat: 1 },
-          { id: 'new-note-1', beat: 2, velocity: 0.75 },
+          { id: 'new-note-1', beat: 2, velocity: 48 },
         ]],
       },
     };
 
-    expect(await calculatePatternPackContentHash(renamed)).toEqual(
-      await calculatePatternPackContentHash(first),
-    );
+    const firstHash = await calculatePatternPackContentHash(first);
+    expect(await calculatePatternPackContentHash(renamed)).toEqual(firstHash);
+    expect(firstHash.contentHashVersion).toBe(2);
   });
 
   test('kit hashes use sample content rather than sample and channel IDs', async () => {
     const firstChannels = normalizeKitChannelsState([{
       id: 'kick-a',
       sample: 'first-name.wav',
+      alignmentOffset: 0.01,
       gain: 0.8,
       percussionType: 'bass_drum',
     }], 'kit-a');
     const secondChannels = normalizeKitChannelsState([{
       id: 'kick-b',
       sample: 'renamed.wav',
+      alignmentOffset: 0.01,
       gain: 0.8,
       percussionType: 'bass_drum',
     }], 'kit-b');
     const firstKit: Kit = { id: 'kit-a', name: 'First', channelIds: ['kick-a'] };
     const secondKit: Kit = { id: 'kit-b', name: 'Renamed', channelIds: ['kick-b'] };
     const firstSample: Sample = {
-      id: firstChannels.entities['kick-a'].sampleId,
+      id: firstChannels.entities['kick-a'].velocityLayers[0].sampleId,
       sourceType: 'user',
       name: 'First sample',
       contentHash: hash,
       contentHashAlgorithm: 'sha256',
       contentHashVersion: 1,
-      alignmentOffset: 0.01,
     };
     const secondSample: Sample = {
       ...firstSample,
-      id: secondChannels.entities['kick-b'].sampleId,
+      id: secondChannels.entities['kick-b'].velocityLayers[0].sampleId,
       name: 'Renamed sample',
       url: 'somewhere-else.wav',
     };
@@ -122,6 +124,76 @@ describe('canonical content hashes', () => {
     });
 
     expect(secondHash).toEqual(firstHash);
+    expect(firstHash.contentHashVersion).toBe(2);
+  });
+
+  test('kit hashes include every ordered layer property but exclude layer IDs', async () => {
+    const channels = normalizeKitChannelsState([{
+      id: 'snare',
+      percussionType: 'snare_drum',
+      velocityLayers: [
+        {
+          id: 'soft-local-id',
+          sample: 'soft.wav',
+          maxVelocity: 63,
+          alignmentOffset: 0.01,
+          trimDb: -2,
+        },
+        {
+          id: 'hard-local-id',
+          sample: 'hard.wav',
+          maxVelocity: 127,
+          alignmentOffset: 0.02,
+          trimDb: 1,
+        },
+      ],
+    }], 'kit-layered');
+    const channel = channels.entities.snare;
+    const kit: Kit = { id: 'kit-layered', name: 'Layered', channelIds: ['snare'] };
+    const samples = {
+      [channel.velocityLayers[0].sampleId]: {
+        id: channel.velocityLayers[0].sampleId,
+        sourceType: 'user',
+        contentHashAlgorithm: 'sha256' as const,
+        contentHashVersion: 1,
+        contentHash: '1'.repeat(64),
+      },
+      [channel.velocityLayers[1].sampleId]: {
+        id: channel.velocityLayers[1].sampleId,
+        sourceType: 'user',
+        contentHashAlgorithm: 'sha256' as const,
+        contentHashVersion: 1,
+        contentHash: '2'.repeat(64),
+      },
+    };
+    const calculate = (velocityLayers = channel.velocityLayers) => calculateKitContentHash({
+      kit,
+      channels: [{ ...channel, velocityLayers }],
+      samples,
+    });
+    const original = await calculate();
+    const renamedLayers = channel.velocityLayers.map((layer, index) => ({
+      ...layer,
+      id: `different-local-id-${index}`,
+    }));
+
+    await expect(calculate(renamedLayers)).resolves.toEqual(original);
+    await expect(calculate([
+      { ...channel.velocityLayers[0], maxVelocity: 64 },
+      channel.velocityLayers[1],
+    ])).resolves.not.toEqual(original);
+    await expect(calculate([
+      { ...channel.velocityLayers[0], alignmentOffset: 0.03 },
+      channel.velocityLayers[1],
+    ])).resolves.not.toEqual(original);
+    await expect(calculate([
+      { ...channel.velocityLayers[0], trimDb: -1 },
+      channel.velocityLayers[1],
+    ])).resolves.not.toEqual(original);
+    await expect(calculate([
+      { ...channel.velocityLayers[0], sampleId: channel.velocityLayers[1].sampleId },
+      channel.velocityLayers[1],
+    ])).resolves.not.toEqual(original);
   });
 
   test('song hashes include both dependency hashes', async () => {

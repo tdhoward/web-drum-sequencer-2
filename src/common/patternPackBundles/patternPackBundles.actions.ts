@@ -42,7 +42,7 @@ const sameHash = (
   value: Partial<ContentHashMetadata>,
   hash: ContentHashMetadata,
 ): boolean => (
-  hasCurrentContentHash(value) && value.contentHash === hash.contentHash
+  hasCurrentContentHash(value, 'pattern-pack') && value.contentHash === hash.contentHash
 );
 
 export const findMatchingPatternPack = async (
@@ -86,13 +86,14 @@ export const preparePatternPackBundleImport = async (
   const duplicate = await findMatchingPatternPack(existingPatternPacks, verifiedHash);
   if (duplicate) return { patternPack: duplicate, isNew: false };
 
+  const importedPatternPack = bundle.manifest.patternPack;
   const name = createUniquePatternPackName(
-    bundle.manifest.patternPack.name,
+    importedPatternPack.name,
     existingPatternPacks,
   );
   return {
     patternPack: {
-      ...bundle.manifest.patternPack,
+      ...importedPatternPack,
       id: createPatternPackId(name, existingPatternPacks),
       name,
       ...verifiedHash,
