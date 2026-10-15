@@ -308,7 +308,39 @@ describe('deleteSavedUserSample', () => {
     });
   });
 
-  test('deletes a sample with no active layer references', async () => {
+  test('does not delete a sample used only by a non-reference layer in an inactive saved Kit', async () => {
+    const dispatch = jest.fn();
+
+    const deleted = await deleteSavedUserSample('protected.wav')(
+      dispatch,
+      () => ({
+        kitChannels: normalizeKitChannelsState([{ id: 'snare', sample: 'active.wav' }]),
+        presets: {
+          preset: 'Active Kit',
+          userPresets: [{
+            name: 'Saved Kit',
+            channels: [{
+              id: 'snare',
+              velocityLayers: [
+                { sample: 'main.wav', maxVelocity: 100 },
+                { sampleId: 'sample:protected.wav', maxVelocity: 127 },
+              ],
+            }],
+          }],
+        },
+      }),
+    );
+
+    expect(deleted).toBe(false);
+    expect(mockedDeleteSampleBuffer).not.toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch).toHaveBeenCalledWith({
+      type: 'window/showFlashMessage',
+      payload: FLASH_MESSAGES.SAMPLE_DELETE_IN_USE,
+    });
+  });
+
+  test('deletes a sample with no active or saved Kit layer references', async () => {
     const dispatch = jest.fn();
     mockedDeleteSampleBuffer.mockResolvedValue('unused.wav');
 
@@ -319,6 +351,16 @@ describe('deleteSavedUserSample', () => {
           id: 'kick',
           sample: 'kick.wav',
         }]),
+        presets: {
+          preset: 'Active Kit',
+          userPresets: [{
+            name: 'Saved Kit',
+            channels: [{
+              id: 'snare',
+              velocityLayers: [{ sample: 'saved.wav', maxVelocity: 127 }],
+            }],
+          }],
+        },
       }),
     );
 

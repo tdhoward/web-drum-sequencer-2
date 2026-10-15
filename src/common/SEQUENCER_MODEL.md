@@ -419,13 +419,13 @@ a successful global replacement is not rolled back if a later apply step fails.
 Trim applies a tiny fade only at the end boundary to avoid blunting drum
 attacks. User samples can be renamed, previewed, and deleted through the Kit
 workspace sample manager, but deletion is disabled while the sample is assigned
-to a layer. Usage text includes every matching active channel layer and its
-inclusive velocity range, and the deletion action repeats the usage check so
-stale UI state cannot remove a referenced sample.
-This protection currently covers active Kit layers only. References in saved
-user Kit presets do not block deletion, so deleting a sample used only by a
-saved Kit can leave that preset without its audio. See the follow-ups in
-[the velocity-layer review](../../VELOCITY_LAYERS_NEXT_STEPS.md).
+to an active channel layer or any saved user Kit layer. Usage text includes
+every matching layer and its inclusive velocity range; saved references also
+identify the Kit by name. Details wrap without requiring hover. The deletion
+action repeats both checks against current state so stale UI state cannot
+remove a referenced sample. A sample becomes deletable after its final active
+or saved Kit reference is removed; editing an active Kit alone does not change
+its saved preset.
 
 Recorded device-audio samples are user samples. The recording dialog stores the
 final sample as WAV data in IndexedDB and assigns it to the selected channel's

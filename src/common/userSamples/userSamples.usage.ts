@@ -1,8 +1,10 @@
 import {
   getVelocityLayerRange,
+  normalizeVelocityLayers,
   sampleIdFromUrl,
   type VelocityLayer,
 } from '../velocityLayers';
+import type { UserPreset } from '../presets/presets.reducer';
 
 type UsageVelocityLayer = VelocityLayer & {
   sample?: string;
@@ -16,6 +18,7 @@ export type SampleUsageChannel = {
 };
 
 export type SampleUsage = {
+  savedKitName?: string;
   channelId: string;
   channelLabel: string;
   layerId: string;
@@ -36,7 +39,7 @@ const getChannelLabel = (channel: SampleUsageChannel): string => (
     : channel.kitChannelId || channel.id
 );
 
-export const getSampleUsages = (
+const getChannelSampleUsages = (
   sampleReference: string,
   channels: readonly SampleUsageChannel[],
 ): SampleUsage[] => {
@@ -64,17 +67,40 @@ export const getSampleUsages = (
   ));
 };
 
+export const getSampleUsages = (
+  sampleReference: string,
+  channels: readonly SampleUsageChannel[],
+  savedKits: readonly UserPreset[] = [],
+): SampleUsage[] => [
+  ...getChannelSampleUsages(sampleReference, channels),
+  ...savedKits.flatMap((kit) => {
+    const savedChannels = (kit.channels || []).map(channel => ({
+      ...channel,
+      velocityLayers: normalizeVelocityLayers(channel),
+    }));
+    return getChannelSampleUsages(sampleReference, savedChannels).map(usage => ({
+      ...usage,
+      savedKitName: kit.name,
+    }));
+  }),
+];
+
 export const getSampleUsageLabels = (
   sampleReference: string,
   channels: readonly SampleUsageChannel[],
-): string[] => getSampleUsages(sampleReference, channels).map(usage => (
-  usage.layerCount > 1
+  savedKits: readonly UserPreset[] = [],
+): string[] => getSampleUsages(sampleReference, channels, savedKits).map((usage) => {
+  const layerLabel = usage.layerCount > 1
     ? `${usage.channelLabel} · Layer ${usage.layerIndex + 1} · `
       + `${usage.minVelocity}-${usage.maxVelocity}`
-    : `${usage.channelLabel} · ${usage.minVelocity}-${usage.maxVelocity}`
-));
+    : `${usage.channelLabel} · ${usage.minVelocity}-${usage.maxVelocity}`;
+  return usage.savedKitName !== undefined
+    ? `Saved Kit "${usage.savedKitName}" · ${layerLabel}`
+    : layerLabel;
+});
 
 export const isSampleInUse = (
   sampleReference: string,
   channels: readonly SampleUsageChannel[],
-): boolean => getSampleUsages(sampleReference, channels).length > 0;
+  savedKits: readonly UserPreset[] = [],
+): boolean => getSampleUsages(sampleReference, channels, savedKits).length > 0;

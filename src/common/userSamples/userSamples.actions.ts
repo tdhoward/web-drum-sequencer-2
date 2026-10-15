@@ -13,6 +13,7 @@ import {
   transformChannelSampleAlignments,
 } from '../channels';
 import { transformPresetSampleAlignments } from '../presets';
+import type { PresetsState } from '../presets';
 import {
   removeSampleFromUrl,
   renameSampleFromUrl,
@@ -42,6 +43,7 @@ import { isSampleInUse } from './userSamples.usage';
 type Dispatch = (action: unknown) => unknown;
 
 type UserSamplesRootState = SequencerRootState & {
+  presets?: PresetsState;
   userSamples?: UserSamplesState;
 };
 
@@ -230,7 +232,7 @@ export const deleteSavedUserSample = (sampleId: string) => (
   const channels = Object.values(channelState?.entities || {})
     .filter((channel): channel is KitChannel => Boolean(channel));
 
-  if (isSampleInUse(sampleId, channels)) {
+  if (isSampleInUse(sampleId, channels, state.presets?.userPresets)) {
     dispatch(showFlashMessage(FLASH_MESSAGES.SAMPLE_DELETE_IN_USE));
     return Promise.resolve(false);
   }

@@ -3,6 +3,7 @@ import {
   channelsSelector,
   deleteSavedUserSample,
   renameSavedUserSample,
+  userPresetsSelector,
   userSamplesSelector,
 } from '../../common';
 import type { AppDispatch } from '../../store';
@@ -18,6 +19,7 @@ type SampleManagerModalDispatchProps = {
 
 const mapStateToProps = (state: RootState) => ({
   channels: channelsSelector(state),
+  savedKits: userPresetsSelector(state) || [],
   userSamples: userSamplesSelector(state) || [],
 });
 

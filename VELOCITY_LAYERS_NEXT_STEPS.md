@@ -175,21 +175,21 @@ did not require support for previously exported files.
    behavior for now; if the compact original layout is still desired, treat
    it as a focused UI change with updated tests and visual review. It should
    not remain both a locked requirement and a checked completion claim.
-2. **Decide whether saved Kits should protect samples from deletion.** Usage
-   reporting and deletion guards scan active Kit layers only. A sample used
-   solely by a saved user Kit can therefore be deleted, leaving that preset
-   without its audio. Recommended follow-up: include saved user Kit references
-   in both usage reporting and the deletion action, with regression coverage
-   for a non-reference layer in an inactive saved Kit. This is a product
-   behavior change, not something this documentation cleanup implements.
+2. **Resolved: saved Kits protect samples from deletion.** Usage reporting and
+   deletion guards include every layer in saved user Kits as well as active
+   channels. Saved usage identifies the Kit, channel, layer, and inclusive
+   range, with wrapping text that does not require hover. Regression tests
+   cover a non-reference layer in an inactive saved Kit, action-level rejection,
+   and deletion becoming available after the final reference is removed.
 3. **Keep save failure guarantees precise.** Existing tests cover persistence
    failure before draft commit. If rollback after a successful replacement and
    a later apply failure becomes a requirement, design and test it explicitly;
    the current sequential flow does not provide it.
 
 No additional velocity-layer implementation phase is needed merely to complete
-the old task list. Prioritize the saved-Kit deletion issue over cosmetic layout
-work. Browser/device listening and visual checks remain useful when the user
+the old task list. Saved-Kit deletion protection is now implemented; the layout
+and rollback questions above remain explicit future decisions.
+Browser/device listening and visual checks remain useful when the user
 next runs the app; this review does not claim those checks were performed.
 
 ## Verification for future changes
@@ -217,7 +217,8 @@ Retain regression coverage for:
 - Draft add/remove/select/apply/cancel; main-row scope notification and badge;
   mode-specific pointer behavior; pending-trim alignment; dirty-edit guards.
 - Save-copy isolation; shared replacement alignment; failed persistence;
-  asset-only upload/record; per-sample loading and non-reference usage guards.
+  asset-only upload/record; per-sample loading; active and saved Kit
+  non-reference usage guards; deletion after the final reference is removed.
 - Redux migrations 10/11; v2 round trips and malformed/unsupported bundles;
   shared payload deduplication; content-hash inclusion/exclusion rules.
 

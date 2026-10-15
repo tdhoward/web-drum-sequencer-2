@@ -8,6 +8,7 @@ import {
   getUserSampleId,
   normalizeUserSample,
   type LegacyChannel,
+  type UserPreset,
   type UserSample,
   type UserSampleRecord,
 } from '../../common';
@@ -20,6 +21,7 @@ type SampleManagerModalProps = {
   onClose: () => void;
   onDeleteSample: (sampleId: string) => Promise<unknown> | void;
   onRenameSample: (sampleId: string, name: string) => void;
+  savedKits: UserPreset[];
   show: boolean;
   userSamples: UserSample[];
 };
@@ -127,9 +129,7 @@ const UsageText = styled.div`
   font-size: 0.72rem;
   line-height: 1.25;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 `;
 
 const ActionButton = styled.button`
@@ -183,6 +183,7 @@ export const SampleManagerModalComponent = ({
   onClose,
   onDeleteSample,
   onRenameSample,
+  savedKits,
   show,
   userSamples,
 }: SampleManagerModalProps) => {
@@ -226,7 +227,7 @@ export const SampleManagerModalComponent = ({
   };
 
   const deleteSample = (sample: UserSampleRecord) => {
-    const usageLabels = getSampleUsageLabels(sample.id, channels);
+    const usageLabels = getSampleUsageLabels(sample.id, channels, savedKits);
 
     if (usageLabels.length > 0) {
       return;
@@ -289,7 +290,7 @@ export const SampleManagerModalComponent = ({
           <SampleList>
             {normalizedSamples.map((sample) => {
               const draftName = draftNames[sample.id] ?? getUserSampleDisplayName(sample);
-              const usageLabels = getSampleUsageLabels(sample.id, channels);
+              const usageLabels = getSampleUsageLabels(sample.id, channels, savedKits);
               const isInUse = usageLabels.length > 0;
               const usageText = previewErrorSampleId === sample.id
                 ? 'Could not play'
@@ -337,7 +338,7 @@ export const SampleManagerModalComponent = ({
                   <DeleteButton
                     disabled={isInUse || deletingSampleId === sample.id}
                     onClick={() => deleteSample(sample)}
-                    title={isInUse ? 'Sample is currently assigned to a velocity layer' : undefined}
+                    title={isInUse ? 'Sample is used by an active layer or saved Kit' : undefined}
                     type="button"
                   >
                     Delete
