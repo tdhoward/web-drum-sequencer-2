@@ -416,6 +416,11 @@ does not commit that draft.
 This guarantee applies to persistence failure before draft application. Asset
 persistence and the atomic layer-partition update are separate operations;
 a successful global replacement is not rolled back if a later apply step fails.
+After a successful save, pending waveform edits are cleared and the saved draft
+is retained for an Apply-only retry if layer application fails. Retrying does
+not save another asset or repeat the alignment transform, and does not depend
+on preview loading succeeding. Apply errors survive preview reloads, and the
+editor announces saved copies or shared replacements that Cancel cannot undo.
 Trim applies a tiny fade only at the end boundary to avoid blunting drum
 attacks. User samples can be renamed, previewed, and deleted through the Kit
 workspace sample manager, but deletion is disabled while the sample is assigned

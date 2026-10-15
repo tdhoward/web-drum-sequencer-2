@@ -139,6 +139,12 @@ trim boundaries change.
   **Atomicity covers the layer-partition update, not the entire asset/save
   flow.** A successful asset save or global replacement is not rolled back if
   a later apply step fails. Do not describe Cancel as undoing such a replacement.
+- After saving succeeds, the editor clears pending waveform edits and retains
+  the saved layer draft. An apply failure can be retried with `Apply` without
+  saving the asset again or transforming alignment twice, even if preview
+  loading is delayed or unavailable. Preview loading does not clear an apply
+  error. A visible live notice explains whether Cancel keeps a saved copy or
+  leaves a shared replacement in place.
 
 Essential feedback must remain visible without hover, with accessible names,
 keyboard controls, clear selection/mode state, touch-sized targets, and live
@@ -182,9 +188,12 @@ did not require support for previously exported files.
    cover a non-reference layer in an inactive saved Kit, action-level rejection,
    and deletion becoming available after the final reference is removed.
 3. **Keep save failure guarantees precise.** Existing tests cover persistence
-   failure before draft commit. If rollback after a successful replacement and
-   a later apply failure becomes a requirement, design and test it explicitly;
-   the current sequential flow does not provide it.
+   failure before draft commit, plus Apply-only recovery after a successful
+   copy or replacement with delayed/unavailable preview loading. Recovery
+   preserves the draft and applies alignment transforms only once; the editor
+   explicitly reports saved assets that Cancel cannot undo. If rollback after
+   a successful replacement and a later apply failure becomes a requirement,
+   design and test it explicitly; the current sequential flow does not provide it.
 
 No additional velocity-layer implementation phase is needed merely to complete
 the old task list. Saved-Kit deletion protection is now implemented; the layout
@@ -217,6 +226,8 @@ Retain regression coverage for:
 - Draft add/remove/select/apply/cancel; main-row scope notification and badge;
   mode-specific pointer behavior; pending-trim alignment; dirty-edit guards.
 - Save-copy isolation; shared replacement alignment; failed persistence;
+  Apply-only retry after successful persistence and failed draft application;
+  delayed/unavailable preview loading and persistent apply feedback;
   asset-only upload/record; per-sample loading; active and saved Kit
   non-reference usage guards; deletion after the final reference is removed.
 - Redux migrations 10/11; v2 round trips and malformed/unsupported bundles;

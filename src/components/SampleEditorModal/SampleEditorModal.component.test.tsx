@@ -2,6 +2,7 @@
 
 import React from 'react';
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -342,6 +343,107 @@ describe('SampleEditorModal Phase 6 workflow', () => {
     await screen.findByText('Could not save sample');
     expect(props.onApplyVelocityLayers).not.toHaveBeenCalled();
     expect(props.onClose).not.toHaveBeenCalled();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  test.each([
+    { replaceExisting: false, previewUnavailable: false },
+    { replaceExisting: true, previewUnavailable: false },
+    { replaceExisting: false, previewUnavailable: true },
+    { replaceExisting: true, previewUnavailable: true },
+  ])(
+    'retries Apply after saving (replacement: $replaceExisting, preview unavailable: $previewUnavailable)',
+    async ({ replaceExisting, previewUnavailable }) => {
+      let finishReload!: (buffer: AudioBuffer | null) => void;
+      const pendingReload = new Promise<AudioBuffer | null>((resolve) => {
+        finishReload = resolve;
+      });
+      mockedLoadSampleBuffer.mockResolvedValueOnce(audioBuffer)
+        .mockReturnValue(pendingReload);
+      const applyLayers = jest.fn()
+        .mockRejectedValueOnce(new Error('apply failed'))
+        .mockResolvedValue(undefined);
+      const savedUrl = replaceExisting ? 'user-snare.wav' : 'snare-copy.wav';
+      const props = createProps({
+        channel: {
+          ...singleLayerChannel,
+          referenceVelocityLayerId: 'soft',
+          velocityLayers: [
+            { ...singleLayerChannel.velocityLayers[0], id: 'soft', maxVelocity: 64 },
+            {
+              ...singleLayerChannel.velocityLayers[0],
+              id: 'hard',
+              alignmentOffset: 0.7,
+            },
+          ],
+        },
+        onApplyVelocityLayers: applyLayers,
+        onSaveEditedSample: jest.fn(() => Promise.resolve(savedUrl)),
+        userSamples: [{ id: 'user-snare.wav', name: 'Shared Snare' }],
+      });
+      renderEditor(props);
+      const canvas = await getReadyCanvas(/Edit Soft 1-64 sample waveform/);
+
+      fireEvent.pointerDown(canvas, { clientX: 25, pointerId: 1 });
+      fireEvent.click(screen.getByRole('button', { name: 'Normalize' }));
+      fireEvent.change(screen.getByLabelText('Soft layer trim in decibels'), {
+        target: { value: '3' },
+      });
+      if (replaceExisting) {
+        fireEvent.click(screen.getByRole('checkbox'));
+      }
+      fireEvent.click(screen.getByRole('button', {
+        name: replaceExisting ? 'Replace & Apply' : 'Save Copy & Apply',
+      }));
+
+      await screen.findByText('Could not apply sample layers');
+      expect(props.onClose).not.toHaveBeenCalled();
+      expect((screen.getByRole('button', { name: 'Apply' }) as HTMLButtonElement).disabled)
+        .toBe(false);
+      expect(screen.getByRole('status').textContent).toMatch(
+        replaceExisting ? /Cancel does not undo the replacement/ : /Cancel keeps the saved copy/,
+      );
+      // A later preview load must not turn a successful save into pending edits.
+      await act(async () => {
+        const savedBuffer = (props.onSaveEditedSample as jest.Mock).mock.calls[0][0];
+        finishReload(previewUnavailable ? null : savedBuffer);
+      });
+      expect(screen.getByText('Could not apply sample layers')).not.toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+      await waitFor(() => expect(props.onClose).toHaveBeenCalledTimes(1));
+      expect(props.onSaveEditedSample).toHaveBeenCalledTimes(1);
+      expect(applyLayers).toHaveBeenCalledTimes(2);
+      const [layers, urls] = applyLayers.mock.calls[1];
+      expect(layers).toEqual(applyLayers.mock.calls[0][0]);
+      expect(layers[0]).toMatchObject({
+        sampleId: `sample:${savedUrl}`,
+        alignmentOffset: expect.closeTo(0.15),
+        trimDb: 3,
+      });
+      expect(layers[1].alignmentOffset).toBeCloseTo(replaceExisting ? 0.45 : 0.7);
+      expect(urls.soft).toBe(savedUrl);
+      expect(urls.hard).toBe(replaceExisting ? savedUrl : 'user-snare.wav');
+    },
+  );
+
+  test('keeps an apply failure visible when switching layers reloads the preview', async () => {
+    const props = createProps({
+      onApplyVelocityLayers: jest.fn(() => Promise.reject(new Error('apply failed'))),
+    });
+    renderEditor(props);
+    await getReadyCanvas(/Edit Main 1-127 sample waveform/);
+    fireEvent.click(screen.getByRole('button', { name: 'Add Layer' }));
+    await getReadyCanvas(/Edit Hard 65-127 sample waveform/);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    await screen.findByText('Could not apply sample layers');
+
+    fireEvent.click(screen.getByRole('button', { name: /Soft, velocities 1-64/ }));
+    await getReadyCanvas(/Edit Soft 1-64 sample waveform/);
+
+    expect(screen.getByText('Could not apply sample layers')).not.toBeNull();
+    expect(props.onSaveEditedSample).not.toHaveBeenCalled();
+    expect(screen.queryByRole('status')).toBeNull();
   });
 
   test('creates uploaded assets in the local draft and Cancel discards the assignment', async () => {

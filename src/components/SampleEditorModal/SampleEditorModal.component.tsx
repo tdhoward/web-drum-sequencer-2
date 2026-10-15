@@ -594,6 +594,12 @@ const ErrorText = styled.div`
   min-height: 1rem;
 `;
 
+const SaveNotice = styled.div`
+  color: ${({ theme }) => theme.colors.textMuted};
+  font-size: 0.75rem;
+  line-height: 1.4;
+`;
+
 const LoadingText = styled.div`
   align-items: center;
   color: ${({ theme }) => theme.colors.textMuted};
@@ -732,6 +738,8 @@ export const SampleEditorModal = ({
   const [isRecorderOpen, setIsRecorderOpen] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [savedAssetEffect, setSavedAssetEffect] = useState<'copy' | 'replacement' | null>(null);
+  const [sampleLoadError, setSampleLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -752,6 +760,7 @@ export const SampleEditorModal = ({
     setIsRecorderOpen(false);
     setIsSaving(false);
     setIsApplying(false);
+    setSavedAssetEffect(null);
     setError(null);
   }, [channel, initialSelectedLayerId]);
 
@@ -823,13 +832,12 @@ export const SampleEditorModal = ({
     activeHandleRef.current = null;
     activeAlignmentPointerRef.current = null;
     setAudioBuffer(null);
-    setError(null);
-    setIsSaving(false);
+    setSampleLoadError(null);
     setReplaceExisting(false);
     setSampleName(getDefaultEditedSampleName(selectedSampleName));
 
     if (!selectedSampleUrl) {
-      setError('Sample unavailable');
+      setSampleLoadError('Sample unavailable');
       return undefined;
     }
 
@@ -846,12 +854,12 @@ export const SampleEditorModal = ({
           setAudioBuffer(editableBuffer);
           setSelection(createFullSelection(editableBuffer));
         } else {
-          setError('Sample unavailable');
+          setSampleLoadError('Sample unavailable');
         }
       })
       .catch(() => {
         if (!isCancelled) {
-          setError('Sample unavailable');
+          setSampleLoadError('Sample unavailable');
         }
       });
 
@@ -1315,6 +1323,13 @@ export const SampleEditorModal = ({
         }
         setDraftLayers(nextLayers);
         setSampleUrlsByLayerId(nextSampleUrls);
+        // Persistence has completed even if applying the layer draft later fails.
+        // Retry must not save or transform the same waveform edits a second time.
+        setSelection(createFullSelection(editedBuffer));
+        setReplaceExisting(false);
+        setSavedAssetEffect(previous => (
+          willReplaceExisting || previous === 'replacement' ? 'replacement' : 'copy'
+        ));
         setAssetRevision(previous => previous + 1);
         setIsSaving(false);
         return applyDraftAndClose(nextLayers, nextSampleUrls);
@@ -1560,7 +1575,7 @@ export const SampleEditorModal = ({
                   />
                 </>
               )}
-              {!audioBuffer && !error && (
+              {!audioBuffer && !sampleLoadError && (
                 <LoadingText>Loading</LoadingText>
               )}
             </WaveformFrame>
@@ -1781,7 +1796,14 @@ export const SampleEditorModal = ({
           </Workspace>
         </EditorLayout>
 
-        <ErrorText aria-live="polite">{error || ''}</ErrorText>
+        {savedAssetEffect && (
+          <SaveNotice role="status">
+            {savedAssetEffect === 'replacement'
+              ? 'Shared sample replaced in the library. Cancel does not undo the replacement.'
+              : 'Sample copy saved to the library. Cancel keeps the saved copy.'}
+          </SaveNotice>
+        )}
+        <ErrorText aria-live="polite">{error || sampleLoadError || ''}</ErrorText>
         <ActionRow>
           <span />
           <ButtonGroup>
