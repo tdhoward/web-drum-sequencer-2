@@ -27,7 +27,7 @@ The app should be organized around three main workspaces:
    * Edit beat patterns.
    * Patterns should reference logical lanes and resolve through the current kit, but pattern data should not contain full kit definitions.
    * Built-in rhythm content should be selected as human-readable pattern packs, such as `Hip Hop Swing`, with the existing pattern buttons selecting slots inside the loaded pack.
-   * Pattern editing should stay focused on sequencing notes, timing, steps, accents/velocity if supported, and pattern-level behavior.
+   * Pattern editing should stay focused on sequencing notes, timing, steps, MIDI-style velocity, and pattern-level behavior.
 
 3. Song workspace
 
@@ -55,6 +55,10 @@ Preferred model direction:
 
 Current model baseline:
 
+Detailed contracts live in [SEQUENCER_MODEL.md](src/common/SEQUENCER_MODEL.md).
+Velocity layers are implemented; [Velocity Layers: Status and Follow-ups](VELOCITY_LAYERS_NEXT_STEPS.md)
+records editor behavior and the remaining review findings, rather than pending implementation phases.
+
 * `src/common/percussion.ts` defines the controlled percussion vocabulary and the pure `resolveKitChannelMapping` resolver.
 * `kitChannel.percussionType` is required by invariant checks and defaults to `generic_percussion` for new/legacy channels.
 * Normalized Kit channels require a `velocityLayers` partition and no longer store channel-level `sample`, `sampleId`, or `alignmentOffset` fields. Legacy one-sample inputs normalize to one deterministic 1-127 layer only at migration/normalization boundaries. The selected-Kit view model resolves every layer plus explicit velocity-64 reference-layer fields; it does not recreate deprecated channel-level sample or alignment aliases.
@@ -71,12 +75,9 @@ Current model baseline:
 * Playback humanizes the authored integer, selects exactly one velocity layer from the resulting integer, starts that layer by its alignment offset, and applies MIDI velocity gain multiplied by layer trim before channel gain and dry/reverb routing. Scheduler lookahead uses the largest alignment offset on the channel.
 * Pattern timing changes preserve notes that fall outside the newly active grid, but those hidden notes are inactive: rendering and scheduler paths must ignore notes outside the current pattern length until the pattern timing makes them active again.
 * The Pattern grid exposes note velocity editing through a compact vertical popover. Touch and pen users long-press an active note; mouse users right-click a note, including an empty step to create a note and edit it; keyboard users can use Shift+Enter on a focused step. The popover displays MIDI velocity with its equivalent percentage, resets to 64, edits note velocity only, and leaves kit channel gain unchanged.
-* The Kit channel list opens a unified sample and velocity-layer editor from the row waveform. The editor initially selects the velocity-64 reference layer, keeps sample assignment, contiguous range boundaries, and layer trim in a complete local draft, and commits the partition atomically through Apply. Multi-layer channels use a desktop layer rail and compact mobile selector, while single-layer channels retain a compact Add Layer affordance.
-* The Kit-row waveform is one native pointer- and keyboard-accessible entry point to that editor. Multi-layer channels show an informational `×N` badge beside the reference sample duration, the accessible name includes the layer count, and the reference alignment marker is hidden at the default offset. Beat Alignment is no longer edited inline in the row.
-* The main Kit-row sample selector always targets the current velocity-64 reference layer. Select, upload, and record flows leave the other layers unchanged and announce that scope on multi-layer channels.
-* The unified editor uses one selected-layer waveform with explicit Audio Edit and Beat Alignment modes so touch gestures cannot conflict. Audio Edit retains auto-select, trim, normalize, reset, and original/edited preview; Beat Alignment offers pending-output preview, pointer placement, reset, and 10 ms steps. Pending rendered audio is used for alignment, and leading trims preserve the intended source alignment point.
-* The editor's primary action is contextual: configuration-only drafts use Apply, non-destructive waveform edits use Save Copy & Apply, and explicit user-sample replacement uses Replace & Apply. Uploads and recordings may create library assets immediately, but their layer assignment remains in the draft until Apply. A persistence failure does not commit the channel draft.
-* Replacing a user sample keeps its global asset semantics. Every active layer and saved user Kit layer referencing that asset receives the same trim-start/duration alignment transformation, and affected saved Kit hashes are invalidated.
+* The Kit waveform opens the unified sample/layer editor on the velocity-64 reference layer. The main-row selector targets that layer and announces its scope on multi-layer channels; the waveform shows a layer-count badge and only non-default reference alignment.
+* The editor keeps a complete local layer draft and shares one waveform between Audio Edit and Beat Alignment. Apply commits the partition; Save Copy & Apply creates a selected-layer copy; Replace & Apply changes the shared user asset globally. Upload/record assets can remain in the library after Cancel. The desktop rail currently remains visible even for one layer, unlike the original compact-layout proposal.
+* Leading trims transform alignment for the edited layer, or every matching active/saved user Kit layer on replacement. Failed sample persistence prevents draft commit, but asset persistence and draft application are separate steps with no rollback of a successful global replacement.
 * The sample selector can record device audio as a user sample. Recorded samples are saved through the same WAV/IndexedDB path as edited samples and can be assigned to the current kit channel immediately.
 * `userSamples` now stores user-facing sample metadata records, while older persisted string entries are still normalized when edited. The audio data itself is stored in IndexedDB and mirrored in the in-memory sample store by sample id.
 * The Kit workspace sample manager lists user samples, reports every active channel velocity layer and inclusive range using each sample, lets the user rename samples, previews samples through a dedicated preview channel, and only deletes samples that have no active layer references. Deletion is rechecked in the action as well as disabled in the UI.

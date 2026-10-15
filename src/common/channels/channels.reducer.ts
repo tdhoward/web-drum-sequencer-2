@@ -1,5 +1,4 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { Draft } from 'immer';
+import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 import {
   DEFAULT_KIT_ID,
   normalizeKitChannelsState,

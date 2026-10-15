@@ -339,6 +339,15 @@ increasing and the final layer always ends at 127. Layer IDs are stable local
 identity. A legacy one-sample channel normalizes deterministically to
 `<channel-id>:layer:1`, covering 1-127.
 
+Normalization repairs missing or malformed boundaries deterministically and
+rejects more than 127 layers; bundle readers validate partitions before import.
+The editor limits layer creation to eight and trim editing to -24 through
++12 dB. These are UI limits, not schema limits: the model allows any complete
+1-127 partition and finite trim values. Splitting copies the sample, alignment,
+and trim; removing a layer extends its predecessor, or its successor when
+removing the first layer. A one-velocity range cannot split, and the final
+remaining layer cannot be removed.
+
 The layer containing velocity 64 is the reference layer used by the Kit-row
 sample selector, main waveform, displayed duration, default editor selection,
 and Hit-button audition. Playback selectors resolve every layer so scheduled
@@ -404,12 +413,19 @@ is `Apply`, `Save Copy & Apply`, or `Replace & Apply`. Uploading or recording
 inside the editor creates a library asset without assigning it to the channel
 until the complete valid layer draft is applied. Failed sample persistence
 does not commit that draft.
+This guarantee applies to persistence failure before draft application. Asset
+persistence and the atomic layer-partition update are separate operations;
+a successful global replacement is not rolled back if a later apply step fails.
 Trim applies a tiny fade only at the end boundary to avoid blunting drum
 attacks. User samples can be renamed, previewed, and deleted through the Kit
 workspace sample manager, but deletion is disabled while the sample is assigned
 to a layer. Usage text includes every matching active channel layer and its
 inclusive velocity range, and the deletion action repeats the usage check so
 stale UI state cannot remove a referenced sample.
+This protection currently covers active Kit layers only. References in saved
+user Kit presets do not block deletion, so deleting a sample used only by a
+saved Kit can leave that preset without its audio. See the follow-ups in
+[the velocity-layer review](../../VELOCITY_LAYERS_NEXT_STEPS.md).
 
 Recorded device-audio samples are user samples. The recording dialog stores the
 final sample as WAV data in IndexedDB and assigns it to the selected channel's
