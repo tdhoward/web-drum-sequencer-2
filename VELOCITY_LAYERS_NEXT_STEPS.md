@@ -5,8 +5,8 @@
 Reviewed against the repository on October 15, 2026. The original nine
 implementation phases are implemented; this is now a maintenance reference,
 not a queue of phases to implement again. The review found a layout difference
-and lifecycle limitations listed below, so the former feature-complete
-checklist should not be read as proof that every original criterion was met.
+and lifecycle limitations listed below; these remain explicit future decisions
+rather than required implementation phases.
 
 The filename is retained for existing references. Use:
 
@@ -198,8 +198,13 @@ did not require support for previously exported files.
 No additional velocity-layer implementation phase is needed merely to complete
 the old task list. Saved-Kit deletion protection is now implemented; the layout
 and rollback questions above remain explicit future decisions.
-Browser/device listening and visual checks remain useful when the user
-next runs the app; this review does not claim those checks were performed.
+
+On October 15, 2026, the user completed [MANUAL_TEST_CHECKLIST.md](MANUAL_TEST_CHECKLIST.md)
+and reported that all functional checks passed. Overall usability at narrow widths,
+especially phones in portrait mode, remains questionable. A major responsive UI
+review and updates are deferred to a separate project in
+[PROJECT_NOTES.md](PROJECT_NOTES.md#ui-direction). With that work deferred, no known
+velocity-layer functional blockers remain.
 
 ## Verification for future changes
 

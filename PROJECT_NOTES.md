@@ -89,6 +89,12 @@ records editor behavior and the remaining review findings, rather than pending i
 
 ## UI direction
 
+**Deferred follow-up: responsive UI.** Manual testing found that the overall UI
+needs a major usability review and updates for narrow screens, especially phones
+in portrait mode. Review workspace layouts, dialogs, scrolling, control reachability,
+and touch/keyboard use as a separate focused project after velocity layers is complete.
+The finding is recorded in [MANUAL_TEST_CHECKLIST.md](MANUAL_TEST_CHECKLIST.md).
+
 The app should have theme-consistent navigation between the main workspaces.
 
 Preferred top-level pages/workspaces:
